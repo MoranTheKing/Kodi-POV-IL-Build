@@ -138,11 +138,6 @@
                         </focusedlayout>
 				<content>
 					<item>
-						<label>VOD DRAX</label>
-						<icon>special://skin/extras/icons/022.png</icon>
-						<onclick>ActivateWindow(10025,"plugin://plugin.video.pov/?action=tmdb_movies_popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;name=32459",return)</onclick>
-					</item>
-					<item>
 						<label>כאן 11</label>
 						<icon>special://skin/extras/icons/kan11.png</icon>
 						<onclick>ActivateWindow(Videos,"plugin://plugin.video.idanplus/?moredata=&amp;name=%D7%9B%D7%90%D7%9F+11&amp;url=&amp;iconimage=C%253A%255CUsers%255CHome%255CAppData%255CRoaming%255CKodi%255Caddons%255Cplugin.video.idanplus%255Cresources%255Cimages%255Ckan.jpg&amp;module=kan&amp;mode=0",return)</onclick>

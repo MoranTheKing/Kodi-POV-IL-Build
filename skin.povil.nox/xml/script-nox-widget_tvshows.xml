@@ -1,29 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="TVShowWidgetsNox">
-<!--         <include content="WidgetListCategory">
-            <param name="content_path" value="plugin://plugin.video.pov/?mode=navigator.build_shortcut_folder_list&amp;name=%D7%A1%D7%93%D7%A8%D7%95%D7%AA+-+%D7%9C%D7%A4%D7%99+%D7%96%27%D7%90%D7%A0%D7%A8&amp;iconImage=genres&amp;shortcut_folder=True&amp;external_list_item=True"/>
-            <param name="widget_header" value="ז'אנר"/>
-            <param name="widget_target" value="videos"/>
-            <param name="list_id" value="22011"/>
-        </include>
-        <include content="WidgetListBigEpisodes">
-            <param name="content_path" value="plugin://plugin.video.pov/?name=32483&amp;iconImage=next_episodes&amp;mode=build_next_episode"/>
-            <param name="widget_header" value="הפרק הבא"/>
-            <param name="widget_target" value="videos"/>
-            <param name="list_id" value="22012"/>
-        </include> -->
-        <include content="WidgetListBigPosterNox" condition="!Skin.HasSetting(novix_widget)">
+        <include content="WidgetListBigPosterNox">
             <param name="content_path" value="plugin://plugin.video.pov/?action=trakt_tv_trending&amp;iconImage=trending&amp;mode=build_tvshow_list&amp;name=32458"/>
-            <param name="widget_header" value="עולם הסדרות"/>
+            <param name="widget_header" value="סדרות פופולריות"/>
             <param name="widget_target" value="videos"/>
             <param name="list_id" value="22013"/>
         </include>
-        <include content="WidgetListBigPosterNox" condition="Skin.HasSetting(novix_widget)">
-            <param name="content_path" value="plugin://plugin.video.pov/?name=32458&amp;action=trakt_tv_trending&amp;iconImage=trending&amp;mode=build_tvshow_list"/>
-            <param name="widget_header" value="לוהט כעת"/>
+        <include content="WidgetListBigPosterNox">
+            <param name="content_path" value="plugin://plugin.video.pov/?action=tmdb_tv_premieres&amp;iconImage=fresh&amp;mode=build_tvshow_list&amp;name=32460"/>
+            <param name="widget_header" value="סדרות חדשות"/>
             <param name="widget_target" value="videos"/>
-            <param name="list_id" value="22013"/>
+            <param name="list_id" value="22014"/>
         </include>
     </include>
 </includes>

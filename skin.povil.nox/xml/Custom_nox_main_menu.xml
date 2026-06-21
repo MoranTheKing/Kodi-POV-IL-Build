@@ -461,12 +461,6 @@
 
 					</item>
 					<item>
-						<label>VOD DRAX</label>
-						<icon>special://skin/extras/icons/022.png</icon>
-						<onclick>ActivateWindow(10025,"plugin://plugin.video.pov/?action=tmdb_movies_popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;name=32459",return)</onclick>
-						<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom1)</visible>
-					</item>
-					<item>
 						<label>רשת 13</label>
 						<icon>special://skin/extras/icons/13.png</icon>
 						<onclick>ActivateWindow(10025,"plugin://plugin.video.idanplus/?iconimage=C%253A%255CUsers%255CHome%255CAppData%255CRoaming%255CKodi%255Caddons%255Cplugin.video.idanplus%255Cresources%255Cimages%255C13.png&amp;mode=-1&amp;module=reshet&amp;moredata&amp;name=%5bB%5d%d7%a8%d7%a9%d7%aa%2013%5b%2fB%5d&amp;url",return)</onclick>
@@ -677,9 +671,9 @@
 						<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom3)</visible>
 					</item> -->
 					<item>
-						<label>סדרות אנימה DRAX</label>
+						<label>סדרות אנימה</label>
 						<icon>special://skin/extras/icons/oscar.png</icon>
-						<onclick>ActivateWindow(10025,"plugin://plugin.video.pov/?action=tmdb_movies_popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;name=32459",return)</onclick>
+						<onclick>ActivateWindow(10025,&quot;plugin://plugin.video.otaku/&quot;,return)</onclick>
 						<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom3)</visible>
 					</item>
 <!-- -->
@@ -820,9 +814,15 @@
 
 														<!-- מועדפים -->
 					<item>
-						<label>מועדפים POV IL</label>
+						<label>הסרטים שלי</label>
 						<icon>special://skin/extras/icons/kidseng.png</icon>
-						<onclick>ActivateWindow(10025,&quot;plugin://plugin.video.pov/?iconImage=favorites&amp;mode=navigator.favorites&amp;name=32453&quot;,return)</onclick>
+						<onclick>ActivateWindow(10025,&quot;plugin://plugin.video.pov/?action=favorites_movies&amp;mode=build_movie_list&amp;name=%D7%94%D7%A1%D7%A8%D7%98%D7%99%D7%9D+%D7%A9%D7%9C%D7%99&quot;,return)</onclick>
+						<visible>String.IsEqual(Container(9000).ListItem.Property(id),favorites)</visible>
+					</item>
+					<item>
+						<label>הסדרות שלי</label>
+						<icon>special://skin/extras/icons/kidseng.png</icon>
+						<onclick>ActivateWindow(10025,&quot;plugin://plugin.video.pov/?action=favorites_tvshows&amp;mode=build_tvshow_list&amp;name=%D7%94%D7%A1%D7%93%D7%A8%D7%95%D7%AA+%D7%A9%D7%9C%D7%99&quot;,return)</onclick>
 						<visible>String.IsEqual(Container(9000).ListItem.Property(id),favorites)</visible>
 					</item>
 
