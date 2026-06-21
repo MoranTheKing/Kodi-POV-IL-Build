@@ -106,7 +106,7 @@
 		<onclick>ActivateWindow(osdsubtitlesettings)</onclick>
 	</item>
 	<item>
-		<label>הגדרות נגן בקרוב</label>
+		<label>הגדרות נגן</label>
 		<icon>https://www.iconsdb.com/icons/preview/white/play-3-xxl.png</icon>
 		<onclick>Control.SetFocus(9001)</onclick>
 	</item>
@@ -144,6 +144,7 @@
 		<left>20</left>
 		<top>5</top>
 		<align>left</align>
+		<font>font12</font>
 		<label>[B]$INFO[ListItem.Label][/B]</label>
 	</control>
 	<control type="label">
@@ -174,6 +175,7 @@
 		<left>20</left>
 		<top>5</top>
 		<align>left</align>
+		<font>font12</font>
 		<label>[B]$INFO[ListItem.Label][/B]</label>
 	</control>
 	<control type="label">
@@ -199,6 +201,17 @@
 		<colorbox>$INFO[Skin.String(osdbuttonfocuscolor)]</colorbox>
 		<onclick>Skin.SetColor(osdbuttonfocuscolor, player)</onclick>
 	</item>
+	<item>
+		<label>שנה צבע מסגרת פוקוס כפתורים</label>
+		<label2>$INFO[Skin.String(osdframebuttoncolor)]</label2>
+		<colorbox>$INFO[Skin.String(osdframebuttoncolor)]</colorbox>
+		<onclick>Skin.SetColor(osdframebuttoncolor, player)</onclick>
+	</item>
+	<item>
+		<label>הגדר עוצמת רקע ב INFO</label>
+		<label2>שקיפות הרקע שונתה ל $INFO[Skin.String(backwindowopecitychange)]</label2>
+		<include>InfoBackWindowOpecityChange</include>
+	</item>	
 	</content>
 	</control>
 	</control>
