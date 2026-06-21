@@ -36,7 +36,12 @@ def call_trakt(path, params=None, data=None, with_auth=True, method=None, pagina
 			headers=headers,
 			timeout=timeout
 		)
-		result = response.json() if 'json' in response.headers.get('Content-Type', '') else response.text
+		if 'json' in response.headers.get('Content-Type', ''):
+			try: result = response.json()
+			except ValueError:
+				logger('trakt error', 'invalid JSON response (empty/malformed body)')
+				return ([], page) if pagination else None
+		else: result = response.text
 		if not response.ok: response.raise_for_status()
 		if (sort_by := response.headers.get('X-Sort-By')) and (sort_how := response.headers.get('X-Sort-How')):
 #			result = sort_list(sort_by, sort_how, result, settings.ignore_articles())
@@ -46,6 +51,7 @@ def call_trakt(path, params=None, data=None, with_auth=True, method=None, pagina
 		return result
 	except requests.RequestException as e:
 		logger('trakt error', str(e))
+		return ([], page) if pagination else None
 
 def _get_trakt_paginated_list(url):
 	params = {'limit': 1000, 'page': 1}
@@ -277,33 +283,44 @@ def trakt_get_lists(list_type):
 	url = {'path': 'users/me/%s' % path_insert, 'params': {'limit': 100}}
 	return trakt_cache.cache_trakt_object(call_trakt, string, url)
 
+def _trakt_sync_call(path, data):
+	result = call_trakt(path, data=data)
+	if result is None:
+		kodi_utils.sleep(1000)
+		result = call_trakt(path, data=data)
+	return result
+
 def add_to_sync(list_type, data):
 	key = 'episodes' if list_type == 'collection' else 'shows'
-	result = call_trakt('sync/%s' % list_type, data=data)
-	if result['added']['movies'] + result['added'][key] == 0: return kodi_utils.notification(32574)
+	result = _trakt_sync_call('sync/%s' % list_type, data)
+	added = (result or {}).get('added') or {}
+	if added.get('movies', 0) + added.get(key, 0) == 0: return kodi_utils.notification(32574)
 	kodi_utils.notification(32576)
 	trakt_sync_activities()
 	return result
 
 def remove_from_sync(list_type, data):
 	key = 'episodes' if list_type == 'collection' else 'shows'
-	result = call_trakt('sync/%s/remove' % list_type, data=data)
-	if result['deleted']['movies'] + result['deleted'][key] == 0: return kodi_utils.notification(32574)
+	result = _trakt_sync_call('sync/%s/remove' % list_type, data)
+	deleted = (result or {}).get('deleted') or {}
+	if deleted.get('movies', 0) + deleted.get(key, 0) == 0: return kodi_utils.notification(32574)
 	kodi_utils.notification(32576)
 	trakt_sync_activities()
 	kodi_utils.container_refresh()
 	return result
 
 def add_to_list(user, slug, data):
-	result = call_trakt('users/%s/lists/%s/items' % (user, slug), data=data)
-	if result['added']['movies'] + result['added']['shows'] == 0: return kodi_utils.notification(32574)
+	result = _trakt_sync_call('users/%s/lists/%s/items' % (user, slug), data)
+	added = (result or {}).get('added') or {}
+	if added.get('movies', 0) + added.get('shows', 0) == 0: return kodi_utils.notification(32574)
 	kodi_utils.notification(32576)
 	trakt_sync_activities()
 	return result
 
 def remove_from_list(user, slug, data):
-	result = call_trakt('users/%s/lists/%s/items/remove' % (user, slug), data=data)
-	if result['deleted']['movies'] + result['deleted']['shows'] == 0: return kodi_utils.notification(32574)
+	result = _trakt_sync_call('users/%s/lists/%s/items/remove' % (user, slug), data)
+	deleted = (result or {}).get('deleted') or {}
+	if deleted.get('movies', 0) + deleted.get('shows', 0) == 0: return kodi_utils.notification(32574)
 	kodi_utils.notification(32576)
 	trakt_sync_activities()
 	kodi_utils.container_refresh()

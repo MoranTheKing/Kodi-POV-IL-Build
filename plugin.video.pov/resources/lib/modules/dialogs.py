@@ -61,6 +61,10 @@ def genres_choice(mediatype, genres, poster, return_genres=False):
 	return select_dialog(choices, **kwargs)
 
 def trakt_manager_choice(params):
+	# Personal TMDB account beats Trakt for favorites/watchlist: no rate limits,
+	# working mobile/web UI. The bundled default TMDB key is read-only and does
+	# not set account_id, so users without a personal connection fall through.
+	if get_setting('tmdb.account_id'): return tmdb_manager_choice(params)
 	if not get_setting('trakt_user', ''): return notification(32760)
 	from indexers import trakt_api
 	heading = ls(32198).replace('[B]', '').replace('[/B]', '')
