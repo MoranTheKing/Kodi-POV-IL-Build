@@ -3,7 +3,8 @@
 	<defaultcontrol always="true">5000</defaultcontrol>
 	<backgroundcolor>background</backgroundcolor>
 	<include>OpenCloseWindowFadeAnimation</include>
-	<onunload>Control.SetFocus(201)</onunload>
+	<onunload condition="ControlGroup(202).HasFocus()">Control.SetFocus(202)</onunload>
+	<onunload condition="Control.HasFocus(201)">Control.SetFocus(201)</onunload>
 	<controls>
 	
 	<!-- FAKE BUTTON -->
@@ -14,7 +15,6 @@
 	<onback>Dialog.Close(1126)</onback>
 	<onup>Dialog.Close(1126)</onup>
 	<ondown>Dialog.Close(1126)</ondown>
-	<ondown>ReplaceWindow(1127)</ondown>
 	</control>
 	
 	

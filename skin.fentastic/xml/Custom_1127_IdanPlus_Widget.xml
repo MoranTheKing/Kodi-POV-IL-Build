@@ -8,7 +8,7 @@
 	<animation type="WindowClose">
 	<effect type="fade" start="100" end="0" time="250" delay="100"/>
 	</animation>
-	<onunload>Control.SetFocus(201)</onunload>
+	<onunload>Control.SetFocus(202)</onunload>
 	<controls>
 	
 	<control type="list" id="5000">
@@ -60,10 +60,11 @@
 			<aligny>center</aligny>
 			<font>font20</font>
 			<label>$INFO[ListItem.Label]</label>
+			<autoscroll>true</autoscroll>
 		</control>
 	</control>
 	</focusedlayout>
-	<content>$VAR[FixIdanPlusContent__OSD]</content>
+	<content target="videos">$VAR[FixIdanPlusContent__OSD]</content>
 	</control>
 	
 	<control type="label">

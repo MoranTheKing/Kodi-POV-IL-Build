@@ -2835,4 +2835,8 @@
 </definition>
 </include>
 
+<include name="NoTextureFocusButtonsNetflixView">
+<texturenofocus colordiffuse="25FFFFFF">masks/circle.png</texturenofocus>
+</include>
+
 </includes>

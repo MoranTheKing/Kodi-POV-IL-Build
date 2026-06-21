@@ -31,6 +31,7 @@
 	<expression name="__livetv">String.IsEqual(ListItem.DBTYPE,livetv)</expression>
 	<expression name="__Movies_OSD">VideoPlayer.Content(movies)</expression>
 	<expression name="__episode_OSD">VideoPlayer.Content(episodes)</expression>
+	<expression name="__CheckIdanplus_OSD">String.Contains(Player.FolderPath,idanplus)</expression>
 	<expression name="__livetv_OSD">VideoPlayer.Content(LiveTv)</expression>
 	<expression name="__SubtitleCheckTrueOrFalse">VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</expression>
 	<expression name="__LiveTvTrueOrFalse">$EXP[__Movies_OSD] | $EXP[__episode_OSD]</expression>
