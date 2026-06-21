@@ -30,13 +30,16 @@ que=urllib.parse.quote_plus
 
 ####################################################################################
 GET_SUBTITLES_POP_KEYS = ['tmdb', 'Tagline', 'Tagline_From_Fen', 'VideoPlayer.Tagline', 'file_original_path', 'mpaa', 'is_local_media_playing', 'media_type_videoInfoTag', 'media_type_ListItem.DBTYPE']
+OPENSUBTITLES_CACHE_VERSION = 'opensubtitles_api_v4'
 def temporary_pop_and_get_subtitles(video_data):
     # Store and remove the values for the specified keys
     temp_values = {key: video_data.pop(key) for key in GET_SUBTITLES_POP_KEYS if key in video_data}
     log.warning(f"DEBUG | temporary_pop_and_get_subtitles | MID POP | video_data={str(video_data)}")
     
     try:
-        return cache.get(get_subtitles, 24, video_data, table='subs')
+        cache_video_data = dict(video_data)
+        cache_video_data['_opensubtitles_cache_version'] = OPENSUBTITLES_CACHE_VERSION
+        return cache.get(get_subtitles, 24, cache_video_data, table='subs')
     finally:
         # Restore the original values to the video_data
         video_data.update(temp_values)

@@ -9,10 +9,6 @@
 	<include file="Includes_DialogSelect.xml" />
 	<include file="Includes_MusicInfo.xml" />
 	<include file="Includes_PVR.xml" />
-	<include file="Includes_VideoOsd1.xml" />
-	<include file="Includes_VideoOsd2.xml"/>
-	<include file="Includes_VideoOsd3.xml"/>
-	<include file="Includes_NetflixPlayer.xml"/>
 	<include file="script-fentastic-main_menu_movies.xml" />
 	<include file="script-fentastic-main_menu_tvshows.xml" />
 	<include file="script-fentastic-main_menu_custom1.xml" />
@@ -36,17 +32,48 @@
 	<include file="View_501_Banner.xml" />
 	<include file="View_502_FanArt.xml" />
 	<include file="View_504_WideWall.xml" />
-	<include file="Includes_Onclicks.xml"/>
 	<include file="Custom_1117_ExtraInfoContent.xml"/>
 	<include file="Custom_1118_SetupGuideViewer.xml"/>
 	<include file="Custom_1119_ChangelogViewer.xml" />
 	<include file="Custom_1121_SearchResults.xml" />
-	<include file="Includes_Items.xml" />
-	<include file="Includes_Layouts.xml" />
-	<include file="Includes_Labels.xml"/>
 	<include file="Variables.xml" />
-	<include file="Includes_Expression.xml" />
-	<include file="Includes_Constant.xml" />
+	<constant name="DepthDialog">0.50</constant>
+	<constant name="DepthDialog+">0.52</constant>
+	<constant name="DepthDialog-">0.48</constant>
+	<constant name="DepthMax">0.54</constant>
+	<constant name="DepthOSD">0.40</constant>
+	<constant name="DepthOSD+">0.44</constant>
+	<constant name="DepthContentPopout">0.10</constant>
+	<constant name="DepthContentPanel">0.05</constant>
+	<constant name="DepthBars">0.12</constant>
+	<constant name="DepthBackground">-0.80</constant>
+	<constant name="DepthSideBlade">0.10</constant>
+	<constant name="bg_alpha">79</constant>
+	<constant name="dialogbuttons_itemgap">20</constant>
+	<constant name="list_bottom">0</constant>
+	<constant name="list_bottom_offset">70</constant>
+	<constant name="list_top_offset">110</constant>
+	<constant name="list_item_height">68</constant>
+	
+	<!-- KODI-RD-IL ADDITION -->
+	<constant name="PadLeft">650</constant>
+	<constant name="PadfixLeft">550</constant>
+	<constant name="GlobalPadfixLeft">535</constant>
+	<!-- ##################### -->
+	
+	<expression name="infodialog_active">Window.IsActive(musicinformation) | Window.IsActive(songinformation) | Window.IsActive(movieinformation) | Window.IsActive(addoninformation) | Window.IsActive(pvrguideinfo) | Window.IsActive(pvrrecordinginfo) | Window.IsActive(pictureinfo) | Window.IsVisible(script-embuary-video.xml) | Window.IsVisible(script-embuary-person.xml) | Window.IsVisible(script-embuary-image.xml)</expression>
+	<expression name="sidebar_visible">ControlGroup(9000).HasFocus | Control.HasFocus(6130) | Control.HasFocus(6131)</expression>
+	<expression name="ProgessBarMovie">String.IsEqual(ListItem.DBtype,movie) + !String.IsEmpty(Container($PARAM[id]).ListItem.Property(WatchedProgress)) + !Integer.IsEqual(Container($PARAM[id]).ListItem.Property(WatchedProgress),0)</expression>
+	
+	<!-- KODI-RD-IL ADDITION -->
+	<expression name="HomeScreenOff">![Window.IsActive(home) | Control.IsVisible(50) | Control.IsVisible(54) | Control.IsVisible(56) | Control.IsVisible(500) | Control.IsVisible(501) | Control.IsVisible(504)]</expression>
+	<expression name="SkinZoomToggle">Skin.HasSetting(ZoomToggle)</expression>
+	<expression name="LiveTvCondition">!VideoPlayer.Content(livetv)</expression>
+	<expression name="PausedTended_Prefix">Skin.HasSetting(ShowPlayerPauseWindow) + Player.Paused + !String.IsEmpty(VideoPlayer.Plot) + !Window.IsActive(1123)</expression>
+	<expression name="Label_Visible_Prefix">VideoPlayer.Content(movies) | VideoPlayer.Content(tvshows) | VideoPlayer.Content(seasons) | VideoPlayer.Content(episodes) + ![String.IsEmpty(VideoPlayer.Genre) | String.IsEmpty(VideoPlayer.Year)]</expression>
+	<expression name="fakebuttonsync">Control.HasFocus(700450)</expression>
+	<!-- ##################### -->
+	
 	<include name="CommonScrollbars">
 		<param name="bottom_offset">list_bottom_offset</param>
 		<definition>
@@ -2197,8 +2224,8 @@
 				<scrollout>true</scrollout>
 				<pauseatend>500</pauseatend>
 				<label>6</label>
-				<info condition="!String.IsEmpty(VideoPlayer.Genre)">VideoPlayer.Genre</info>
-				<info condition="!String.IsEmpty(VideoPlayer.Year)">VideoPlayer.Year</info>
+				<info>VideoPlayer.Genre</info>
+				<info>VideoPlayer.Year</info>
 				<font>font10</font>
 				<textcolor>FFB2D4F5</textcolor>
 				<textoffsetx>20</textoffsetx>
@@ -2303,464 +2330,5 @@
 		</include>
 	</include>
 	<!-- ##################### -->
-		
-	<include name="ReplaceSourcePlayer">
-	<onload>SetProperty(PovAutoPlayerMovie,RunPlugIn($VAR[OsdReplaceSourceStartPoint]&mediatype=movie&tmdb_id=$VAR[_Fix_TMDB_ID]&autoplay=true),home)</onload>
-	<onload>SetProperty(PovNoAutoPlayerMovie,RunPlugIn($VAR[OsdReplaceSourceStartPoint]&mediatype=movie&tmdb_id=$VAR[_Fix_TMDB_ID]&autoplay=false),home)</onload>
-	<onload>SetProperty(PovAutoPlayerEpisode,RunPlugin($VAR[OsdReplaceSourceStartPoint]&mediatype=episode&tmdb_id=$VAR[_Fix_TMDB_ID]&season=$INFO[VideoPlayer.Season]&episode=$INFO[VideoPlayer.Episode]&query=$INFO[VideoPlayer.Title]&autoplay=true),home)</onload>
-	<onload>SetProperty(PovNoAutoPlayerEpisode,RunPlugin($VAR[OsdReplaceSourceStartPoint]&mediatype=episode&tmdb_id=$VAR[_Fix_TMDB_ID]&season=$INFO[VideoPlayer.Season]&episode=$INFO[VideoPlayer.Episode]&query=$INFO[VideoPlayer.TvShowTite]&autoplay=false),home)</onload>
-	</include>
-	
-	<include name="BaseMainMenu">
-	<param name="id">9000</param>
-	<param name="animation">BasedMenuAnimationOsdSettings</param>
-	<param name="TopHeadLineBaseMenu">TopHeadLineDateAndtimeOSdSettings</param>
-	<param name="visible">true</param>
-	<param name="basedmenuleft">Padxy10</param>
-	<param name="basedmenuwidth">430</param>
-	<param name="basedmenuheight">600</param>
-	<param name="list_height">340</param>
-	<param name="items">BasedMenuOsdItems</param>
-	<param name="headlinebackgroundtop">2%</param>
-	<param name="headlinebackgroundwidth">95%</param>
-	<param name="headlinebackgroundheight">20%</param>
-	<param name="layout">BasedMenuLayout</param>
-	<param name="top_list">200</param>
-	<param name="list_left">Padxy10</param>
-	<param name="movement">3</param>
-	<definition>
-	<control type="group">
-	<centertop>50%</centertop>
-	<left>$PARAM[basedmenuleft]</left>
-	<width>$PARAM[basedmenuwidth]</width>
-	<height>$PARAM[basedmenuheight]</height>
-	<include>$PARAM[animation]</include>
-	<visible allowhiddenfocus="true">$PARAM[visible]</visible>
-	<control type="image">
-		<centerleft>50%</centerleft>
-		<top>$PARAM[headlinebackgroundtop]</top>
-		<width>$PARAM[headlinebackgroundwidth]</width>
-		<height>$PARAM[headlinebackgroundheight]</height>
-		<texture border="16" colordiffuse="98000000">masks/categorywidget.png</texture>
-		<bordertexture border="16">masks/categorywidget-unfocused.png</bordertexture>
-	</control>
-	<control type="image">
-		<texture colordiffuse="85FFFFFF">masks/poster_w460_h680.png</texture>
-	</control>
-	<control type="image">
-		<left>0</left>
-		<right>0</right>
-		<top>0</top>
-		<bottom>0</bottom>
-		<animation condition="true" effect="fade" end="95" time="0">Conditional</animation>
-		<texture colordiffuse="98000000">lists/contentpanel-fade.png</texture>
-	</control>
-	<control type="image">
-		<left>0</left>
-		<right>0</right>
-		<top>0</top>
-		<bottom>0</bottom>
-		<animation condition="true" effect="fade" end="5" time="0">Conditional</animation>
-		<texture flipx="true" colordiffuse="purple">lists/shadow_mask_v.png</texture>
-	</control>
-	<include>$PARAM[TopHeadLineBaseMenu]</include>
-	<control type="fixedlist" id="$PARAM[id]">
-		<top>$PARAM[top_list]</top>
-		<left>$PARAM[list_left]</left>
-		<height>$PARAM[list_height]</height>
-		<onback>$PARAM[onback]</onback>
-		<scrolltime tween="cubic">550</scrolltime>
-		<movement>$PARAM[movement]</movement>
-		<orientation>vertical</orientation>
-		<include>$PARAM[layout]</include>
-		<include>$PARAM[items]</include>
-	</control>
-	</control>
-	</definition>
-	</include>
-	
-	<include name="_FixOsdFlags">
-	<param name="left">0</param>
-	<definition>
-	<control type="group">
-	<width>150</width>
-	<height>60</height>
-	<control type="image">
-		<texture>flags/flag.png</texture>
-	</control>
-	<control type="image">
-		<top>20</top>
-		<left>15</left>
-		<right>10</right>
-		<width>20</width>
-		<height>20</height>
-		<texture>$PARAM[texture]</texture>
-		<visible>$PARAM[visible]</visible>
-	</control>
-	<control type="label">
-		<left>$PARAM[left]</left>
-		<right>0</right>
-		<align>center</align>
-		<aligny>center</aligny>
-		<font>font10</font>
-		<label>$INFO[VideoPlayer.$PARAM[flaglabel]]</label>
-		<visible fallback="n/a">!String.IsEmpty(VideoPlayer.$PARAM[flaglabel])</visible>
-	</control>
-	<control type="label">
-		<left>$PARAM[left]</left>
-		<right>0</right>
-		<align>center</align>
-		<aligny>center</aligny>
-		<font>font10</font>
-		<label fallback="n/a">$PARAM[label2]</label>
-	</control>
-	</control>
-	</definition>
-	</include>
-	
-	<include name="OsdBackWindowInfo">
-		<onload>SetProperty(getosdtitlevar,$INFO[VideoPlayer.Title],home)</onload>
-		<onload>SetProperty(getosdgenrevar,$INFO[VideoPlayer.Genre],home)</onload>
-		<onload>SetProperty(getosdplotvar,$ESCINFO[VideoPlayer.Plot],home)</onload>
-		<onload>SetProperty(getosdyearvar,$ESCINFO[VideoPlayer.Year,(,)],home)</onload>
-	</include>
-	
-	<include name="PauseTendViewType">
-	<control type="group">
-		<visible>Player.Paused + $EXP[PauseTendOsd]</visible>
-		<control type="image" id="1">
-			<animation type="Visible">
-			<effect type="slide" start="-150" end="0" time="250" tween="sine" easing="inout"/>
-			<effect type="fade" start="50" end="100" time="250" delay="150"/>
-			</animation>
-			<animation type="Hidden">
-			<effect type="slide" start="0" end="-150" time="250" tween="sine" easing="inout"/>
-			<effect type="fade" start="100" end="0" time="250" delay="150"/>
-			</animation>
-				<visible>$EXP[PausedTended_Prefix]</visible>
-				<centerleft>60%</centerleft>
-				<centertop>50%</centertop>
-				<width>1702</width>
-				<height>592</height>
-				<texture diffuse="masks/landscape-502.png">lists/contentpanel-fade.png</texture>
-		</control>	
-		<control type="image" id="1">
-			<animation type="Visible">
-			<effect type="slide" start="150" end="0" time="250" tween="sine" easing="inout"/>
-			<effect type="fade" start="50" end="100" time="250" delay="150"/>
-			</animation>
-			<animation type="Hidden">
-			<effect type="slide" start="0" end="150" time="250" tween="sine" easing="inout"/>
-			<effect type="fade" start="100" end="0" time="250" delay="150"/>
-			</animation>
-				<visible>$EXP[PausedTended_Prefix]</visible>
-				<centerleft>60%</centerleft>
-				<centertop>50%</centertop>
-				<width>1002</width>
-				<height>592</height>
-				<texture flipx="true" diffuse="masks/landscape-502.png">lists/contentpanel-fade.png</texture>
-			</control>
-			<control type="image" id="1">
-			<animation type="Visible">
-			<effect type="slide" start="150" end="0" time="250" tween="sine" easing="inout"/>
-			<effect type="fade" start="50" end="100" time="250" delay="150"/>
-			</animation>
-			<animation type="Hidden">
-			<effect type="slide" start="0" end="150" time="250" tween="sine" easing="inout"/>
-			<effect type="fade" start="100" end="0" time="250" delay="150"/>
-			</animation>
-				<visible>$EXP[PausedTended_Prefix]</visible>
-				<centerleft>77%</centerleft>
-				<centertop>30%</centertop>
-				<width>282</width>
-				<height>100</height>
-				<texture border="20" flipx="true" colordiffuse="44ffffff">kodirdil/overlays/gradient-box.png</texture>
-		</control>	
-			<control type="image" id="1">
-			<animation type="Visible">
-			<effect type="slide" start="150" end="0" time="250" tween="sine" easing="inout"/>
-			<effect type="fade" start="50" end="100" time="250" delay="150"/>
-			</animation>
-			<animation type="Hidden">
-			<effect type="slide" start="0" end="150" time="250" tween="sine" easing="inout"/>
-			<effect type="fade" start="100" end="0" time="250" delay="150"/>
-			</animation>
-				<visible>$EXP[PausedTended_Prefix]</visible>
-				<centerleft>77%</centerleft>
-				<centertop>30%</centertop>
-				<width>282</width>
-				<height>100</height>
-				<texture border="20" colordiffuse="44ffffff">kodirdil/overlays/gradient-box.png</texture>
-		</control>	
-			<control type="image" id="1">
-			<animation type="Visible">
-			<effect type="slide" start="150" end="0" time="250" tween="sine" easing="inout"/>
-			<effect type="fade" start="50" end="100" time="250" delay="150"/>
-			</animation>
-			<animation type="Hidden">
-			<effect type="slide" start="0" end="150" time="250" tween="sine" easing="inout"/>
-			<effect type="fade" start="100" end="0" time="250" delay="150"/>
-			</animation>
-				<visible>$EXP[PausedTended_Prefix]</visible>
-				<centerleft>81.5%</centerleft>
-				<centertop>30%</centertop>
-				<width>22</width>
-				<height>32</height>
-				<texture colordiffuse="white">kodirdil/overlays/media-pause-512.png</texture>
-		</control>	
-		<control type="image" id="1">
-			<animation type="Visible">
-			<effect type="slide" start="-150" end="0" time="250" tween="sine" easing="inout"/>
-			<effect type="fade" start="50" end="100" time="250" delay="150"/>
-			</animation>
-			<animation type="Hidden">
-			<effect type="slide" start="0" end="-150" time="250" tween="sine" easing="inout"/>
-			<effect type="fade" start="100" end="0" time="250" delay="150"/>
-			</animation>
-				<visible>$EXP[PausedTended_Prefix]</visible>
-				<centerleft>24%</centerleft>
-				<centertop>50%</centertop>
-				<width>392</width>
-				<height>592</height>
-				<texture fallback="kodirdil/fallbacks/videodefault.jpg" diffuse="masks/poster-50.png">$VAR[NowPlayingPosterVar]</texture>
-			</control>		
-
-		<control type="image" id="1">
-			<animation type="Visible">
-			<effect type="slide" start="150" end="0" time="250" tween="sine" easing="inout"/>
-			<effect type="fade" start="50" end="100" time="250" delay="150"/>
-			</animation>
-			<animation type="Hidden">
-			<effect type="slide" start="0" end="150" time="250" tween="sine" easing="inout"/>
-			<effect type="fade" start="100" end="0" time="250" delay="150"/>
-			</animation>
-				<visible>$EXP[PausedTended_Prefix]</visible>
-				<centerleft>78%</centerleft>
-				<centertop>65%</centertop>
-				<width>220</width>
-				<height>122</height>
-				<texture diffuse="masks/landscape-502.png">$VAR[NowPlayingFanartVar]</texture>
-		</control>	
-			
-			<control type="textbox" id="1">
-				<animation type="Visible">
-				<effect type="slide" start="150" end="0" time="250" tween="sine" easing="inout"/>
-				<effect type="fade" start="50" end="100" time="250" delay="150"/>
-				</animation>
-				<animation type="Hidden">
-				<effect type="slide" start="0" end="150" time="250" tween="sine" easing="inout"/>
-				<effect type="fade" start="100" end="0" time="250" delay="150"/>
-				</animation>
-				<visible>$EXP[PausedTended_Prefix]</visible>
-				<description>buffering value</description>
-					<label>[COLOR button_focus][B]$LOCALIZE[31080]:[/B][/COLOR] $INFO[Player.FinishTime][CR][COLOR button_focus][B]$LOCALIZE[700039]:[/B] [/COLOR]$INFO[VideoPlayer.Duration(hh:mm:ss)]</label>
-					<centerleft>54.5%</centerleft>
-					<centertop>40%</centertop>
-					<width>700</width>
-					<height>220</height>
-					<aligny>center</aligny>
-					<align>center</align>
-					<font>font35_title</font>
-			</control>
-		<control type="textbox" id="1">
-				<animation type="Visible">
-				<effect type="slide" start="150" end="0" time="250" tween="sine" easing="inout"/>
-				<effect type="fade" start="50" end="100" time="250" delay="150"/>
-				</animation>
-				<animation type="Hidden">
-				<effect type="slide" start="0" end="150" time="250" tween="sine" easing="inout"/>
-				<effect type="fade" start="100" end="0" time="250" delay="150"/>
-				</animation>
-					<visible>$EXP[PausedTended_Prefix]</visible>
-					<description>buffering value</description>
-					<label>$LOCALIZE[700040]</label>
-					<centerleft>75.5%</centerleft>
-					<centertop>30%</centertop>
-					<width>700</width>
-					<height>220</height>
-					<aligny>center</aligny>
-					<align>center</align>
-					<font>font45_title</font>
-				</control>
-			<control type="image" id="1">
-				<animation type="Visible">
-				<effect type="slide" start="-150" end="0" time="250" tween="sine" easing="inout"/>
-				<effect type="fade" start="50" end="100" time="250" delay="150"/>
-				</animation>
-				<animation type="Hidden">
-				<effect type="slide" start="0" end="-150" time="250" tween="sine" easing="inout"/>
-				<effect type="fade" start="100" end="0" time="250" delay="150"/>
-				</animation>
-					<visible>$EXP[PausedTended_Prefix]</visible>
-					<centerleft>18.0%</centerleft>
-					<centertop>25.5%</centertop>
-					<width>122</width>
-					<height>72</height>
-					<aspectratio align="center" aligny="center" scalediffuse="false">keep</aspectratio>
-					<texture>kodirdil/studiologos/$INFO[VideoPlayer.Studio].png</texture>
-			</control>					
-				<control type="textbox" id="1">
-				<animation type="Visible">
-				<effect type="slide" start="150" end="0" time="250" tween="sine" easing="inout"/>
-				<effect type="fade" start="50" end="100" time="250" delay="150"/>
-				</animation>
-				<animation type="Hidden">
-				<effect type="slide" start="0" end="150" time="250" tween="sine" easing="inout"/>
-				<effect type="fade" start="100" end="0" time="250" delay="150"/>
-				</animation>
-					<visible>$EXP[PausedTended_Prefix]</visible>
-					<description>buffering value</description>
-					<label fallback="n/a">[B][COLOR yellow]$VAR[NowPlayingLabelVar][/COLOR][/B]</label>
-					<centerleft>54.5%</centerleft>
-					<centertop>29%</centertop>
-					<width>420</width>
-					<height>220</height>
-					<aligny>center</aligny>
-					<align>center</align>
-					<font>font40_title</font>
-			</control>
-			<control type="group">
-				<animation type="Visible">
-				<effect type="slide" start="150" end="0" time="250" tween="sine" easing="inout"/>
-				<effect type="fade" start="50" end="100" time="250" delay="150"/>
-				</animation>
-				<animation type="Hidden">
-				<effect type="slide" start="0" end="150" time="250" tween="sine" easing="inout"/>
-				<effect type="fade" start="100" end="0" time="250" delay="150"/>
-				</animation>
-				<visible>$EXP[PausedTended_Prefix]</visible>
-				<left>1385</left>
-				<top>-1200</top>
-				<visible>$EXP[Label_Visible_Prefix]</visible>
-				<left>-45</left>
-				<control type="image">
-					<centertop>80%</centertop>
-					<centerleft>21%</centerleft>
-					<width>100</width>
-					<height>19</height>
-					<texture border="16">kodirdil/overlays/progress-back.png</texture>
-					<colordiffuse>white</colordiffuse>
-				</control>
-				<control type="progress">
-					<centertop>79.4%</centertop>
-					<centerleft>21.5%</centerleft>
-					<height>12</height>
-					<width>100</width>
-					<texturebg>-</texturebg>
-					<midtexture colordiffuse="button_focus" border="10.8">kodirdil/overlays/progress-mid.png</midtexture>
-					<info>Player.Progress</info>
-				</control>
-				</control>
-			<include content="Label_prefix">
-				<param name="color">button_focus</param>
-				<param name="id">12333</param>
-				<param name="centerleft">54.5</param>
-				<param name="centertop">68</param>
-				<param name="font_prefix">font10</param>
-				<param name="visible">$EXP[Label_Visible_Prefix]</param>
-				<animation effect="fade" start="0" end="100" time="400">VisibleChange</animation>
-			</include>
-				<control type="textbox" id="1">
-				<animation type="Visible">
-				<effect type="slide" start="150" end="0" time="250" tween="sine" easing="inout"/>
-				<effect type="fade" start="50" end="100" time="250" delay="150"/>
-				</animation>
-				<animation type="Hidden">
-				<effect type="slide" start="0" end="150" time="250" tween="sine" easing="inout"/>
-				<effect type="fade" start="100" end="0" time="250" delay="150"/>
-				</animation>
-					<visible>$EXP[PausedTended_Prefix]</visible>
-					<description>buffering value</description>
-					<label>$VAR[Episode_prefix]</label>
-					<centerleft>77%</centerleft>
-					<centertop>37%</centertop>
-					<width>420</width>
-					<height>220</height>
-					<aligny>center</aligny>
-					<align>center</align>
-					<font>font10</font>
-			</control>
-			<control type="textbox" id="1">
-				<animation type="Visible">
-				<effect type="slide" start="150" end="0" time="250" tween="sine" easing="inout"/>
-				<effect type="fade" start="50" end="100" time="250" delay="150"/>
-				</animation>
-				<animation type="Hidden">
-				<effect type="slide" start="0" end="150" time="250" tween="sine" easing="inout"/>
-				<effect type="fade" start="100" end="0" time="250" delay="150"/>
-				</animation>
-				<autoscroll time="4000" fade="4000" repeat="4500">System.IdleTime(5) + Player.Paused</autoscroll>
-					<visible>$EXP[PausedTended_Prefix]</visible>
-					<description>buffering value</description>
-					<label fallback="$LOCALIZE[700041]">[B]$INFO[VideoPlayer.Plot][/B]</label>
-					<centerleft>54.5%</centerleft>
-					<centertop>54%</centertop>
-					<width>600</width>
-					<height>155</height>
-					<aligny>center</aligny>
-					<align>center</align>
-					<font>font10</font>
-			</control>
-
-		<control type="grouplist">
-		<animation type="Visible">
-		<effect type="slide" start="150" end="0" time="250" tween="sine" easing="inout"/>
-		<effect type="fade" start="50" end="100" time="250" delay="150"/>
-		</animation>
-		<animation type="Hidden">
-		<effect type="slide" start="0" end="150" time="250" tween="sine" easing="inout"/>
-		<effect type="fade" start="100" end="0" time="250" delay="150"/>
-		</animation>
-		<visible>$EXP[PausedTended_Prefix]</visible>
-		<centertop>82%</centertop>
-		<centerleft>56.5%</centerleft>
-			<width>840</width>
-			<height>200</height>
-			<align>center</align>
-			<orientation>horizontal</orientation>
-			<itemgap>0</itemgap>
-				<include content="SetPauseTendedFlagsVideosOSd">
-					<param name="groupwidth">120</param>
-					<param name="label">AudioLanguage</param>
-					<param name="freetext">-Audio</param>
-				</include>
-				<include content="SetPauseTendedFlagsVideosOSd">
-				<param name="groupwidth">120</param>
-				<param name="label">VideoResolution</param>
-				<param name="freetext">HD</param>
-				<include content="SetPauseTendedFlagsVideosOSd">
-					<param name="groupwidth">120</param>
-					<param name="label">VideoAspect</param>
-					<param name="freetext"></param>
-				</include>
-				<include content="SetPauseTendedFlagsVideosOSd">
-					<param name="groupwidth">120</param>
-					<param name="icon">audiocodec</param>
-					<param name="label3">AudioCodec</param>
-				</include>
-				<include content="SetPauseTendedFlagsVideosOSd">
-					<param name="groupwidth">120</param>
-					<param name="label">VideoCodec</param>
-					<param name="freetext"></param>
-				</include>
-				<include content="SetPauseTendedFlagsVideosOSd">
-					<param name="groupwidth">120</param>
-					<param name="label">AudioChannels</param>
-					<param name="freetext">Ch</param>
-				</include>
-				<include content="SetPauseTendedFlagsVideosOSd">
-					<param name="groupwidth">120</param>
-					<param name="label2">Player.Process(VideoFPS)</param>
-					<param name="freetext">fps</param>
-				</include>
-			</include>
-		</control>
-		
-	<include content="SetFadeLabel">
-		<param name="id">12333</param>
-	</include>
-	
-	</control>
-	</include>
 	
 </includes>
