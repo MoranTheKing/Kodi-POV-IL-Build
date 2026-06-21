@@ -604,7 +604,7 @@
 	<left>200</left>
 	<right>100</right>
 	<height>125</height>
-	<bottom>-65</bottom>
+	<bottom>165</bottom>
 	<onback>201</onback>
 	<ondown>201</ondown>
 	<onleft>false</onleft>
@@ -615,8 +615,7 @@
 	<animation type="Hidden">
 		<effect type="fade" start="100" end="0" time="250" tween="sine" easing="inout"/>
 	</animation>
-	<visible>String.IsEqual(Container(201).ListItem.Property(id),forward)</visible>
-	<visible>!Control.HasFocus(202)</visible>
+	<visible>String.IsEqual(Container(204).ListItem.Property(id),forward)</visible>
 	<itemlayout width="145">
 	<control type="group">
 	<width>175</width>
@@ -656,7 +655,7 @@
 	<left>200</left>
 	<right>100</right>
 	<height>125</height>
-	<bottom>-65</bottom>
+	<bottom>165</bottom>
 	<onback>201</onback>
 	<ondown>201</ondown>
 	<onleft>false</onleft>
@@ -667,8 +666,7 @@
 	<animation type="Hidden">
 		<effect type="fade" start="100" end="0" time="250" tween="sine" easing="inout"/>
 	</animation>
-	<visible>String.IsEqual(Container(201).ListItem.Property(id),rewind)</visible>
-	<visible>!Control.HasFocus(202)</visible>
+	<visible>String.IsEqual(Container(204).ListItem.Property(id),rewind)</visible>
 	<itemlayout width="145">
 	<control type="group">
 	<width>125</width>

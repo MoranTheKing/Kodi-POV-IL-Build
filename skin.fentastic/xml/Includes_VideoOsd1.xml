@@ -262,6 +262,13 @@
 			<onclick>SkipNext</onclick>
 			<visible>Player.Chapter | !String.IsEmpty(VideoPlayer.offset(1).Title)</visible>
 		</item>
+		<item id="610">
+			<label>פרקי העונה [COLOR yellow]$INFO[VideoPlayer.Season,(,)][/COLOR] $INFO[VideoPlayer.TvShowTitle]</label>
+			<icon>DefaultAddonPVRClient.png</icon>
+			<property name="id">allepisodes</property>
+			<onclick>Control.SetFocus(200323)</onclick>
+			<visible>$EXP[__episode_OSD]</visible>
+		</item>
 		<include>__GlobalPlayerReplacmentItem__OSD</include>
 		</content>
 	</control>
@@ -311,6 +318,50 @@
 <param name="visible">String.IsEqual(Container(201).ListItem.Property(id),previous) + $EXP[IDANPlusCheck_OSd] + $EXP[PreviousItemExist_OSd]</param>
 </include>
 <!-- END OSD PREVIOUS SHOW INFO -->
+
+<control type="group">
+<left>10</left>
+<height>600</height>
+<width>380</width>
+<bottom>osdbottom</bottom>
+<include>bottom2topslideanimation</include>
+<visible>Container(201).HasFocus(610)</visible>
+<include content="BasedResizedWidgetFrame">
+	<include content="BasedResizedWidgetImage">
+		<param name="resize">0</param>
+		<param name="bottom">0</param>
+	</include>
+</include>
+<include content="BasedResizedWidgetFrameBox">
+	<param name="boxcolordiffuse">98181818</param>
+	<include content="BasedResizedWidgetImage">
+		<param name="resize">2</param>
+		<param name="bottom">2</param>
+	</include>
+</include>
+<include content="BasedResizedWidgetTexture">
+	<param name="texture">$INFO[Player.Art(tvshow.poster)]</param>
+<include content="BasedResizedWidgetImage">
+	<param name="resize">5</param>
+	<param name="bottom">5</param>
+</include>
+</include>
+</control>
+<control type="list" id="200323">
+<height>500</height>
+<left>400</left>
+<onleft>false</onleft>
+<onright>false</onright>
+<bottom>-20</bottom>
+<onback>201</onback>
+<ondown>201</ondown>
+<orientation>horizontal</orientation>
+<scrolltime tween="cubic">550</scrolltime>
+<include>bottom2topslideanimation</include>
+<visible>Container(201).HasFocus(610)</visible>
+<include>__OsdEpisodesAdvancedPlayerlayout__</include>
+<content target="videos">$VAR[build_Episodes_Url_OSD]</content>
+</control>
 
 
 
@@ -719,7 +770,6 @@
 	<height>$PARAM[groupheight]</height>
 	<bottom>osdbottom</bottom>
 	<include>bottom2topslideanimation</include>
-	<visible></visible>	
 <control type="group">
 	<width>380</width>
 	<bottom>0</bottom>

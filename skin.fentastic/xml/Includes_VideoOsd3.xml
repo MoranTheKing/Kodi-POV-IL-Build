@@ -404,7 +404,8 @@
 						<onclick condition="!String.IsEmpty(Skin.String(__chooseplayer,__simpleplayer)">Skin.SetString(__chooseplayer,__simpleplayer)</onclick>
 						<onclick condition="Skin.String(__chooseplayer,__simpleplayer)">Skin.SetString(__chooseplayer,__advancedplayer)</onclick>
 						<onclick condition="Skin.String(__chooseplayer,__advancedplayer)">Skin.SetString(__chooseplayer,__netflixplayer)</onclick>
-						<onclick condition="Skin.String(__chooseplayer,__netflixplayer)">Skin.SetString(__chooseplayer,__simpleplayer)</onclick>
+						<onclick condition="Skin.String(__chooseplayer,__netflixplayer)">Skin.SetString(__chooseplayer,__prettyplayer)</onclick>
+						<onclick condition="Skin.String(__chooseplayer,__prettyplayer)">Skin.SetString(__chooseplayer,__simpleplayer)</onclick>
 					</control>
 					<control type="button" id="700455">
 						<description>Idan Plus Channels Menu</description>

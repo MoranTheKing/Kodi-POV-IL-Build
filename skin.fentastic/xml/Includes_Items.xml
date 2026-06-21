@@ -212,5 +212,58 @@
 </content>
 </include>
 
+<include name="__osdtopmenu__">
+<content>
+<item>
+<icon>$VAR[stripoutosdbuttons]/previous.png</icon>
+<property name="id">previuos</property>
+<onclick>SkipPrevious</onclick>
+<!-- <visible>Player.Chapter | !String.IsEmpty(VideoPlayer.offset(-1).Title)</visible> -->
+</item>
+<item id="500">
+<icon>$VAR[stripoutosdbuttons]/rewind.png</icon>
+<property name="id">rewind</property>
+<onclick>Control.SetFocus(40022)</onclick>
+</item>
+
+
+<item id="501">
+<icon>$VAR[stripoutosdbuttons]/forward.png</icon>
+<property name="id">forward</property>
+<onclick>Control.SetFocus(40023)</onclick>
+</item>
+<item>
+<icon>$VAR[stripoutosdbuttons]/next.png</icon>
+<property name="id">next</property>
+<onclick>SkipNext</onclick>
+<!-- <visible>Player.Chapter | !String.IsEmpty(VideoPlayer.offset(-1).Title)</visible> -->
+</item>
+</content>
+</include>
+
+<include name="osdprettybottomnenu">
+<item id="120">
+<label>מידע מורחב</label>
+<onclick></onclick>
+</item>
+<item id="470">
+<label>פרקי העונה</label>
+<property name="menu_id">episodes</property>
+<onclick>Control.SetFocus(500323)</onclick>
+<visible>$EXP[__episode_OSD]</visible>
+</item>
+<item id="121">
+<label>הגדרות וידאו</label>
+<onclick>ActivateWindow(osdvideosettings)</onclick>
+</item>
+<item id="122">
+<label>הגדרות אודיו</label>
+<onclick>ActivateWindow(osdaudiosettings)</onclick>
+</item>
+<item id="123">
+<label>$VAR[__PlayerChoose]</label>
+<include>__GlobalPlayerReplacment__OSD</include>
+</item>
+</include>
 
 </includes>
