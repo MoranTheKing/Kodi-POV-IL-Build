@@ -79,6 +79,12 @@
 						<onclick>Dialog.Close(all)</onclick>
 						<onclick>ReloadSkin()</onclick>
 					</item>
+					<item>
+						<!-- Switch FENtastic Player -->
+						<label>[B][COLOR blue]$LOCALIZE[700070][/COLOR][/B]</label>
+						<onclick>Dialog.Close(all)</onclick>
+						<onclick>RunScript(service.subtitles.kodipovilai,action=fentastic_player_switch)</onclick>
+					</item>
 					<!-- ##################### -->
 				</content>
 			</control>
