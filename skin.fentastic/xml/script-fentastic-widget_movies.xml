@@ -14,7 +14,7 @@
             <param name="list_id" value="19012"/>
         </include>
         <include content="WidgetListBigPoster">
-            <param name="content_path" value="plugin://plugin.video.pov/?name=popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;action=tmdb_movies_popular"/>
+            <param name="content_path" value="plugin://plugin.video.pov/?name=blockbusters&amp;iconImage=popular&amp;mode=build_movie_list&amp;action=tmdb_movies_blockbusters"/>
             <param name="widget_header" value="[B][COLOR yellow]סרטים פופולריים[/COLOR][/B]"/>
             <param name="widget_target" value="videos"/>
             <param name="list_id" value="19015"/>
