@@ -126,9 +126,7 @@
                             <!-- KODI-POV-IL - Open FENtastic player selector -->
                             <label>[B][COLOR blue]בחר נגן[/COLOR][/B]</label>
                             <label2>$VAR[osdchangeplayervar]</label2>
-                            <onclick>Dialog.Close(all)</onclick>
-                            <onclick>ActivateWindow(1124)</onclick>
-                            <onclick>Control.SetFocus(9001)</onclick>
+                            <onclick>RunPlugin(plugin://plugin.program.kodipovilwizard/?mode=install&amp;action=fentastic_select_player)</onclick>
                         </item>
 					<!-- ##################### -->
 				</content>

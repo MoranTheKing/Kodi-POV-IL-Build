@@ -20,59 +20,10 @@
 	<value condition="$EXP[LivetvExpressionEPG_OSD]">מתחיל [COLOR button_focus]$INFO[VideoPlayer.StartTime][/COLOR] מסתיים [COLOR button_focus]$INFO[VideoPlayer.EndTime][/COLOR]</value>
 	<value>No Information</value>
 	</variable>
-	
-	<variable name="middlelabelInfo_Next_OSD_Var">
-	<value condition="!String.IsEmpty(VideoPlayer.offset(1).Genre)">$INFO[VideoPlayer.offset(1).Genre]</value>
-	<value condition="VideoPlayer.Content(LiveTv) + VideoPlayer.HasEpg">מתחיל [COLOR button_focus]$INFO[VideoPlayer.NextStartTime][/COLOR] מסתיים [COLOR button_focus]$INFO[VideoPlayer.NextEndTime][/COLOR]</value>
-	<value>No Information</value>
-	</variable>
-	
-	<variable name="NextTitleInfo_Next_OSD">
-	<value condition="!String.IsEmpty(VideoPlayer.offset(1).Title)">$INFO[VideoPlayer.offset(1).Title]</value>
-	<value condition="!String.IsEmpty(Player.offset(1).Title)">$INFO[Player.offset(1).Title]</value>
-	<value>No Title</value>
-	</variable>
-	
-	<variable name="PreviousTitleInfo_Next_OSD">
-	<value condition="!String.IsEmpty(VideoPlayer.offset(-1).Title)">$INFO[VideoPlayer.offset(-1).Title]</value>
-	<value condition="!String.IsEmpty(Player.offset(-1).Title)">$INFO[Player.offset(-1).Title]</value>
-	<value>No Title</value>
-	</variable>
-	
-	<variable name="NextTitleInfoYear_Next_OSD">
-	<value condition="!String.IsEmpty(VideoPlayer.offset(1).Year)">$INFO[VideoPlayer.offset(1).Year]</value>
-	<value condition="!String.IsEmpty(Player.offset(1).Year)">$INFO[Player.offset(1).Year]</value>
-	</variable>
-	
-	<variable name="PreviousTitleInfoYear_Next_OSD">
-	<value condition="!String.IsEmpty(VideoPlayer.offset(-1).Year)">$INFO[VideoPlayer.offset(-1).Year]</value>
-	<value condition="!String.IsEmpty(Player.offset(-1).Year)">$INFO[Player.offset(-1).Year]</value>
-	</variable>
-
-	<variable name="middlelabelInfo_Previous_OSD_Var">
-	<value condition="!String.IsEmpty(VideoPlayer.offset(-1).Genre)">$INFO[VideoPlayer.offset(-1).Genre]</value>
-	<value>No Information</value>
-	</variable>
-	
-	<variable name="bottomlabelinfo_Previous_OSD_Var">
-	<value>$INFO[VideoPlayer.offset(-1).Plot]</value>
-	</variable>
-
-	<variable name="bottomlabelinfo_Next_OSD_Var">
-	<value>$INFO[VideoPlayer.offset(1).Plot]</value>
-	</variable>
-	
 	<variable name="NextShowIcon_OSD_Var">
 	<value condition="!String.IsEmpty(VideoPlayer.offset(1).Cover)">$INFO[VideoPlayer.offset(1).Cover]</value>
-	<value condition="!String.IsEmpty(VideoPlayer.offset(1).Icon)">$INFO[VideoPlayer.offset(1).Icon]</value>	
+	<value condition="!String.IsEmpty(VideoPlayer.offset(1).Icon)">$INFO[VideoPlayer.offset(1).Icon]</value>
 	</variable>
-	
-	<variable name="PreviousShowIcon_OSD_Var">
-	<value condition="!String.IsEmpty(VideoPlayer.offset(-1).Cover)">$INFO[VideoPlayer.offset(-1).Cover]</value>
-	<value condition="!String.IsEmpty(VideoPlayer.offset(-1).Icon)">$INFO[VideoPlayer.offset(-1).Icon]</value>
-	<value condition="!String.IsEmpty(VideoPlayer.offset(-1).Icon)">$INFO[VideoPlayer.offset(-1).Icon]</value>
-	</variable>
-
 <variable name="_FixaudiolangugeOsd">
 		<value condition="String.IsEqual(VideoPlayer.AudioLanguage,eng)">אנגלית</value>
 		<value condition="String.IsEqual(VideoPlayer.AudioLanguage,heb)">עברית</value>

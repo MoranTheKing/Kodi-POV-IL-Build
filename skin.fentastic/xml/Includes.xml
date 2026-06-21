@@ -10,6 +10,7 @@
 	<include file="Includes_MusicInfo.xml" />
 	<include file="Includes_PVR.xml" />
 	<include file="Includes_VideoOsd.xml" />
+	<include file="Includes_VideoOsd2.xml" />
 	<include file="script-fentastic-main_menu_movies.xml" />
 	<include file="script-fentastic-main_menu_tvshows.xml" />
 	<include file="script-fentastic-main_menu_custom1.xml" />
