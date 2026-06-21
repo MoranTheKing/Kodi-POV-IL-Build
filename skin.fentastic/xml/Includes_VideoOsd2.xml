@@ -21,6 +21,15 @@
 			<height>180</height>
 			<visible>![Window.IsVisible(SliderDialog) | Window.IsVisible(1110) | Window.IsVisible(osdaudiosettings) | Window.IsVisible(osdvideosettings) | Window.IsVisible(VideoBookmarks) | Window.IsVisible(playerprocessinfo) | Window.IsVisible(osdcmssettings) | Window.IsVisible(PVROSDChannels) | Window.IsVisible(pvrchannelguide)]</visible>
 			<animation effect="fade" time="200">VisibleChange</animation>
+				<!-- KODI-POV-IL - OSD bottom backplate -->
+				<control type="image">
+					<left>0</left>
+					<bottom>0</bottom>
+					<width>100%</width>
+					<height>180</height>
+					<texture>colors/black.png</texture>
+					<colordiffuse>B0000000</colordiffuse>
+				</control>
 			<control type="label">
 				<animation effect="slide" end="0,-20" time="150" condition="VideoPlayer.Content(LiveTV)">conditional</animation>
 				<right>20</right>
