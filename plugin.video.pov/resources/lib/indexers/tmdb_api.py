@@ -76,7 +76,7 @@ def tmdb_movies_popular(page_no):
 	return cache_object(get_tmdb, string, url, expiration=EXPIRES_2_DAYS)
 
 def tmdb_movies_blockbusters(page_no):
-	string = 'tmdb_movies_blockbusters_%s' % page_no
+	string = 'tmdb_movies_blockbusters_v016_%s' % page_no
 	url = '%s/discover/movie?api_key=%s&language=en-US&region=US&sort_by=revenue.desc&page=%s' % (base_url, tmdb_api_key(), page_no)
 	return cache_object(get_tmdb, string, url, expiration=EXPIRES_2_DAYS)
 
@@ -94,7 +94,7 @@ def tmdb_movies_premieres(page_no):
 
 def tmdb_movies_latest_releases(page_no):
 	current_date, previous_date = get_dates(31, reverse=True)
-	string = 'tmdb_movies_latest_releases_%s' % page_no
+	string = 'tmdb_movies_latest_releases_v016_%s' % page_no
 	url = '%s/discover/movie?api_key=%s&language=en-US&region=US' % (base_url, tmdb_api_key())
 	url += '&release_date.gte=%s&release_date.lte=%s&with_release_type=4|5&page=%s' % (previous_date, current_date, page_no)
 	return cache_object(get_tmdb, string, url, expiration=EXPIRES_2_DAYS)
@@ -129,7 +129,7 @@ def tmdb_movies_year(year, page_no):
 	return cache_object(get_tmdb, string, url, expiration=EXPIRES_2_DAYS)
 
 def tmdb_movies_networks(network_id, page_no):
-	string = 'tmdb_movies_networks_%s_%s' % (network_id, page_no)
+	string = 'tmdb_movies_networks_wp_%s_%s' % (network_id, page_no)
 	url = '%s/discover/movie?api_key=%s&language=en-US&region=US' % (base_url, tmdb_api_key())
 	url += '&sort_by=popularity.desc&watch_region=US&with_watch_providers=%s&page=%s' % (network_id, page_no)
 	return cache_object(get_tmdb, string, url, expiration=EXPIRES_2_DAYS)
@@ -168,7 +168,7 @@ def tmdb_tv_title_year(title, year=None):
 	return cache_object(get_tmdb, string, url, expiration=EXPIRES_1_MONTH)
 
 def tmdb_tv_popular(page_no):
-	string = 'tmdb_tv_popular_%s' % page_no
+	string = 'tmdb_tv_popular_v016_%s' % page_no
 #	url = '%s/tv/popular?api_key=%s&language=en-US&region=US&page=%s' % (base_url, tmdb_api_key(), page_no)
 #	url = '%s/tv/popular?api_key=%s&with_original_language=en&language=en-US&region=US&page=%s' % (base_url, tmdb_api_key(), page_no)
 	url = '%s/discover/tv?api_key=%s&with_original_language=en&language=en-US&region=US&page=%s' % (base_url, tmdb_api_key(), page_no)
@@ -177,7 +177,7 @@ def tmdb_tv_popular(page_no):
 
 def tmdb_tv_premieres(page_no):
 	current_date, previous_date = get_dates(31, reverse=True)
-	string = 'tmdb_tv_premieres_%s' % page_no
+	string = 'tmdb_tv_premieres_v016_%s' % page_no
 #	url = '%s/discover/tv?api_key=%s&language=en-US&region=US&sort_by=popularity.desc&first_air_date.gte=%s&first_air_date.lte=%s&page=%s' % (base_url, tmdb_api_key(), previous_date, current_date, page_no)
 	url = '%s/discover/tv?api_key=%s&with_original_language=en&language=en-US&region=US' % (base_url, tmdb_api_key())
 	url += '&sort_by=popularity.desc&first_air_date.gte=%s&first_air_date.lte=%s&page=%s' % (previous_date, current_date, page_no)
