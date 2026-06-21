@@ -5,7 +5,8 @@ from urllib.parse import unquote, parse_qsl, urlparse
 from urllib.request import Request, urlopen
 from indexers.metadata import get_title
 from windows import open_window
-from modules import debrid, kodi_utils
+from modules import kodi_utils
+from modules.sources import SourceSelect
 from modules.settings import download_directory, get_art_provider, get_language
 from modules.utils import clean_file_name, clean_title, safe_string, remove_accents
 # from modules.kodi_utils import logger
@@ -27,21 +28,23 @@ def runner(params):
 		for item in ('thumb_url', 'image_url'):
 			image_params = params
 			image_params['url'] = params.pop(item)
-			image_params['mediatype'] = item
+			image_params['media_type'] = item
 			Downloader(image_params).run()
 	elif action == 'meta.pack':
+		from modules.debrid import debrid_packs
 		from modules.source_utils import find_season_in_release_title
 		threads = []
 		append = threads.append
-		source, meta = json.loads(params['source']), json.loads(params['meta'])
-		pack_choices = debrid.Source(source, meta).browse_packs(download=True)
+		provider, highlight = params['provider'], params['highlight']
+		pack_choices = debrid_packs(provider, params['name'], params['magnet_url'], params['info_hash'], download=True)
 		if not pack_choices: return kodi_utils.notification(32692)
-		heading = clean_file_name(source.get('name'))
+		heading = clean_file_name(json.loads(params['source']).get('name'))
 		kwargs = {'enumerate': 'true', 'multi_choice': 'true', 'multi_line': 'true'}
-		kwargs.update({'items': json.dumps(pack_choices), 'heading': heading, 'highlight': params['highlight']})
+		kwargs.update({'items': json.dumps(pack_choices), 'heading': heading, 'highlight': highlight})
 		chosen_list = kodi_utils.select_dialog(pack_choices, **kwargs)
 		if not chosen_list: return
-		show_package = source.get('package') == 'show'
+		show_package = json.loads(params['source']).get('package') == 'show'
+		meta  = json.loads(params.get('meta'))
 		default_name = '%s (%s)' % (clean_file_name(get_title(meta, get_language())), meta.get('year'))
 		default_foldername = kodi_utils.dialog.input(ls(32228), defaultt=default_name)
 		chosen_list = [{**params, 'pack_files': item} for item in chosen_list]
@@ -81,7 +84,7 @@ class Downloader:
 			self.meta = json.loads(self.params_get('meta'))
 			self.meta_get = self.meta.get
 			title = get_title(self.meta, get_language())
-			self.mediatype = self.meta_get('mediatype')
+			self.media_type = self.meta_get('media_type')
 			self.year = self.meta_get('year')
 			self.image = self.meta_get('poster')
 			self.image = self.meta_get(art_provider[0]) or self.meta_get(art_provider[1]) or poster_empty
@@ -90,7 +93,7 @@ class Downloader:
 		else:
 			self.meta = None
 			title = self.params_get('name')
-			self.mediatype = self.params_get('mediatype')
+			self.media_type = self.params_get('media_type')
 			self.image = self.params_get('image')
 			self.name = None
 		self.title = clean_file_name(title)
@@ -107,39 +110,40 @@ class Downloader:
 		url = self.params_get('url')
 		if url in (None, 'None', ''):
 			if self.action == 'meta.single':
-				url = debrid.Source(json.loads(self.source), self.meta).resolve_sources()
-			if self.action == 'meta.pack':
-				if self.provider == 'real-debrid':
-					from debrids.real_debrid_api import RealDebridAPI as debrid_function
-				elif self.provider == 'premiumize.me':
+				source = json.loads(self.source)
+				url = SourceSelect().resolve_sources(source, self.meta)
+			elif self.action == 'meta.pack':
+				if self.provider == 'Premiumize.me':
 					from debrids.premiumize_api import PremiumizeAPI as debrid_function
-				elif self.provider == 'alldebrid':
+				elif self.provider == 'Real-Debrid':
+					from debrids.real_debrid_api import RealDebridAPI as debrid_function
+				elif self.provider == 'AllDebrid':
 					from debrids.alldebrid_api import AllDebridAPI as debrid_function
-				elif self.provider == 'torbox':
+				elif self.provider == 'TorBox':
 					from debrids.torbox_api import TorBoxAPI as debrid_function
 				url = self.params_get('pack_files')['link']
-				if self.provider == 'premiumize.me':
+				if self.provider == 'Premiumize.me':
 					url = debrid_function().add_headers_to_url(url)
-				if self.provider in ('real-debrid', 'alldebrid', 'torbox'):
+				if self.provider in ('Real-Debrid', 'AllDebrid', 'TorBox'):
 					url = debrid_function().unrestrict_link(url)
 		else:
 			if self.action.startswith('cloud'):
 				if '_direct' in self.action:
 					url = self.params_get('url')
-				elif 'real-debrid' in self.action:
-					from menus.real_debrid import resolve_rd
-					url = resolve_rd(self.params)
 				elif 'premiumize' in self.action:
 					from debrids.premiumize_api import PremiumizeAPI
 					url = PremiumizeAPI().add_headers_to_url(url)
+				elif 'realdebrid' in self.action:
+					from debrids.real_debrid import resolve_rd
+					url = resolve_rd(self.params)
 				elif 'alldebrid' in self.action:
-					from menus.alldebrid import resolve_ad
+					from debrids.alldebrid import resolve_ad
 					url = resolve_ad(self.params)
 				elif 'torbox' in self.action:
-					from menus.torbox import resolve_tb
+					from debrids.torbox import resolve_tb
 					url = resolve_tb(self.params)
 				elif 'easynews' in self.action:
-					from menus.easynews import resolve_easynews
+					from debrids.easynews import resolve_easynews
 					url = resolve_easynews(self.params)
 		try: headers = dict(parse_qsl(url.rsplit('|', 1)[1]))
 		except: headers = dict('')
@@ -149,8 +153,8 @@ class Downloader:
 		self.url = url
 
 	def get_download_folder(self):
-		self.down_folder = download_directory(self.mediatype)
-		if self.mediatype == 'thumb_url':
+		self.down_folder = download_directory(self.media_type)
+		if self.media_type == 'thumb_url':
 			self.down_folder = os.path.join(self.down_folder, '.thumbs')
 		for level in levels:
 			try: kodi_utils.make_directory(os.path.abspath(os.path.join(self.down_folder, level)))
@@ -164,7 +168,7 @@ class Downloader:
 			if self.action == 'meta.single': folder_rootname = kodi_utils.dialog.input(ls(32228), defaultt=default_name)
 			else: folder_rootname = self.params_get('default_foldername', default_name)
 			if not folder_rootname: return False
-			if self.mediatype == 'episode':
+			if self.media_type == 'episode':
 				inter = os.path.join(self.down_folder, folder_rootname)
 				kodi_utils.make_directory(inter)
 				self.final_destination = os.path.join(inter, 'Season %02d' %  int(self.season))
@@ -195,11 +199,11 @@ class Downloader:
 			ext = '.zip'
 		elif self.action == 'image':
 			ext = os.path.splitext(urlparse(self.url).path)[1][1:]
-			if ext not in image_extensions: ext = 'jpg'
+			if not ext in image_extensions: ext = 'jpg'
 			ext = '.%s' % ext
 		else:
 			ext = os.path.splitext(urlparse(self.url).path)[1][1:]
-			if ext not in video_extensions: ext = 'mp4'
+			if not ext in video_extensions: ext = 'mp4'
 			ext = '.%s' % ext
 		self.extension = ext
 
@@ -255,7 +259,7 @@ class Downloader:
 						f.close()
 						try: progressDialog.close()
 						except: pass
-						return self.finish_download(self.final_name, self.mediatype, True, self.image)
+						return self.finish_download(self.final_name, self.media_type, True, self.image)
 			except Exception as e:
 				error = True
 				sleep_time = 10
@@ -286,7 +290,7 @@ class Downloader:
 				if (not self.resumable and resume >= 50) or resume >= 500:
 					try: progressDialog.close()
 					except: pass
-					return self.finish_download(self.final_name, self.mediatype, False, self.image)
+					return self.finish_download(self.final_name, self.media_type, False, self.image)
 				resume += 1
 				errors  = 0
 				if self.resumable:
@@ -304,9 +308,9 @@ class Downloader:
 			return resp
 		except: return None
 
-	def finish_download(self, title, mediatype, downloaded, image):
-		if self.mediatype == 'thumb_url': return
-		if self.mediatype == 'image_url':
+	def finish_download(self, title, media_type, downloaded, image):
+		if self.media_type == 'thumb_url': return
+		if self.media_type == 'image_url':
 			if downloaded: kodi_utils.notification('[I]%s[/I]' % ls(32576), 3000, image)
 			else: kodi_utils.notification('[I]%s[/I]' % ls(32691), 3000, image)
 		else:
@@ -321,7 +325,7 @@ class Downloader:
 			text = '%s[CR]%s' % (ls(32688) % self.mb, ls(32689))
 			if self.action == 'meta.single': 
 				kwargs = dict(meta=self.meta, text=text, enable_buttons=True, true_button=ls(32824), false_button=ls(32828), focus_button=10)
-				choice = open_window(('windows.progress', 'ProgressMedia'), 'progress_media.xml', **kwargs)
+				choice = open_window(('windows.sources', 'ProgressMedia'), 'progress_media.xml', **kwargs)
 			else: choice = kodi_utils.confirm_dialog(text=text)
 		return choice
 

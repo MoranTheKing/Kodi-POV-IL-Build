@@ -7,33 +7,21 @@ ls, get_setting = kodi_utils.local_string, kodi_utils.get_setting
 base_url = 'https://api.alldebrid.com/'
 timeout = 10.0
 session = requests.Session()
-session.custom_errors = requests.exceptions.ConnectionError, requests.exceptions.Timeout
 session.mount('https://api.alldebrid.com', requests.adapters.HTTPAdapter(max_retries=1))
 
 class AllDebridAPI:
 	icon = 'alldebrid.png'
 
-	@staticmethod
-	def flatten_magnet_files(files_list):
-		def flatten(items):
-			for i in items:
-				if not isinstance(i, dict): continue
-				if 'e' in i: flatten(i['e'])
-				else: files_append(i)
-		files = []
-		files_append = files.append
-		flatten(files_list)
-		return files
-
 	def __init__(self):
 		self.token = get_setting('ad.token')
-		session.headers.update(self.headers())
+		session.headers['Authorization'] = 'Bearer %s' % self.token
 
 	def _request(self, method, path, params=None, data=None):
 		url = base_url + path
 		try: response = session.request(method, url, params=params, data=data, timeout=timeout)
-		except session.custom_errors: return kodi_utils.notification('%s timeout' % __name__)
-		if not response.ok: kodi_utils.logger(__name__, f"{response.reason}\n{response.url}")
+		except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+			return kodi_utils.notification('%s timeout' % self.__class__.__name__)
+		if not response.ok: kodi_utils.logger(self.__class__.__name__, f"{response.reason}\n{response.url}")
 		response = response.json() if 'json' in response.headers.get('Content-Type', '') else response
 		if 'data' in response and response.get('status') == 'success': response = response['data']
 		return response
@@ -43,9 +31,6 @@ class AllDebridAPI:
 
 	def _post(self, path, data=None):
 		return self._request('post', path, data=data)
-
-	def headers(self):
-		return {'Authorization': 'Bearer %s' % self.token}
 
 	def days_remaining(self):
 		import datetime
@@ -57,12 +42,11 @@ class AllDebridAPI:
 		return days
 
 	def account_info(self):
-		url = 'v4/user'
-		result = self._get(url)
-		return result
+		response = self._get('v4/user')
+		return response
 
-	def torrent_info(self, transfer_id):
-		url = 'v4.1/magnet/status'
+	def list_transfer(self, transfer_id):
+		url = 'v4/magnet/status'
 		params = {'id': transfer_id}
 		result = self._get(url, params)
 		result = result['magnets']
@@ -72,19 +56,23 @@ class AllDebridAPI:
 		url = 'v4/magnet/delete'
 		params = {'id': transfer_id}
 		result = self._get(url, params)
-		return True if result is not None and 'error' not in result else False
+		return True if not result is None and not 'error' in result else False
 
 	def unrestrict_link(self, link):
 		url = 'v4/link/unlock'
 		params = {'link': link}
-		result = self._get(url, params)
-		try: return result['link']
+		response = self._get(url, params)
+		try: return response['link']
 		except: return None
+
+	def check_single_magnet(self, hash_string):
+		cache_info = self.check_cache(hash_string)['magnets'][0]
+		return cache_info['instant']
 
 	def check_cache(self, hashes):
 		data = {'v4/magnets[]': hashes}
-		result = self._post('magnet/instant', data)
-		return result
+		response = self._post('magnet/instant', data)
+		return response
 
 	def create_transfer(self, magnet):
 		url = 'v4/magnet/upload'
@@ -100,31 +88,47 @@ class AllDebridAPI:
 			torrent_id = self.create_transfer(magnet_url)
 			for key in ['completionDate'] * 3:
 				kodi_utils.sleep(500)
-				torrent_info = self.torrent_info(torrent_id)
-				if torrent_info[key]: break
+				transfer_info = self.list_transfer(torrent_id)
+				if transfer_info[key]: break
 			else: raise Exception('alldebrid uncached magnet')
-			torrent_info['links'] = self.flatten_magnet_files(torrent_info['files'])
-			return [
-				{'link': item['l'],
-				 'size': item['s'],
+			torrent_files = [
+				{'link': item['link'],
+				 'size': item['size'],
 				 'torrent_id': torrent_id,
-				 'filename': item['n']}
-				for item in torrent_info['links']
-				if item['n'].lower().endswith(tuple(extensions))
+				 'filename': item['filename']}
+				for item in transfer_info['links']
+				if item['filename'].lower().endswith(tuple(extensions))
 			]
+			return torrent_files
 		except Exception as e:
 			if torrent_id: self.delete_torrent(torrent_id)
 			if errors: raise
 
+	def get_hosts(self):
+		string = 'pov_ad_valid_hosts'
+		url = 'v4/hosts'
+		hosts_dict = {'AllDebrid': []}
+		hosts = []
+		try:
+			result = cache_object(self._get, string, url, False, 168)
+			result = result['hosts']
+			for k, v in result.items():
+				try: hosts.extend(v['domains'])
+				except: pass
+			hosts = list(set(hosts))
+			hosts_dict['AllDebrid'] = hosts
+		except: pass
+		return hosts_dict
+
 	def downloads(self):
 		url = 'v4/user/history'
 		string = 'pov_ad_downloads'
-		return cache_object(self._get, string, url, 0.5)
+		return cache_object(self._get, string, url, False, 0.5)
 
 	def user_cloud(self, completed=True):
-		url = 'v4.1/magnet/status'
+		url = 'v4/magnet/status'
 		string = 'pov_ad_user_cloud'
-		result = cache_object(self._get, string, url, 0.5)
+		result = cache_object(self._get, string, url, False, 0.5)
 		if completed: result['magnets'] = [i for i in result['magnets'] if i['statusCode'] == 4]
 		return result
 
@@ -154,9 +158,9 @@ class AllDebridAPI:
 				dbcur.execute("""DELETE FROM maincache WHERE id = ?""", ('pov_ad_valid_hosts',))
 				clear_property('pov_ad_valid_hosts')
 				dbcon.commit()
+				dbcon.close()
 				hoster_links_success = True
 			except: hoster_links_success = False
-			dbcon.close()
 			# HASH CACHED STATUS
 			try:
 				DebridCache().clear_debrid_results('ad')

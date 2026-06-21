@@ -53,12 +53,34 @@
 				<visible>String.IsEqual(Window.Property(tikiskins.dialog.multi_choice),false)</visible>
 				<top>130</top>
 				<left>260r</left>
-				<control type="image">
-					<aligny>left</aligny>
-					<height>240</height>
-					<width>240</width>
-					<aspectratio aligny="top">keep</aspectratio>
-					<texture>$INFO[Container(2025).ListItem.Property(tikiskins.dialog.icon)]</texture>
+				<control type="group">
+					<visible>!String.IsEqual(Container(2025).ListItem.Property(tikiskins.dialog.default_icon),true)</visible>
+					<control type="image">
+						<aligny>left</aligny>
+						<height>240</height>
+						<width>240</width>
+						<aspectratio aligny="top">keep</aspectratio>
+						<texture>$INFO[Container(2025).ListItem.Property(tikiskins.dialog.icon)]</texture>
+						<visible>String.IsEqual(Window.Property(tikiskins.dialog.multi_choice),false)</visible>
+					</control>
+					<control type="image">
+						<aligny>left</aligny>
+						<height>240</height>
+						<width>240</width>
+						<aspectratio aligny="top">keep</aspectratio>
+						<texture>$INFO[Container(2025).ListItem.Property(tikiskins.dialog.icon)]</texture>
+						<visible>String.IsEqual(Window.Property(tikiskins.dialog.multi_choice),true)</visible>
+					</control>
+				</control>
+				<control type="group">
+					<visible>String.IsEqual(Container(2025).ListItem.Property(tikiskins.dialog.default_icon),true)</visible>
+					<control type="image">
+						<aligny>left</aligny>
+						<height>240</height>
+						<width>240</width>
+						<aspectratio aligny="top">keep</aspectratio>
+						<texture>$INFO[Window.Property(tikiskins.pov.icon)]</texture>
+					</control>
 				</control>
 			</control>
 			<control type="group">
@@ -133,7 +155,7 @@
 							</control>
 							<control type="label">
 								<font>font12</font>
-								<textcolor>$INFO[Window.Property(tikiskins.dialog.highlight)]</textcolor>
+								<textcolor>FFED0606</textcolor>
 								<aligny>center</aligny>
 								<label>[UPPERCASE]$INFO[ListItem.Property(tikiskins.dialog.line1)][/UPPERCASE]</label>
 								<visible>!String.IsEmpty(ListItem.Property(tikiskins.check_status))</visible>
@@ -157,7 +179,7 @@
 								<top>25</top>
 								<height>5</height>
 								<font>font12</font>
-								<textcolor>$INFO[Window.Property(tikiskins.dialog.highlight)]</textcolor>
+								<textcolor>FFED0606</textcolor>
 								<aligny>center</aligny>
 								<label>[UPPERCASE][B]$INFO[ListItem.Property(tikiskins.dialog.line1)][/B][/UPPERCASE]</label>
 								<visible>!String.IsEmpty(ListItem.Property(tikiskins.check_status))</visible>
@@ -175,7 +197,7 @@
 								<top>60</top>
 								<height>5</height>
 								<font>font12</font>
-								<textcolor>$INFO[Window.Property(tikiskins.dialog.highlight)]</textcolor>
+								<textcolor>FFED0606</textcolor>
 								<aligny>center</aligny>
 								<label>[UPPERCASE][I]$INFO[ListItem.Property(tikiskins.dialog.line2)][/I][/UPPERCASE]</label>
 								<visible>!String.IsEmpty(ListItem.Property(tikiskins.check_status))</visible>
@@ -214,7 +236,7 @@
 							<control type="label">
 								<scroll>true</scroll>
 								<font>font12</font>
-								<textcolor>$INFO[Window.Property(tikiskins.dialog.highlight)]</textcolor>
+								<textcolor>FFED0606</textcolor>
 								<aligny>center</aligny>
 								<label>[UPPERCASE]$INFO[ListItem.Property(tikiskins.dialog.line1)][/UPPERCASE]</label>
 								<visible>!String.IsEmpty(ListItem.Property(tikiskins.check_status))</visible>
@@ -240,7 +262,7 @@
 								<top>25</top>
 								<height>5</height>
 								<font>font12</font>
-								<textcolor>$INFO[Window.Property(tikiskins.dialog.highlight)]</textcolor>
+								<textcolor>FFED0606</textcolor>
 								<aligny>center</aligny>
 								<label>[UPPERCASE][B]$INFO[ListItem.Property(tikiskins.dialog.line1)][/B][/UPPERCASE]</label>
 								<visible>!String.IsEmpty(ListItem.Property(tikiskins.check_status))</visible>
@@ -260,7 +282,7 @@
 								<top>60</top>
 								<height>5</height>
 								<font>font12</font>
-								<textcolor>$INFO[Window.Property(tikiskins.dialog.highlight)]</textcolor>
+								<textcolor>FFED0606</textcolor>
 								<aligny>center</aligny>
 								<label>[UPPERCASE][I]$INFO[ListItem.Property(tikiskins.dialog.line2)][/I][/UPPERCASE]</label>
 								<visible>!String.IsEmpty(ListItem.Property(tikiskins.check_status))</visible>

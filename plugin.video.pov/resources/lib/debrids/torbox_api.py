@@ -7,10 +7,9 @@ from modules import kodi_utils
 ls, get_setting = kodi_utils.local_string, kodi_utils.get_setting
 user_agent = 'POV/%s' % kodi_utils.get_addoninfo('version')
 ip_url = 'https://api.ipify.org'
-base_url = 'https://api.torbox.app/v1/api/'
+base_url = 'https://api.torbox.app/v1/api'
 timeout = 20.0
 session = requests.Session()
-session.custom_errors = requests.exceptions.ConnectionError, requests.exceptions.Timeout
 session.mount('https://api.torbox.app', requests.adapters.HTTPAdapter(max_retries=1))
 
 class TorBoxAPI:
@@ -21,12 +20,13 @@ class TorBoxAPI:
 		session.headers.update(self.headers())
 
 	def _request(self, method, path, params=None, json=None, data=None):
-		url = (base_url + path) if not path.startswith('http') else path
+		url = '%s/%s' % (base_url, path) if not path.startswith('http') else path
 		try: response = session.request(method, url, params=params, json=json, data=data, timeout=timeout)
-		except session.custom_errors: return kodi_utils.notification('%s timeout' % __name__)
-		if not response.ok: kodi_utils.logger(__name__, f"{response.reason}\n{response.url}")
+		except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+			return kodi_utils.notification('%s timeout' % self.__class__.__name__)
+		if not response.ok: kodi_utils.logger(self.__class__.__name__, f"{response.reason}\n{response.url}")
 		response = response.json() if 'json' in response.headers.get('Content-Type', '') else response
-		if 'data' in response and 'success' in response and 'control' not in path: response = response['data']
+		if 'data' in response and 'success' in response and not 'control' in path: response = response['data']
 		return response
 
 	def _get(self, url, params=None):
@@ -68,19 +68,19 @@ class TorBoxAPI:
 		data = {'torrent_id': request_id, 'operation': 'delete'}
 		url = 'torrents/controltorrent'
 		result = self._post(url, json=data)
-		return True if result is not None and result['success'] else False
+		return True if not result is None and result['success'] else False
 
 	def delete_usenet(self, request_id):
 		data = {'usenet_id': request_id, 'operation': 'delete'}
 		url = 'usenet/controlusenetdownload'
 		result = self._post(url, json=data)
-		return True if result is not None and result['success'] else False
+		return True if not result is None and result['success'] else False
 
 	def delete_webdl(self, request_id):
 		data = {'webdl_id': request_id, 'operation': 'delete'}
 		url = 'webdl/controlwebdownload'
 		result = self._post(url, json=data)
-		return True if result is not None and result['success'] else False
+		return True if not result is None and result['success'] else False
 
 	def unrestrict_link(self, file_id):
 		try: user_ip = requests.get(ip_url, timeout=2.0).text
@@ -108,6 +108,10 @@ class TorBoxAPI:
 		params.update({'token': self.token, 'web_id': webdl_id, 'file_id': file_id})
 		url = 'webdl/requestdl'
 		return self._get(url, params=params)
+
+	def check_single_magnet(self, hash_string):
+		result = self.check_cache([hash_string])
+		return hash_string in result
 
 	def check_cache(self, hashes):
 		data = {'hashes': hashes}
@@ -137,7 +141,7 @@ class TorBoxAPI:
 			extensions = supported_video_extensions()
 			torrent_id = self.create_transfer(magnet_url)
 			torrent_files = self.torrent_info(torrent_id)
-			return [
+			torrent_files = [
 				{'link': '%d,%d' % (torrent_id, item['id']),
 				 'size': item['size'],
 				 'torrent_id': torrent_id,
@@ -145,14 +149,16 @@ class TorBoxAPI:
 				for item in torrent_files['files']
 				if item['short_name'].lower().endswith(tuple(extensions))
 			]
-		except Exception as e:
+			return torrent_files
+		except Exception:
 			if torrent_id: self.delete_torrent(torrent_id)
+			return None
 
 	def resolve_nzb(self, nzb_url, info_hash, store_to_cloud, title, season, episode, nzb_info=None):
 		from modules.source_utils import supported_video_extensions, seas_ep_filter, extras_filter
 		try:
 			extensions = supported_video_extensions()
-			extras_filtering_list = tuple(i for i in extras_filter() if i not in title.lower())
+			extras_filtering_list = tuple(i for i in extras_filter() if not i in title.lower())
 			if not nzb_info:
 				nzb_id = self.create_transfer(nzb_url)
 				nzb_files = self.nzb_info(nzb_id)
@@ -177,10 +183,25 @@ class TorBoxAPI:
 			if nzb_id: Thread(target=self.delete_usenet, args=(nzb_id,)).start()
 			return None
 
+	def usenet_search(self, query, season='', episode='', imdb=''):
+		sort = int(get_setting('tb.sort', '0'))
+		if imdb: query = 'imdb:%s' % imdb
+		else: query = 'search/%s' % requests.utils.quote(query)
+		url = 'https://search-api.torbox.app/usenet/%s' % query
+		params = {'check_cache': 'true', 'check_owned': 'true', 'search_user_engines': 'true'}
+		if season and episode: params.update({'season': int(season), 'episode': int(episode)})
+		result = self._get(url, params=params)
+		try: result = result['nzbs']
+		except: result = []
+		if   sort == 1: result.sort(key=lambda k: int(k['size']), reverse=True)
+		elif sort == 2: result.sort(key=lambda k: k['tracker'], reverse=False)
+		else: result.sort(key=lambda k: int(k['age'].rstrip('d')), reverse=False)
+		return result
+
 	def user_cloud(self, request_id=None, check_cache=True, completed=True):
 		string = 'pov_tb_user_cloud_info_%s' % request_id if request_id else 'pov_tb_user_cloud'
 		url = 'torrents/mylist?id=%s' % request_id if request_id else 'torrents/mylist'
-		if check_cache: result = cache_object(self._get, string, url, 0.5)
+		if check_cache: result = cache_object(self._get, string, url, False, 0.5)
 		else: result = self._get(url)
 		if not request_id and completed: result = [i for i in result if i['download_finished'] and i['files']]
 		return result
@@ -188,7 +209,7 @@ class TorBoxAPI:
 	def user_cloud_usenet(self, request_id=None, check_cache=True, completed=True):
 		string = 'pov_tb_user_cloud_usenet_info_%s' % request_id if request_id else 'pov_tb_user_cloud_usenet'
 		url = 'usenet/mylist?id=%s' % request_id if request_id else 'usenet/mylist'
-		if check_cache: result = cache_object(self._get, string, url, 0.5)
+		if check_cache: result = cache_object(self._get, string, url, False, 0.5)
 		else: result = self._get(url)
 		if not request_id and completed: result = [i for i in result if i['download_finished'] and i['files']]
 		return result
@@ -196,7 +217,7 @@ class TorBoxAPI:
 	def user_cloud_webdl(self, request_id=None, check_cache=True, completed=True):
 		string = 'pov_tb_user_cloud_webdl_info_%s' % request_id if request_id else 'pov_tb_user_cloud_webdl'
 		url = 'webdl/mylist?id=%s' % request_id if request_id else 'webdl/mylist'
-		if check_cache: result = cache_object(self._get, string, url, 0.5)
+		if check_cache: result = cache_object(self._get, string, url, False, 0.5)
 		else: result = self._get(url)
 		if not request_id and completed: result = [i for i in result if i['download_finished'] and i['files']]
 		return result
@@ -211,7 +232,6 @@ class TorBoxAPI:
 			try:
 				dbcur.execute("""DELETE FROM maincache WHERE id = ?""", ('torbox_usenet_queries',))
 				clear_property('torbox_usenet_queries')
-				dbcon.commit()
 				usenet_queries_success = True
 			except: usenet_queries_success = False
 			# USER CLOUD
@@ -224,7 +244,6 @@ class TorBoxAPI:
 					dbcon.commit()
 				user_cloud_success = True
 			except: user_cloud_success = False
-			dbcon.close()
 			# HASH CACHED STATUS
 			try:
 				DebridCache().clear_debrid_results('tb')
