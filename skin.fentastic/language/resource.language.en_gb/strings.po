@@ -930,10 +930,6 @@ msgctxt "#31611"
 msgid "System"
 msgstr ""
 
-msgctxt "#700070"
-msgid "Switch FENtastic Player"
-msgstr ""
-
 ################################################################
 
 # KODI-RD-IL CUSTOM ADDITIONS:
