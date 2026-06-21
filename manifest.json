@@ -3,19 +3,19 @@
   "name": "Kodi POV IL Build",
   "repo": "MoranTheKing/Kodi-POV-IL-Build",
   "release_tag": "addons-latest",
-  "generated": "2026-06-21T13:12:19Z",
+  "generated": "2026-06-21T19:06:04Z",
   "manifest_url": "https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL-Build/main/manifest.json",
   "addons": {
     "plugin.program.kodipovilwizard": {
       "id": "plugin.program.kodipovilwizard",
       "name": "[COLOR yellow]Kodi POV IL Wizard[/COLOR]",
-      "version": "0.1.30",
+      "version": "0.1.31",
       "type": "plugin",
-      "filename": "plugin.program.kodipovilwizard-0.1.30.zip",
-      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.kodipovilwizard-0.1.30.zip",
-      "size": 4535831,
-      "sha256": "2b65bf7808d87086c5c5e36c8492b37b264b9244d35ccac664b21609abec5cff",
-      "updated": "2026-06-21T13:12:19Z"
+      "filename": "plugin.program.kodipovilwizard-0.1.31.zip",
+      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.kodipovilwizard-0.1.31.zip",
+      "size": 4539955,
+      "sha256": "7c9388662bb6cc73aa76f644e4f0432ac44fc54d2ba63352d9a8820530c01183",
+      "updated": "2026-06-21T19:06:04Z"
     },
     "plugin.video.pov": {
       "id": "plugin.video.pov",
@@ -26,7 +26,7 @@
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.video.pov-5.12.04.zip",
       "size": 1230691,
       "sha256": "2f9afe67ad2dfc1486e5b6854cde373abb47d1b8c85ceb17147cf704c08188ba",
-      "updated": "2026-06-21T13:12:19Z"
+      "updated": "2026-06-21T19:06:04Z"
     },
     "script.fentastic.helper": {
       "id": "script.fentastic.helper",
@@ -37,7 +37,7 @@
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/script.fentastic.helper-0.6.20a.zip",
       "size": 18907,
       "sha256": "c17a361921d72635ecb6cfea477042680883520af3a25498d64623cc53711af9",
-      "updated": "2026-06-21T13:12:19Z"
+      "updated": "2026-06-21T19:06:04Z"
     },
     "service.subtitles.All_Subs": {
       "id": "service.subtitles.All_Subs",
@@ -48,7 +48,7 @@
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/service.subtitles.All_Subs-4.7.7.zip",
       "size": 3084101,
       "sha256": "a28401c9b6aa192952a3b897b5cda30abf32e4956ae6cf3deedd1dd5b2d5b7d4",
-      "updated": "2026-06-21T13:12:19Z"
+      "updated": "2026-06-21T19:06:04Z"
     },
     "service.subtitles.kodipovilai": {
       "id": "service.subtitles.kodipovilai",
@@ -59,7 +59,7 @@
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/service.subtitles.kodipovilai-0.2.243.zip",
       "size": 6914746,
       "sha256": "3e94c65bd1cab1d8d8096fc9a9dcf8cbc3a39aeee25f58ac0f7a747697a01b10",
-      "updated": "2026-06-21T13:12:19Z"
+      "updated": "2026-06-21T19:06:04Z"
     },
     "skin.estuary": {
       "id": "skin.estuary",
@@ -70,7 +70,7 @@
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/skin.estuary-4.0.0.zip",
       "size": 6815771,
       "sha256": "d30f84fec7e9b5d725f24a2e4b05fcf8db78b5baf88aa233546e1949389c8059",
-      "updated": "2026-06-21T13:12:19Z"
+      "updated": "2026-06-21T19:06:04Z"
     },
     "skin.fentastic": {
       "id": "skin.fentastic",
@@ -81,7 +81,7 @@
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/skin.fentastic-1.0.25.zip",
       "size": 10069056,
       "sha256": "42861cb0ffe237bd621e2af164d4fd619c9cd1fcc72f108754f3ece43fd948d0",
-      "updated": "2026-06-21T13:12:19Z"
+      "updated": "2026-06-21T19:06:04Z"
     },
     "skin.povil.nox": {
       "id": "skin.povil.nox",
@@ -92,7 +92,7 @@
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/skin.povil.nox-1.0.10.zip",
       "size": 24370782,
       "sha256": "deb3bb8e5dab6c2fc15d00311764aee5012dcbbc2c9577bf42c0aa4da9c43104",
-      "updated": "2026-06-21T13:12:19Z"
+      "updated": "2026-06-21T19:06:04Z"
     }
   }
 }
