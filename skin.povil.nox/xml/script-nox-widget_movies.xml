@@ -1,23 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="MovieWidgetsNox">
-        <control type="group">
-            <top>0</top>
-            <include content="WidgetListBigPosterNox">
-                <param name="content_path" value="plugin://plugin.video.pov/?action=tmdb_movies_popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;name=32459"/>
-                <param name="widget_header" value="סרטים פופולריים"/>
-                <param name="widget_target" value="videos"/>
-                <param name="list_id" value="19013"/>
-            </include>
-        </control>
-        <control type="group">
-            <top>380</top>
-            <include content="WidgetListBigPosterNox">
-                <param name="content_path" value="plugin://plugin.video.pov/?action=tmdb_movies_latest_releases&amp;iconImage=dvd&amp;mode=build_movie_list&amp;name=32461"/>
-                <param name="widget_header" value="סרטים חדשים"/>
-                <param name="widget_target" value="videos"/>
-                <param name="list_id" value="19014"/>
-            </include>
-        </control>
+        <include content="WidgetListBigPosterNox">
+            <param name="content_path" value="plugin://plugin.video.pov/?action=tmdb_movies_popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;name=32459"/>
+            <param name="widget_header" value="סרטים פופולריים"/>
+            <param name="widget_target" value="videos"/>
+            <param name="list_id" value="19013"/>
+        </include>
     </include>
 </includes>

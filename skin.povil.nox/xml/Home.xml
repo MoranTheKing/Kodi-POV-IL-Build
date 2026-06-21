@@ -3,7 +3,8 @@
 <defaultcontrol always="true">9000</defaultcontrol>
 
 	<!-- <onload condition="!Skin.HasSetting(firsttimerun)">Skin.SetString(HomeS, Home_default)</onload> -->
-	<onload condition="!Skin.HasSetting(firsttimerun)">ActivateWindow(2113)</onload>
+	<onload condition="String.IsEmpty(Skin.String(HomeS))">Skin.SetString(HomeS,Home_nox)</onload>
+	<onload condition="!Skin.HasSetting(firsttimerun)">Skin.SetBool(firsttimerun)</onload>
 	<onload condition="Skin.HasSetting(username)">ActivateWindow(2114)</onload>
  		<include condition="Skin.String(HomeS, Home_default)" content="skin_home_default">
             <param name="HomeS" value="home" />
