@@ -374,7 +374,7 @@ def download(download_data,MySubFolder):
                 raise RuntimeError("OpenSubtitles DownloadSubtitles HTTPError reached maximum tries.")
 
 def c_get_os_api_keys():    
-    OS_API_KEYS = requests.get('https://kodi7rd.github.io/repository/other/DarkSubs_OpenSubtitles/darksubs_opensubtitles_api.json', timeout=DEFAULT_REQUEST_TIMEOUT).json()
+    OS_API_KEYS = requests.get('https://morantheking.github.io/Kodi-POV-IL/repository/other/DarkSubs_OpenSubtitles/darksubs_opensubtitles_api.json', timeout=DEFAULT_REQUEST_TIMEOUT).json()
     return OS_API_KEYS
     
 def get_random_key():
