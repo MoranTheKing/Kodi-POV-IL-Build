@@ -116,5 +116,259 @@
 	</control>
 	</focusedlayout>
 </include>
-	
+
+<include name="__OsdEpisodeslayout">
+<itemlayout width="380" height="280">
+<control type="group">
+<width>350</width>
+	<control type="image">
+		<width>350</width>
+		<texture colordiffuse="black">colors/white.png</texture>
+	</control>
+	<control type="image">
+		<height>70%</height>
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture>$INFO[ListItem.Icon]</texture>
+	</control>
+	<control type="label">
+		<top>200</top>
+		<height>25</height>
+		<align>left</align>
+		<left>8</left>
+		<font>font10</font>
+		<label>[B]$INFO[ListItem.TvShowTitle][/B]</label>
+	</control>
+	<control type="label">
+		<top>245</top>
+		<height>25</height>
+		<align>right</align>
+		<right>8</right>
+		<font>font10</font>
+		<label>עונה [COLOR red]$INFO[ListItem.Season,(,)][/COLOR] פרק [COLOR red]$INFO[ListItem.Episode,(,)][/COLOR]</label>
+	</control>
+	<control type="label">
+		<top>245</top>
+		<height>25</height>
+		<align>left</align>
+		<left>8</left>
+		<font>font10</font>
+		<label>$INFO[ListItem.Premiered]</label>
+	</control>
+</control>
+</itemlayout>
+<focusedlayout width="380" height="280">
+<control type="group">
+<width>350</width>
+	<control type="image">
+		<width>350</width>
+		<texture colordiffuse="black">colors/white.png</texture>
+		<visible>!Control.HasFocus(500323)</visible>
+	</control>
+	<control type="image">
+		<width>350</width>
+		<texture colordiffuse="black">colors/white.png</texture>
+		<bordertexture colordiffuse="white">colors/white.png</bordertexture>
+		<bordersize>4</bordersize>
+		<visible>Control.HasFocus(500323)</visible>
+	</control>
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<height>70%</height>
+		<texture>$INFO[ListItem.Icon]</texture>
+	</control>
+	<control type="label">
+		<top>200</top>
+		<height>25</height>
+		<align>left</align>
+		<left>8</left>
+		<font>font10</font>
+		<label>[B]$INFO[ListItem.TvShowTitle][/B]</label>
+	</control>
+	<control type="label">
+		<top>245</top>
+		<height>25</height>
+		<align>right</align>
+		<right>8</right>
+		<font>font10</font>
+		<label>עונה [COLOR red]$INFO[ListItem.Season,(,)][/COLOR] פרק [COLOR red]$INFO[ListItem.Episode,(,)][/COLOR]</label>
+	</control>
+	<control type="label">
+		<top>245</top>
+		<height>25</height>
+		<align>left</align>
+		<left>8</left>
+		<font>font10</font>
+		<label>$INFO[ListItem.Premiered]</label>
+	</control>
+</control>
+</focusedlayout>
+</include>
+
+
+<include name="__OsdEpisodesAdvancedPlayerlayout__">
+<itemlayout width="380" height="280">
+<control type="group">
+<width>350</width>
+	<control type="image">
+		<width>350</width>
+		<animation condition="true" effect="fade" start="100" end="68" time="0">Conditional</animation>
+		<texture colordiffuse="FF181818">colors/white.png</texture>
+	</control>
+	<control type="image">
+		<height>70%</height>
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture>$INFO[ListItem.Icon]</texture>
+	</control>
+	<control type="label">
+		<top>200</top>
+		<height>25</height>
+		<align>left</align>
+		<left>8</left>
+		<font>font10</font>
+		<label>[B]$INFO[ListItem.TvShowTitle][/B]</label>
+	</control>
+	<control type="label">
+		<top>245</top>
+		<height>25</height>
+		<align>right</align>
+		<right>8</right>
+		<font>font10</font>
+		<label>עונה [COLOR red]$INFO[ListItem.Season,(,)][/COLOR] פרק [COLOR red]$INFO[ListItem.Episode,(,)][/COLOR]</label>
+	</control>
+	<control type="label">
+		<top>245</top>
+		<height>25</height>
+		<align>left</align>
+		<left>8</left>
+		<font>font10</font>
+		<label>$INFO[ListItem.Premiered]</label>
+	</control>
+</control>
+</itemlayout>
+<focusedlayout width="380" height="280">
+<control type="group">
+<width>350</width>
+	<control type="image">
+		<width>350</width>
+		<texture colordiffuse="FF181818">colors/white.png</texture>
+		<visible>!Control.HasFocus(200323)</visible>
+	</control>
+	<control type="image">
+		<width>350</width>
+		<texture colordiffuse="FF181818">colors/white.png</texture>
+		<bordertexture colordiffuse="white">colors/white.png</bordertexture>
+		<bordersize>4</bordersize>
+		<visible>Control.HasFocus(200323)</visible>
+	</control>
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<height>70%</height>
+		<texture>$INFO[ListItem.Icon]</texture>
+	</control>
+	<control type="label">
+		<top>200</top>
+		<height>25</height>
+		<align>left</align>
+		<left>8</left>
+		<font>font10</font>
+		<label>[B]$INFO[ListItem.TvShowTitle][/B]</label>
+	</control>
+	<control type="label">
+		<top>245</top>
+		<height>25</height>
+		<align>right</align>
+		<right>8</right>
+		<font>font10</font>
+		<label>עונה [COLOR red]$INFO[ListItem.Season,(,)][/COLOR] פרק [COLOR red]$INFO[ListItem.Episode,(,)][/COLOR]</label>
+	</control>
+	<control type="label">
+		<top>245</top>
+		<height>25</height>
+		<align>left</align>
+		<left>8</left>
+		<font>font10</font>
+		<label>$INFO[ListItem.Premiered]</label>
+	</control>
+</control>
+</focusedlayout>
+</include>
+
+
+<include name="prettybottomenu_osd">
+<itemlayout width="350" height="80" condition="Integer.IsEqual(Container(202).NumItems,4)">
+<control type="group">
+<height>170</height>
+	<control type="image">
+		<texture colordiffuse="25FFFFFF" border="5">masks/menumain.png</texture>
+	</control>
+	<control type="label">
+		<align>center</align>
+		<aligny>center</aligny>
+		<font>font36_title</font>
+		<label>$INFO[ListItem.Label]</label>
+	</control>
+</control>
+</itemlayout>
+<focusedlayout width="350" height="80" condition="Integer.IsEqual(Container(202).NumItems,4)">
+<control type="group">
+<height>170</height>
+<control type="image">
+	<texture colordiffuse="25FFFFFF" border="5">masks/menumain.png</texture>
+</control>
+<control type="image">
+	<texture border="5">masks/menumain.png</texture>
+	<animation condition="!Control.HasFocus(202)" effect="fade" start="100" end="50" time="250">Conditional</animation>
+</control>
+<control type="label">
+	<align>center</align>
+	<aligny>center</aligny>
+	<font>font36_title</font>
+	<label>$INFO[ListItem.Label]</label>
+	<textcolor>black</textcolor>
+</control>
+</control>
+</focusedlayout>
+<itemlayout width="350" height="70" condition="Integer.IsEqual(Container(202).NumItems,5)">
+<control type="group">
+<height>170</height>
+<control type="image">
+	<texture colordiffuse="25FFFFFF" border="5">masks/menumain.png</texture>
+</control>
+<control type="label">
+	<align>center</align>
+	<aligny>center</aligny>
+	<font>font36_title</font>
+	<label>$INFO[ListItem.Label]</label>
+</control>
+</control>
+</itemlayout>
+<focusedlayout width="350" height="70" condition="Integer.IsEqual(Container(202).NumItems,5)">
+<control type="group">
+<height>170</height>
+<control type="image">
+	<texture colordiffuse="25FFFFFF" border="5">masks/menumain.png</texture>
+</control>
+<control type="image">
+	<texture border="5">masks/menumain.png</texture>
+	<animation condition="!Control.HasFocus(202)" effect="fade" start="100" end="50" time="250">Conditional</animation>
+</control>
+<control type="label">
+	<align>center</align>
+	<aligny>center</aligny>
+	<font>font36_title</font>
+	<label>$INFO[ListItem.Label]</label>
+	<textcolor>black</textcolor>
+</control>
+</control>
+</focusedlayout>
+</include>
+
 </includes>

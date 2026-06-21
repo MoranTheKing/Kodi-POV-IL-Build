@@ -1,0 +1,460 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<includes>
+
+<!-- player project -->
+<include name="videosd4">
+<control type="group">
+<height>850</height>
+<width>fullwidth</width>
+<bottom>0</bottom>
+<include>Animation_BottomSlide</include>
+<animation condition="$EXP[groupcontrol1]" effect="slide" start="0,0" end="0,-220" time="250">Conditional</animation>
+<!-- ####### BG -->
+<control type="image">
+	<top>700</top>
+	<height>850</height>
+	<texture>colors/white.png</texture>
+	<colordiffuse>FF181818</colordiffuse>
+	<animation condition="$EXP[groupcontrol3]" effect="slide" start="0,0" end="0,-120" time="250">Conditional</animation>
+</control>
+<!-- ######### -->
+
+<!-- ####### MAIN MENU -->
+<control type="grouplist" id="201">
+<height>200</height>
+<align>justify</align>
+<width>fullwidth</width>
+<bottom>-50</bottom>
+<onup>204</onup>
+<onup>SetProperty(lastlist,50,home)</onup>
+<ondown>SetProperty(lastlist,60,home)</ondown>
+<ondown>202</ondown>
+<visible allowhiddenfocus="true">$EXP[groupcontrol2]</visible>
+<animation effect="fade" start="0" end="100" time="250">VisibleChange</animation>
+<orientation>horizontal</orientation>
+<control type="button" id="29993">
+	<label>עצור</label>
+	<height>170</height>
+	<width>350</width>
+	<font>font36_title</font>
+	<align>center</align>
+	<aligny>center</aligny>
+	<textcolor>white</textcolor>
+	<focusedcolor>black</focusedcolor>
+	<texturenofocus colordiffuse="25FFFFFF" border="5">masks/menumain.png</texturenofocus>
+	<texturefocus border="5">masks/menumain.png</texturefocus>
+	<onclick>stop</onclick>
+</control>
+<control type="togglebutton" id="29994">
+	<label>לחץ להשהייה</label>
+	<altlabel>מושהה</altlabel>
+	<height>170</height>
+	<width>350</width>
+	<font>font36_title</font>
+	<align>center</align>
+	<aligny>center</aligny>
+	<texturenofocus colordiffuse="25FFFFFF" border="5">masks/menumain.png</texturenofocus>
+	<textcolor>white</textcolor>
+	<focusedcolor>black</focusedcolor>
+	<texturefocus border="5">masks/menumain.png</texturefocus>
+	<alttexturefocus border="5" colordiffuse="red">masks/menumain.png</alttexturefocus>
+	<alttexturenofocus border="5" colordiffuse="red">masks/menumain.png</alttexturenofocus>
+	<usealttexture>Player.Paused</usealttexture>
+	<include>altosplaycontrol</include>
+</control>
+<control type="button" id="29995">
+	<label>חפש כתובית</label>
+	<height>170</height>
+	<width>350</width>
+	<font>font36_title</font>
+	<align>center</align>
+	<textcolor>white</textcolor>
+	<focusedcolor>black</focusedcolor>
+	<texturenofocus colordiffuse="25FFFFFF" border="5">masks/menumain.png</texturenofocus>
+	<texturefocus border="5">masks/menumain.png</texturefocus>
+	<onclick>ActivateWindow(subtitlesearch)</onclick>
+</control>
+<control type="button" id="29997">
+	<label>החלף מקור</label>
+	<height>170</height>
+	<width>350</width>
+	<font>font36_title</font>
+	<align>center</align>
+	<textcolor>white</textcolor>
+	<focusedcolor>black</focusedcolor>
+	<texturenofocus colordiffuse="25FFFFFF" border="5">masks/menumain.png</texturenofocus>
+	<texturefocus border="5">masks/menumain.png</texturefocus>
+	<include>__ChooseSourceOsd__</include>
+</control>
+<control type="togglebutton" id="29996">
+	<label>כתובית כבוייה</label>
+	<altlabel>כתובית מופעלת</altlabel>
+	<height>170</height>
+	<width>350</width>
+	<font>font36_title</font>
+	<align>center</align>
+	<aligny>center</aligny>
+	<texturenofocus colordiffuse="25FFFFFF" border="5">masks/menumain.png</texturenofocus>
+	<textcolor>white</textcolor>
+	<focusedcolor>black</focusedcolor>
+	<texturefocus border="15">masks/menumain.png</texturefocus>
+	<alttexturefocus border="15" colordiffuse="red">masks/menumain.png</alttexturefocus>
+	<alttexturenofocus border="15" colordiffuse="red">masks/menumain.png</alttexturenofocus>
+	<usealttexture>VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</usealttexture>
+	<onclick>showsubtitles</onclick>
+	<altclick>showsubtitles</altclick>
+</control>
+</control>
+<!-- ######### -->
+
+<!-- ######### progress-->
+<include>__OsdSlider__</include>
+<!-- ######### -->
+
+<!-- ######### bottom menu-->
+<control type="fixedlist" id="202">
+<animation effect="fade" start="0" end="100" time="500" delay="500">Visible</animation>
+<animation effect="fade" start="0" end="100" time="0">Hidden</animation>
+<visible allowhiddenfocus="true">$EXP[groupcontrol1]</visible>
+<animation condition="Integer.IsEqual(Container(202).NumItems,4)" effect="slide" start="0,0" end="0,-50" time="0">Conditional</animation>
+<height>450</height>
+<width>500</width>
+<top>665</top>
+<focusposition>2</focusposition>
+<movement>2</movement>
+<orientation>vertical</orientation>
+<onright condition="Container(202).HasFocus(470)">Control.SetFocus(500323)</onright>
+<include>prettybottomenu_osd</include>
+<content>
+<include>osdprettybottomnenu</include>
+</content>
+</control>
+
+<!-- ######### info -->
+<control type="grouplist" id="2400">
+<height>295</height>
+<bottom>-195</bottom>
+<itemgap>10</itemgap>
+<left>380</left>
+<right>20</right>
+<align>center</align>
+<animation effect="fade" start="0" end="100" time="500" delay="500">Visible</animation>
+<animation effect="fade" start="0" end="100" time="0">Hidden</animation>
+<visible>$EXP[groupcontrol6]</visible>
+<!-- <animation condition="$EXP[groupcontrol6]" effect="slide" start="0,0" end="0,-220" time="250">Conditional</animation> -->
+<control type="label">
+	<height>50</height>
+	<font>font45_title</font>
+	<label>$VAR[osd_top_info_var]</label>
+</control>
+<control type="label">
+	<height>30</height>
+	<label>$VAR[__Osdprettyplayerlabel]</label>
+</control>
+<control type="label">
+	<height>35</height>
+	<label>$VAR[__Osdprettyplayerlabeltime]</label>
+</control>
+<control type="textbox">
+	<height max="145">auto</height>
+	<font>font36_title</font>
+	<label>[B]$INFO[VideoPlayer.Plot][/B]</label>
+	<pagecontrol>15000</pagecontrol>
+</control>
+</control>
+</control>
+<!-- ######### -->
+
+<control type="scrollbar" id="15000">
+	<bottom>30</bottom>
+	<right>10</right>
+	<onback>202</onback>
+	<height>260</height>
+	<width>5</width>
+	<ondown>15000</ondown>
+	<onup>15000</onup>
+	<visible>$EXP[groupcontrol1]</visible>
+	<texturesliderbackground colordiffuse="85FFFFFF">colors/white.png</texturesliderbackground>
+	<texturesliderbarfocus colordiffuse="red">colors/white.png</texturesliderbarfocus>
+	<texturesliderbar colordiffuse="white">colors/white.png</texturesliderbar>
+	<animation effect="fade" start="0" end="100" time="500" delay="500">Visible</animation>
+	<animation effect="fade" start="0" end="100" time="0">Hidden</animation>
+</control>
+
+<control type="grouplist">
+<animation effect="fade" start="0" end="100" time="500" delay="500">Visible</animation>
+<animation effect="fade" start="0" end="100" time="0">Hidden</animation>
+<orientation>horizontal</orientation>
+<visible>$EXP[groupcontrol5]</visible>
+<include>Animation_BottomSlide</include>
+<height>105</height>
+<bottom>150</bottom>
+<itemgap>-25</itemgap>
+<align>center</align>
+	<include content="_roundedFlagosd_">
+	<param name="label">$INFO[VideoPlayer.VideoResolution]</param>
+	<param name="visible">VideoPlayer.VideoResolution</param>
+	</include>
+	<include content="_roundedFlagosd_">
+	<param name="label">$INFO[VideoPlayer.VideoCodec]</param>
+	<param name="visible">VideoPlayer.VideoCodec</param>
+	</include>
+	<include content="_roundedFlagosd_">
+	<param name="label">$INFO[VideoPlayer.AudioChannels] ערוצים</param>
+	<param name="visible">VideoPlayer.AudioChannels</param>
+	</include>
+	<include content="_roundedFlagosd_">
+	<param name="labelposition">-3</param>
+	<param name="label">$VAR[_FixaudiolangugeOsd]</param>
+	<param name="visible">VideoPlayer.AudioLanguage</param>
+	<param name="icontop">52</param>
+	<param name="iconleft">32</param>
+	<param name="icon">https://www.iconsdb.com/icons/preview/white/speaker-xxl.png</param>
+	</include>
+	<include content="_roundedFlagosd_">
+	<param name="labelposition">-3</param>
+	<param name="label">$VAR[_FixsublanguageOsd]</param>
+	<param name="visible">VideoPlayer.SubtitlesLanguage</param>
+	<param name="icontop">52</param>
+	<param name="iconleft">30</param>
+	<param name="icon">$VAR[stripoutosdbuttons]/subs3.png</param>
+	</include>	
+	<include content="_roundedFlagosd_">
+	<param name="label">$INFO[VideoPlayer.AudioCodec]</param>
+	<param name="visible">VideoPlayer.AudioCodec</param>
+	</include>	
+	<include content="_roundedFlagosd_">
+	<param name="label">$INFO[Player.Process(VideoFPS)]</param>
+	<param name="visible">Player.Process(VideoFPS)</param>
+	</include>
+</control>
+
+<control type="group">
+<!-- fake button -->
+<control type="button" id="204">
+<height>1</height>
+<width>1</width>
+<onfocus>SetFocus(203)</onfocus>
+<label />
+</control>
+<control type="list" id="203">
+<height>80</height>
+<bottom>175</bottom>
+<width>420</width>
+<onback>SetFocus(201)</onback>
+<centerleft>50%</centerleft>
+<animation effect="fade" start="0" end="100" time="500" delay="500">Visible</animation>
+<animation effect="fade" start="0" end="100" time="0">Hidden</animation>
+<onback condition="String.IsEqual(Window(home).Property(lastlist),50)">201</onback>
+<visible allowhiddenfocus="true">$EXP[groupcontrol7]</visible>
+<orientation>horizontal</orientation>
+<itemlayout width="100" height="70">
+<control type="group">
+<width>80</width>
+<height>80</height>
+<control type="image">
+	<height>55</height>
+	<width>55</width>
+	<centertop>50%</centertop>
+	<centerleft>50%</centerleft>
+	<texture>$INFO[ListItem.Icon]</texture>
+</control>
+<control type="image">
+	<height>45</height>
+	<width>45</width>
+	<centertop>50%</centertop>
+	<centerleft>50%</centerleft>
+	<texture>$INFO[ListItem.Property(resizedicon)]</texture>
+</control>
+</control>
+</itemlayout>
+<focusedlayout width="100" height="50">
+<control type="group">
+<width>80</width>
+<height>80</height>
+<control type="image">
+<texture>masks/circle.png</texture>
+<animation condition="!Control.HasFocus(203)" effect="fade" start="100" end="50" time="150">Conditional</animation>
+</control>
+<control type="image">
+	<height>55</height>
+	<width>55</width>
+	<centertop>50%</centertop>
+	<centerleft>50%</centerleft>
+	<texture colordiffuse="red">$INFO[ListItem.Icon]</texture>
+</control>
+<control type="image">
+	<height>45</height>
+	<width>45</width>
+	<centertop>50%</centertop>
+	<centerleft>50%</centerleft>
+	<texture colordiffuse="red">$INFO[ListItem.Property(resizedicon)]</texture>
+</control>
+</control>
+</focusedlayout>
+<include>__osdtopmenu__</include>
+</control>
+</control>
+
+
+	<!-- ####### seek rewind-->	
+	<control type="list" id="40022">
+	<orientation>horizontal</orientation>
+	<height>165</height>
+	<bottom>225</bottom>
+	<onback>204</onback>
+	<ondown>false</ondown>
+	<onleft>false</onleft>
+	<onright>false</onright>
+	<centerleft>50%</centerleft>
+	<animation type="Visible">
+		<effect type="fade" start="0" end="100" time="250" tween="sine" easing="inout"/>
+	</animation>
+	<animation type="Hidden">
+		<effect type="fade" start="100" end="0" time="250" tween="sine" easing="inout"/>
+	</animation>
+	<visible>String.IsEqual(Container(203).ListItem.Property(id),rewind)</visible>
+	<visible>$EXP[groupcontrol8]</visible>
+	<itemlayout width="240" height="160">
+	<control type="group">
+	<width>230</width>
+	<height>160</height>
+		<control type="image">
+			<texture colordiffuse="white" border="5">masks/menumain.png</texture>
+		</control>
+		<control type="label">
+			<align>center</align>
+			<aligny>center</aligny>
+			<font>font32_title</font>
+			<label>$INFO[ListItem.Label]</label>
+			<textcolor>black</textcolor>
+		</control>
+	</control>
+	</itemlayout>
+	<focusedlayout width="240" height="160">
+	<control type="group">
+	<width>230</width>
+	<height>160</height>
+		<control type="image">
+			<texture colordiffuse="white" border="5">masks/menumain.png</texture>
+			<visible>!Control.HasFocus(40022)</visible>
+		</control>
+		<control type="image">
+			<texture colordiffuse="red" border="5">masks/menumain.png</texture>
+			<visible>Control.HasFocus(40022)</visible>
+		</control>
+		<control type="label">
+			<align>center</align>
+			<aligny>center</aligny>
+			<label>$INFO[ListItem.Label]</label>
+			<font>font32_title</font>
+			<textcolor>white</textcolor>
+			<visible>Control.HasFocus(40022)</visible>
+		</control>
+		<control type="label">
+			<align>center</align>
+			<aligny>center</aligny>
+			<label>$INFO[ListItem.Label]</label>
+			<font>font32_title</font>
+			<textcolor>black</textcolor>
+			<visible>!Control.HasFocus(40022)</visible>
+		</control>
+	</control>
+	</focusedlayout>
+	<include>seek_rewind_osd_item</include>
+	</control>
+<!-- ####### end seek rewind-->	
+
+
+
+	<!-- ####### seek rewind-->	
+	<control type="list" id="40023">
+	<orientation>horizontal</orientation>
+	<height>165</height>
+	<bottom>225</bottom>
+	<onback>204</onback>
+	<ondown>false</ondown>
+	<onleft>false</onleft>
+	<onright>false</onright>
+	<centerleft>50%</centerleft>
+	<animation type="Visible">
+		<effect type="fade" start="0" end="100" time="250" tween="sine" easing="inout"/>
+	</animation>
+	<animation type="Hidden">
+		<effect type="fade" start="100" end="0" time="250" tween="sine" easing="inout"/>
+	</animation>
+	<visible>String.IsEqual(Container(203).ListItem.Property(id),forward)</visible>
+	<visible>$EXP[groupcontrol8]</visible>
+	<itemlayout width="240" height="160">
+	<control type="group">
+	<width>230</width>
+	<height>160</height>
+		<control type="image">
+			<texture colordiffuse="white" border="5">masks/menumain.png</texture>
+		</control>
+		<control type="label">
+			<align>center</align>
+			<aligny>center</aligny>
+			<font>font32_title</font>
+			<label>$INFO[ListItem.Label]</label>
+			<textcolor>black</textcolor>
+		</control>
+	</control>
+	</itemlayout>
+	<focusedlayout width="240" height="160">
+	<control type="group">
+	<width>230</width>
+	<height>160</height>
+		<control type="image">
+			<texture colordiffuse="white" border="5">masks/menumain.png</texture>
+			<visible>!Control.HasFocus(40023)</visible>
+		</control>
+		<control type="image">
+			<texture colordiffuse="red" border="5">masks/menumain.png</texture>
+			<visible>Control.HasFocus(40023)</visible>
+		</control>
+		<control type="label">
+			<align>center</align>
+			<aligny>center</aligny>
+			<label>$INFO[ListItem.Label]</label>
+			<font>font32_title</font>
+			<textcolor>white</textcolor>
+			<visible>Control.HasFocus(40023)</visible>
+		</control>
+		<control type="label">
+			<align>center</align>
+			<aligny>center</aligny>
+			<label>$INFO[ListItem.Label]</label>
+			<font>font32_title</font>
+			<textcolor>black</textcolor>
+			<visible>!Control.HasFocus(40023)</visible>
+		</control>
+	</control>
+	</focusedlayout>
+	<include>seek_forward_osd_item</include>
+	</control>
+<!-- ####### end seek forward-->	
+
+<include>__OsdEpisodesSeasons__</include>
+
+
+<!-- check for update -->
+<control type="label">
+	<height>50</height>
+	<align>center</align>
+	<top>895</top>
+	<include>Animation_BottomSlide</include>
+	<animation effect="fade" start="0" end="100" time="500" delay="500">Visible</animation>
+	<animation effect="fade" start="0" end="100" time="0">Hidden</animation>
+	<animation condition="Container(500323).IsUpdating" effect="fade" stat="0" end="100" time="1500" pulse="true">Conditional</animation>
+	<label>טוען פרקי עונה אנא המתן...</label>
+	<visible>$EXP[groupcontrol9]</visible>
+	<font>font45_title</font>
+</control>
+<!-- check for update -->
+
+
+</include>
+
+
+</includes>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<includes>
+
+<include name="BasedResizedWidgetImage">
+<param name="resize">5</param>
+<param name="bottom">5</param>
+<definition>
+<left>$PARAM[resize]</left>
+<right>$PARAM[resize]</right>
+<top>$PARAM[resize]</top>
+<bottom>$PARAM[bottom]</bottom>
+</definition>
+</include>
+
+<include name="BasedResizedWidgetFrame">
+<control type="image">
+	<nested />
+	<texture border="16">icons/box21.png</texture>
+	<colordiffuse>FF181818</colordiffuse>
+</control>
+</include>
+
+<include name="BasedResizedWidgetFrameBox">
+<param name="boxcolordiffuse">98181818</param>
+<definition>
+<control type="image">
+	<nested />
+	<texture border="16">icons/box.png</texture>
+	<colordiffuse>$PARAM[boxcolordiffuse]</colordiffuse>
+</control>
+</definition>
+</include>
+
+<include name="BasedResizedWidgetTexture">
+<control type="image">
+<nested />
+	<texture>$PARAM[texture]</texture>
+</control>
+</include>
+	
+</includes>

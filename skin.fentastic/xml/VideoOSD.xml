@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <window>
 	<onload condition="!Player.PauseEnabled">SetFocus(603)</onload>
-	<defaultcontrol>201</defaultcontrol>
+	<defaultcontrol always="true">201</defaultcontrol>
 	<depth>DepthOSD</depth>
 	<include>OsdBackWindowInfo</include>
 	<controls>
@@ -12,9 +12,10 @@
 	<!-- </include> -->
 	
 	<control type="group">
-	<include condition="String.IsEqual(Skin.String(__chooseplayer),__advancedplayer)">videosd1</include>
-	<include condition="String.IsEqual(Skin.String(__chooseplayer),__netflixplayer)">videosd2</include>
-	<include condition="String.IsEqual(Skin.String(__chooseplayer),__simpleplayer)">videosd3</include>
+	<include condition="String.IsEqual(Skin.String(__chooseplayer),__advancedplayer)">videosd1</include> <!--נגן מתקדם -->
+	<include condition="String.IsEqual(Skin.String(__chooseplayer),__netflixplayer)">videosd2</include> <!-- נגן נטפליקס -->
+	<include condition="String.IsEqual(Skin.String(__chooseplayer),__simpleplayer)">videosd3</include> <!-- נגן פשוט -->
+	<include condition="String.IsEqual(Skin.String(__chooseplayer),__prettyplayer)">videosd4</include> <!-- נגן למבוגרים -->
 	</control>
 	
 	</controls>

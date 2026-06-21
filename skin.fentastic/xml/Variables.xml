@@ -18,6 +18,10 @@
 	<value>colors/white.png</value>
 	</variable>
 	
+	<variable name="stripoutosdbuttons">
+	<value>osd/fullscreen/buttons</value>
+	</variable>
+	
 	
 	<variable name="__NetflixCheckStatuWindowOpen_Osd__">
 	<value condition="![Window.IsActive(1126) | Window.IsActive(1127)]">הצג Flags</value>
@@ -96,6 +100,10 @@
 	<value>No Information</value>
 	</variable>
 	
+	<variable name="build_Episodes_Url_OSD">
+	<value condition="$EXP[__episode_OSD]">$VAR[PovStartPoint_OSD]build_episode_list&season=$VAR[OsdSeasonInfo]&tmdb_id=$VAR[__FixTmdbOsd__]</value>
+	</variable>
+	
 	<variable name="middlelabelInfo_Next_OSD_Var">
 	<value condition="!String.IsEmpty(VideoPlayer.offset(1).Genre)">$INFO[VideoPlayer.offset(1).Genre]</value>
 	<value condition="VideoPlayer.Content(LiveTv) + VideoPlayer.HasEpg">מתחיל [COLOR button_focus]$INFO[VideoPlayer.NextStartTime][/COLOR] מסתיים [COLOR button_focus]$INFO[VideoPlayer.NextEndTime][/COLOR]</value>
@@ -122,6 +130,18 @@
 	<variable name="PreviousTitleInfoYear_Next_OSD">
 	<value condition="!String.IsEmpty(VideoPlayer.offset(-1).Year)">$INFO[VideoPlayer.offset(-1).Year]</value>
 	<value condition="!String.IsEmpty(Player.offset(-1).Year)">$INFO[Player.offset(-1).Year]</value>
+	</variable>
+	
+	<variable name="PovStartPoint_OSD">
+	<value>plugin://plugin.video.pov/?mode=</value>
+	</variable>
+	
+	<variable name="__FixTmdbOsd__">
+	<value>$INFO[VideoPlayer.UniqueID(tmdb)]</value>
+	</variable>
+	
+	<variable name="OsdSeasonInfo">
+	<value>$INFO[VideoPlayer.Season]</value>
 	</variable>
 
 	<variable name="middlelabelInfo_Previous_OSD_Var">
@@ -153,7 +173,20 @@
 	<value condition="!String.IsEmpty(VideoPlayer.offset(-1).Cover)">$INFO[VideoPlayer.offset(-1).Cover]</value>
 	<value condition="!String.IsEmpty(VideoPlayer.offset(-1).Icon)">$INFO[VideoPlayer.offset(-1).Icon]</value>
 	<value condition="!String.IsEmpty(VideoPlayer.offset(-1).Icon)">$INFO[VideoPlayer.offset(-1).Icon]</value>
+	</variable>
 	
+	<variable name="__Osdprettyplayerlabel">
+	<value condition="$EXP[__Movies_OSD]">[B]שנה: [COLOR red]$INFO[VideoPlayer.Year][/COLOR][/B] [B]סגנון: [COLOR red]$INFO[VideoPlayer.Genre][/COLOR][/B]</value>
+	<value condition="$EXP[__episode_OSD]">[B]שנה: [COLOR red]$INFO[VideoPlayer.Year][/COLOR][/B] [B]סגנון: [COLOR red]$INFO[VideoPlayer.Genre][/COLOR][/B] [B]תאריך יציאת הפרק: [COLOR red]$INFO[VideoPlayer.Premiered][/COLOR][/B]</value>
+	<value conditon="$EXP[__livetv_OSD]">[B]מתחיל: [COLOR red]$INFO[VideoPlayer.StartTime][/COLOR][/B] [B]מסתיים: [COLOR red]$INFO[VideoPlayer.EndTime][/COLOR][/B]</value>
+	</variable>
+
+	<variable name="__Osdprettyplayerlabeltime">
+	<value condition="$EXP[__episode_OSD] | $EXP[__Movies_OSD]">[B]נשאר עד סוף הצפיה: [COLOR red]$INFO[Player.TimeRemaining][/COLOR][/B] [B]מסתיים: [COLOR red]$INFO[Player.FinishTime][/COLOR][/B] [B]:אחוזי צפיה עד כה [COLOR red]$INFO[Player.Progress]% אחוז[/COLOR][/B] $VAR[__Osdprettyplayerlabelepisode]</value>
+	</variable>	
+	
+	<variable name="__Osdprettyplayerlabelepisode">
+	<value condition="$EXP[__episode_OSD]">[B]עונה: [COLOR red]$INFO[VideoPlayer.Season,(,)][/COLOR][/B] [B]פרק: [COLOR red]$INFO[VideoPlayer.Episode,(,)][/COLOR][/B]</value>
 	</variable>
 
 	<variable name="_FixsublanguageOsd">
@@ -1355,5 +1388,6 @@
 	<value condition="String.IsEqual(Skin.String(__chooseplayer),__simpleplayer)">נגן פשוט</value>
 	<value condition="String.IsEqual(Skin.String(__chooseplayer),__advancedplayer)">נגן מתקדם</value>
 	<value condition="String.IsEqual(Skin.String(__chooseplayer),__netflixplayer)">נגן נטפליקס</value>
+	<value condition="String.IsEqual(Skin.String(__chooseplayer),__prettyplayer)">נגן למבוגרים</value>
 	</variable>
 </includes>

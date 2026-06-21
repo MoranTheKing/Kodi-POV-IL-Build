@@ -35,4 +35,14 @@
 	<expression name="__livetv_OSD">VideoPlayer.Content(LiveTv)</expression>
 	<expression name="__SubtitleCheckTrueOrFalse">VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</expression>
 	<expression name="__LiveTvTrueOrFalse">$EXP[__Movies_OSD] | $EXP[__episode_OSD]</expression>
+	<!-- osd 4 exp -->
+	<expression name="groupcontrol1">Control.HasFocus(202) | Control.HasFocus(15000) | Control.HasFocus(500323)</expression>
+	<expression name="groupcontrol2">ControlGroup(201).HasFocus() | Control.HasFocus(203) | Control.HasFocus(204) | Control.HasFocus(40022) | Control.HasFocus(40023)</expression>
+	<expression name="groupcontrol3">Control.HasFocus(204) | Control.HasFocus(203) | Control.HasFocus(40022) | Control.HasFocus(40023)</expression>
+	<expression name="groupcontrol4">String.IsEqual(Container(203).ListItem.Property(id),rewind) | String.IsEqual(Container(203).ListItem.Property(id),forward)</expression>
+	<expression name="groupcontrol5">ControlGroup(201).HasFocus(</expression>
+	<expression name="groupcontrol6">[Container(202).HasFocus(120) | Container(202).HasFocus(121) | Container(202).HasFocus(122) | Container(202).HasFocus(123)] + Control.HasFocus(202)</expression>
+	<expression name="groupcontrol7">![ControlGroup(201).HasFocus() | Control.HasFocus(202) | Control.HasFocus(15000) | Control.HasFocus(500323)]</expression>
+	<expression name="groupcontrol8">![ControlGroup(201).HasFocus() | Control.HasFocus(202) | Control.HasFocus(15000) | Control.HasFocus(500323)]</expression>
+	<expression name="groupcontrol9">Control.HasFocus(202) + Container(202).HasFocus(470) + Container(500323).IsUpdating</expression>
 </includes>

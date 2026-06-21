@@ -9,9 +9,11 @@
 	<include file="Includes_DialogSelect.xml" />
 	<include file="Includes_MusicInfo.xml" />
 	<include file="Includes_PVR.xml" />
+	<include file="Includes_Obj.xml"/>
 	<include file="Includes_VideoOsd1.xml" />
 	<include file="Includes_VideoOsd2.xml"/>
 	<include file="Includes_VideoOsd3.xml"/>
+	<include file="Includes_VideoOsd4.xml"/>
 	<include file="Includes_NetflixPlayer.xml"/>
 	<include file="script-fentastic-main_menu_movies.xml" />
 	<include file="script-fentastic-main_menu_tvshows.xml" />
@@ -2428,6 +2430,7 @@
 	<include name="PauseTendViewType">
 	<control type="group">
 		<visible>Player.Paused + $EXP[PauseTendOsd]</visible>
+		<visible>!Container(201).HasFocus(107)</visible>
 		<control type="image" id="1">
 			<animation type="Visible">
 			<effect type="slide" start="-150" end="0" time="250" tween="sine" easing="inout"/>
@@ -2923,6 +2926,116 @@
 </definition>
 </include>
 
-	
+<include name="_roundedFlagosd_">
+<param name="groupwidth">220</param>
+<param name="groupwidth">130</param>
+<param name="labelposition">2</param>
+<definition>
+<control type="group">
+<width>220</width>
+<height>130</height>
+<visible>!String.IsEmpty($PARAM[visible])</visible>
+	<control type="image">
+		<texture colordiffuse="red" border="5">masks/menumain.png</texture>
+		<bordertexture colordiffuse="black" border="5">masks/menumain.png</bordertexture>
+		<bordersize>5</bordersize>
+	</control>
+	<control type="label">
+		<top>$PARAM[labelposition]</top>
+		<align>center</align>
+		<aligny>center</aligny>
+		<font>font32_title</font>
+		<textcolor>white</textcolor>
+		<shadowcolor>black</shadowcolor>
+		<label>$PARAM[label]</label>
+	</control>
+	<control type="image">
+		<top>$PARAM[icontop]</top>
+		<left>$PARAM[iconleft]</left>
+		<height>25</height>
+		<width>25</width>
+		<texture>$PARAM[icon]</texture>
+	</control>
+</control>
+</definition>
+</include>
+
+<include name="__OsdSlider__">
+<param name="height">15</param>
+<param name="width">fullwidth</param>
+<param name="progresschacheheight">15</param>
+<param name="bottom">150</param>
+<param name="texture">kodirdil/overlays/progress-mid.png</param>
+<param name="progresscachebg">gray</param>
+<param name="progresscachemidcolor">white</param>
+<param name="progressmidcolor">red</param>
+<param name="progresstop">-9</param>
+<param name="rangestop">6</param>
+<definition>
+<control type="group">
+<height>$PARAM[height]</height>
+<width>$PARAM[width]</width>
+<bottom>$PARAM[bottom]</bottom>
+	<control type="progress">
+		<height>$PARAM[progresschacheheight]</height>
+		<texturebg colordiffuse="$PARAM[progresscachebg]" border="10.8">$PARAM[texture]</texturebg>
+		<midtexture colordiffuse="$PARAM[progresscachemidcolor]" border="10.8">$PARAM[texture]</midtexture>
+		<info>Player.ProgressCache</info>
+	</control>
+	<control type="progress">
+		<top>$PARAM[progresstop]</top>
+		<texturebg />
+		<midtexture colordiffuse="$PARAM[progressmidcolor]" border="10.8">$PARAM[texture]</midtexture>
+		<info>Player.Progress</info>
+	</control>
+	<control type="ranges">
+		<top>$PARAM[rangestop]</top>
+		<texturebg border="3" colordiffuse="00FFFFFF">colors/white50.png</texturebg>
+		<lefttexture>colors/white.png</lefttexture>
+		<midtexture colordiffuse="FFFF0000">colors/white.png</midtexture>
+		<righttexture>colors/white.png</righttexture>
+		<info>Player.Editlist</info>
+	</control>
+	<control type="ranges">
+		<top>$PARAM[rangestop]</top>
+		<texturebg border="3" colordiffuse="00FFFFFF">colors/red50.png</texturebg>
+		<righttexture>colors/red.png</righttexture>
+		<info>Player.Cuts</info>
+	</control>
+	<control type="ranges">
+		<top>$PARAM[rangestop]</top>
+		<texturebg border="3" colordiffuse="00FFFFFF">colors/white50.png</texturebg>
+		<righttexture>colors/white.png</righttexture>
+		<info>Player.SceneMarkers</info>
+	</control>
+	<control type="ranges">
+		<top>$PARAM[rangestop]</top>
+		<texturebg border="3" colordiffuse="00FFFFFF">colors/white50.png</texturebg>
+		<righttexture>colors/white.png</righttexture>
+		<info>Player.Chapters</info>
+	</control>
+</control>
+</definition>
+</include>
+
+<include name="__OsdEpisodesSeasons__">
+<control type="list" id="500323">
+<height>500</height>
+<width>80%</width>
+<top>770</top>
+<left>400</left>
+<onback>202</onback>
+<onleft>false</onleft>
+<onright>false</onright>
+<orientation>horizontal</orientation>
+<include>Animation_BottomSlide</include>
+<scrolltime tween="cubic">550</scrolltime>
+<visible>Container(202).HasFocus(470) + Control.HasFocus(202) | [Control.HasFocus(500323)]</visible>
+<animation effect="fade" start="0" end="100" time="500" delay="500">Visible</animation>
+<animation effect="fade" start="0" end="100" time="0">Hidden</animation>
+<include>__OsdEpisodeslayout</include>
+<content target="videos">$VAR[build_Episodes_Url_OSD]</content>
+</control>
+</include>
 
 </includes>
