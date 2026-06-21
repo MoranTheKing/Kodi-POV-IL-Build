@@ -43,7 +43,7 @@
 	<focusedcolor>black</focusedcolor>
 	<texturenofocus colordiffuse="25FFFFFF" border="5">masks/menumain.png</texturenofocus>
 	<texturefocus border="5">masks/menumain.png</texturefocus>
-	<onclick>stop</onclick>
+	<onclick>PlayerControl(stop)</onclick>
 </control>
 <control type="togglebutton" id="29994">
 	<label>לחץ להשהייה</label>
@@ -122,6 +122,7 @@
 <top>665</top>
 <focusposition>2</focusposition>
 <movement>2</movement>
+<onback>201</onback>
 <orientation>vertical</orientation>
 <onright condition="Container(202).HasFocus(470)">Control.SetFocus(500323)</onright>
 <include>prettybottomenu_osd</include>
@@ -243,6 +244,8 @@
 <width>420</width>
 <onback>SetFocus(201)</onback>
 <centerleft>50%</centerleft>
+<ondown>201</ondown>
+<onup>SetFocus($INFO[Container(203).ListItem.Property(onup)])</onup>
 <animation effect="fade" start="0" end="100" time="500" delay="500">Visible</animation>
 <animation effect="fade" start="0" end="100" time="0">Hidden</animation>
 <onback condition="String.IsEqual(Window(home).Property(lastlist),50)">201</onback>
@@ -435,7 +438,7 @@
 	</control>
 <!-- ####### end seek forward-->	
 
-<include>__OsdEpisodesSeasons__</include>
+<include condition="$EXP[__episode_OSD]">__OsdEpisodesSeasons__</include>
 
 
 <!-- check for update -->

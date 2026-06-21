@@ -266,6 +266,17 @@
 		<texture>$INFO[ListItem.Icon]</texture>
 	</control>
 	<control type="image">
+		<top>15</top>
+		<left>16</left>
+		<right>15</right>
+		<bottom>15</bottom>
+		<width>22</width>
+		<height>22</height>
+		<centerleft>50%</centerleft>
+		<centertop>50%</centertop>
+		<texture>$INFO[ListItem.Property(episoderesize)]</texture>
+	</control>
+	<control type="image">
 		<top>12</top>
 		<left>12</left>
 		<right>12</right>
@@ -313,6 +324,17 @@
 		<centerleft>50%</centerleft>
 		<centertop>50%</centertop>
 		<texture>$INFO[ListItem.Icon]</texture>
+	</control>	
+	<control type="image">
+		<top>15</top>
+		<left>16</left>
+		<right>15</right>
+		<bottom>15</bottom>
+		<width>22</width>
+		<height>22</height>
+		<centerleft>50%</centerleft>
+		<centertop>50%</centertop>
+		<texture colordiffuse="98000000">$INFO[ListItem.Property(episoderesize)]</texture>
 	</control>
 	<control type="image">
 		<top>12</top>
@@ -433,11 +455,18 @@
 		<visible>VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</visible>
 	</item>
 	<item>
+		<label>פרקי עונה $INFO[VideoPlayer.Season,(,)] לסדרה $INFO[VideoPlayer.TvShowTitle]</label>
+		<property name="episoderesize">https://www.iconsdb.com/icons/preview/white/tv-3-xxl.png</property>
+		<property name="visiblepisodes">true</property>
+		<onclick>Control.SetFocus(200323,0,absolute)</onclick>
+		<visible>$EXP[__episode_OSD]</visible>
+	</item>	
+	<item>
 		<label>סנכרן כתוביות</label>
 		<icon>masks/arrowup.png</icon>
 		<onclick>SubtitleDelayPlus</onclick>
 		<visible>VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</visible>
-	</item>	
+	</item>
 	<item>
 		<label>סנכרן כתוביות</label>
 		<icon>masks/arrowdown.png</icon>
@@ -697,5 +726,42 @@
 	</control>
 <!-- ####### end seek rewind-->		
 </control>
+
+<control type="fixedlist" id="200323">
+	<height>500</height>
+	<left>10</left>
+	<right>10</right>
+	<onleft>false</onleft>
+	<onright>false</onright>
+	<bottom>60</bottom>
+	<onback>201</onback>
+	<ondown>201</ondown>
+	<movement>4</movement>
+	<pagecontrol>50092</pagecontrol>
+	<visible allowhiddenfocus="true">Control.HasFocus(200323)</visible>
+	<orientation>horizontal</orientation>
+	<scrolltime tween="cubic">550</scrolltime>
+	<!-- <include>bottom2topslideanimation</include> -->
+	<animation effect="fade" start="0" end="100" time="500" delay="500">Visible</animation>
+	<animation effect="fade" start="100" end="0" time="500">Hidden</animation>
+	<include>OsdNetflixEpisodesInSeasonsLayout</include>
+	<content target="videos">$VAR[build_Episodes_Url_OSD]</content>
+</control>
+
+<control type="scrollbar" id="50092">
+	<bottom>192</bottom>
+	<onback>201</onback>
+	<height>8</height>
+	<width>1870</width>
+	<left>15</left>
+	<orientation>horizontal</orientation>
+	<visible>Control.HasFocus(200323)</visible>
+	<texturesliderbackground colordiffuse="85FFFFFF">colors/white.png</texturesliderbackground>
+	<texturesliderbarfocus colordiffuse="red">colors/white.png</texturesliderbarfocus>
+	<texturesliderbar colordiffuse="white">colors/white.png</texturesliderbar>
+	<animation effect="fade" start="0" end="100" time="500" delay="500">Visible</animation>
+	<animation effect="fade" start="0" end="100" time="0">Hidden</animation>
+</control>
+
 </include>
 </includes>
