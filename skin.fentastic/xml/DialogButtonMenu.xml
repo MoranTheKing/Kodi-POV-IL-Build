@@ -111,7 +111,7 @@
 					<item>
 						<!-- Clear POV Cache  -->
 						<label>[B][COLOR blue]$LOCALIZE[700052][/COLOR][/B]</label>
-						<onclick>RunPlugin(&quot;plugin://plugin.video.pov/?mode=clear_all_cache&amp;isFolder=false&quot;)</onclick>
+						<onclick>PlayMedia(&quot;plugin://plugin.video.pov/?mode=clear_all_cache&amp;isFolder=false&amp;iconImage=https%3A%2F%2Fi.imgur.com%2FRDNxy36.png&quot;)</onclick>
 					</item>
 					<item>
 						<!-- Clear DarkSubs Cache  -->

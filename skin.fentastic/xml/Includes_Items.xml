@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <includes>
 
-
 <include name="BasedMenuOsdItems">
 	<content>
 	<item>
@@ -117,32 +116,48 @@
 <include name="seek_forward_osd_item">
 <content>
 <item>
+	<label>הרצה</label>
+	<onclick>PlayerControl(forward)</onclick>
+</item>
+<item>
+	<label>עצור הרצה</label>
+	<onclick>PlayerControl(play)</onclick>
+	<visible>Player.Forwarding</visible>
+</item>
+<item>
 	<label>1 דקה</label>
 	<onclick>seek(120)</onclick>
+	<visible>!Player.Forwarding</visible>
 </item>
 <item>
 	<label>5 דקות</label>
 	<onclick>seek(300)</onclick>
+	<visible>!Player.Forwarding</visible>
 </item>
 <item>
 	<label>10 דקות</label>
 	<onclick>seek(600)</onclick>
+	<visible>!Player.Forwarding</visible>
 </item>
 <item>
 	<label>20 דקות</label>
 	<onclick>seek(1200)</onclick>
+	<visible>!Player.Forwarding</visible>
 </item>
 <item>
 	<label>40 דקות</label>
 	<onclick>seek(2400)</onclick>
+	<visible>!Player.Forwarding</visible>
 </item>
 <item>
 	<label>60 דקות</label>
 	<onclick>seek(4800)</onclick>
+	<visible>!Player.Forwarding</visible>
 </item>
-	<item>
+<item>
 	<label>80 דקות</label>
 	<onclick>sseek(6000)</onclick>
+	<visible>!Player.Forwarding</visible>
 </item>
 </content>
 </include>
@@ -151,33 +166,51 @@
 <include name="seek_rewind_osd_item">
 <content>
 <item>
+	<label>הרצה</label>
+	<onclick>PlayerControl(rewind)</onclick>
+</item>
+<item>
+	<label>עצור הרצה</label>
+	<onclick>PlayerControl(play)</onclick>
+	<visible>Player.Rewinding</visible>
+</item>
+<item>
 	<label>1 דקה</label>
 	<onclick>seek(-120)</onclick>
+	<visible>!Player.Rewinding</visible>
 </item>
 <item>
 	<label>5 דקות</label>
 	<onclick>seek(-300)</onclick>
+	<visible>!Player.Rewinding</visible>
 </item>
 <item>
 	<label>10 דקות</label>
 	<onclick>seek(-600)</onclick>
+	<visible>!Player.Rewinding</visible>
 </item>
 <item>
 	<label>20 דקות</label>
 	<onclick>seek(-1200)</onclick>
+	<visible>!Player.Rewinding</visible>
 </item>
 	<item>
 	<label>40 דקות</label>
 	<onclick>seek(-2400)</onclick>
+	<visible>!Player.Rewinding</visible>
 </item>
 <item>
 	<label>60 דקות</label>
 	<onclick>seek(-4800)</onclick>
+	<visible>!Player.Rewinding</visible>
 </item>
 <item>
 	<label>80 דקות</label>
 	<onclick>sseek(-6000)</onclick>
+	<visible>!Player.Rewinding</visible>
 </item>
 </content>
 </include>
+
+
 </includes>
