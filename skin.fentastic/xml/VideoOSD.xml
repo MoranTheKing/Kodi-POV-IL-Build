@@ -7,7 +7,8 @@
 	<controls>
 	
 	<include condition="Skin.HasSetting(chooseosdplayer)">videosd1</include>
-<include condition="!Skin.HasSetting(chooseosdplayer)">videosd2</include>
+	<include condition="!Skin.HasSetting(chooseosdplayer)">videosd1</include>
+	<!-- fallback marker: videosd2 disabled -->
 		
 	</controls>
 </window>

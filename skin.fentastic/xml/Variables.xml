@@ -1183,7 +1183,6 @@
 	
 
     <variable name="OSDPlayerModeVar">
-        <value condition="Skin.HasSetting(chooseosdplayer)">נגן מתקדם</value>
-        <value>נגן קלאסי</value>
+        <value>נגן רגיל</value>
     </variable>
 </includes>
