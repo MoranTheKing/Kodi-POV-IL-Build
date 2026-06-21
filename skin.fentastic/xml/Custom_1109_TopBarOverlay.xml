@@ -15,7 +15,7 @@
 				<left>0</left>
 				<top>0</top>
 				<width>100%</width>
-				<height>55</height>
+				<height>155</height>
 				<texture colordiffuse="D0FFFFFF" border="0,55,0,0">frame/osdfade.png</texture>
 			</control>
 			<control type="label">

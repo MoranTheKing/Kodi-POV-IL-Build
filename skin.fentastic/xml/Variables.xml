@@ -515,6 +515,41 @@
 		<value condition="ListItem.HasReminder">icons/pvr/timers/bell.png</value>
 		<value>icons/pvr/timers/recording.png</value>
   </variable>
+  
+	<variable name="SeekRewindForwardTime">
+		<value condition="Player.Forwarding2x | Player.Rewinding2x">x2</value>
+		<value condition="Player.Forwarding4x | Player.Rewinding4x">x4</value>
+		<value condition="Player.Forwarding8x | Player.Rewinding8x">x8</value>
+		<value condition="Player.Forwarding16x | Player.Rewinding16x">x16</value>
+		<value condition="Player.Forwarding32x | Player.Rewinding32x">x32</value>
+	</variable>
+
+	<variable name="OsdTitleLabelVar">
+		<value condition="VideoPlayer.Content(movies) | VideoPlayer.Content(LiveTv)">$INFO[VideoPlayer.Title]</value>
+		<value condition="VideoPlayer.Content(episodes)">$INFO[VideoPlayer.TvShowTitle] $INFO[VideoPlayer.Year,(,)]</value>
+		<value>No Information</value>
+	</variable>
+	
+	<variable name="PlayerTitleDBTYPE">
+		<value condition="VideoPlayer.Content(movies)">[COLOR button_focus]שם הסרט:[/COLOR]</value>
+		<value condition="VideoPlayer.Content(episodes)">[COLOR button_focus]שם הפרק:[/COLOR]</value>
+		<value condition="VideoPlayer.Content(LiveTv)">[COLOR button_focus]שם התוכנית:[/COLOR]</value>
+	</variable>
+
+	<variable name="OsdInfoLabelVar">
+		<value condition="Player.Chapter + player.chaptercount">פרק[COLOR button_focus] $INFO[Player.Chapter,(,)][/COLOR] / כמות[COLOR button_focus] $INFO[Player.ChapterCount,(,)][/COLOR]</value>
+		<value condition="![Player.Chapter + player.chaptercount)] + VideoPlayer.Content(episodes)">עונה $INFO[VideoPlayer.Season,[COLOR button_focus](,)[/COLOR]] / פרק $INFO[VideoPlayer.Episode,[COLOR button_focus](,)[/COLOR]]</value>
+		<value condition="![Player.Chapter + player.chaptercount)] + VideoPlayer.Content(movies) + !String.IsEmpty(VideoPlayer.TagLine)">$INFO[VideoPlayer.TagLine]</value>
+		<value condition="![Player.Chapter + player.chaptercount)] + VideoPlayer.Content(LiveTv)">מתחיל $INFO[VideoPlayer.StartTime,[COLOR button_focus](,)[/COLOR]] / מסתיים $INFO[VideoPlayer.EndTime,[COLOR button_focus](,)[/COLOR]]</value>
+		<value>No Information</value>
+	</variable>
+
+	<variable name="_FixOsdIcon">
+	<value condition="VideoPlayer.Content(movies) | VideoPlayer.Content(episodes) + !String.IsEmpty(VideoPlayer.Art(poster)">$INFO[VideoPlayer.Art(poster)]</value>
+	<value condition="VideoPlayer.Content(movies) | VideoPlayer.Content(episodes) + !String.IsEmpty(VideoPlayer.Cover)">$INFO[VideoPlayer.Cover]</value>
+	<value condition="VideoPlayer.Content(movies) | VideoPlayer.Content(episodes) + !String.IsEmpty(Player.Icon)">$INFO[Player.Icon]</value>
+	<value>$INFO[Player.Icon]</value>
+	</variable>
 	<!-- Breadcrumbs -->
 	<variable name="BreadcrumbsVideoVar">
 		<value condition="Container.Content(movies) | String.StartsWith(container.folderpath,library://video/movies/) | String.StartsWith(container.folderpath,videodb://movies)">$LOCALIZE[20342]</value>
@@ -1021,9 +1056,22 @@
 		<value condition="!ListItem.IsCollection + String.IsEqual(ListItem.DBtype,season)">$VAR[_Mpaa_Season]$VAR[_Network]$VAR[_Genre]$VAR[_RuntimeEpisodes]$VAR[_Endsat][CR]$VAR[_Plot][CR]</value>
 	</variable>
 
+	<variable name="_Fix_TMDB_ID">
+		<value condition="!String.IsEmpty(VideoPlayer.UniqueID(tmdb)">$INFO[VideoPlayer.UniqueID(tmdb)]</value>
+		<value condition="!String.IsEmpty(VideoPlayer.IMDBNumber)">$INFO[VideoPlayer.IMDBNumber]</value>
+	</variable>
+
 	<!-- EPISODES -->
 	<variable name="InfoPanelEpisode">
 		<value condition="!ListItem.IsCollection + String.IsEqual(ListItem.DBtype,episode)">$VAR[_Aired]$VAR[_Mpaa]$VAR[_Network]$VAR[_RuntimeEpisodes]$VAR[_Endsat][CR]$VAR[_Plot][CR]</value>
+	</variable>
+	
+	<variable name="OsdReplaceSourceStartPoint">
+		<value>plugin://plugin.video.pov/?mode=play_media</value>
+	</variable>
+	
+	<variable name="AutoPlaySetToTrue">
+		<value>&autoplay=true</value>
 	</variable>
 	
 	<!-- KODI-RD-IL ADDITION -->
@@ -1064,6 +1112,11 @@
 		<value condition="!String.IsEmpty(ListItem.Art(clearlogo)">$INFO[ListItem.Art(clearlogo)]</value>
 		<value condition="String.IsEmpty(ListItem.Art(clearlogo)">$INFO[ListItem.Art(clearart)]</value>
 	</variable>
+
+		
+	<variable name="AutoPlaySetToFalse">
+		<value>&autoplay=false</value>
+	</variable>
 	
 	<!-- Seasons Label -->	
 	<variable name="SeasonCorrectLabel">
@@ -1085,5 +1138,7 @@
 		<value condition="VideoPlayer.Content(episodes)">[B][COLOR white]$LOCALIZE[700015][/COLOR] [COLOR button_focus]$INFO[VideoPlayer.Season][/COLOR][/B] / [B][COLOR white]$LOCALIZE[700016][/COLOR] [COLOR button_focus]$INFO[VideoPlayer.Episode][/COLOR][/B]</value>
 	</variable>
 	<!-- ##################### -->
+	
+
 	
 </includes>
