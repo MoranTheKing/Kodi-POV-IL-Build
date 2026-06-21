@@ -219,6 +219,22 @@
 
 						<onclick condition="VideoPlayer.Content(episodes)">RunPlugin(plugin://plugin.video.pov/?mode=playback.media&media_type=episode&tmdb_id=$INFO[VideoPlayer.UniqueID(tmdb)]&season=$INFO[VideoPlayer.Season]&episode=$INFO[VideoPlayer.Episode]&autoplay=false)</onclick>
 					</control> -->
+					<!-- AI_SUBS_NOX_CHANGE_SOURCE_v1 -->
+					<control type="button" id="39517">
+						<description>POV IL change source</description>
+						<visible>VideoPlayer.Content(movies) | VideoPlayer.Content(episodes)</visible>
+						<visible>!VideoPlayer.Content(LiveTV)</visible>
+						<visible>!String.Contains(Player.Folderpath, plugin.video.idanplus)</visible>
+						<visible>!String.Contains(Player.Folderpath, plugin.video.supertv)</visible>
+						<visible>!String.Contains(Player.Folderpath, plugin.video.flashstream)</visible>
+						<height>80</height>
+						<width>220</width>
+						<include>SettingsItemCommonOSD</include>
+						<font>font25_title</font>
+						<label>החלף מקור</label>
+						<onclick condition="VideoPlayer.Content(movies)">RunPlugin(plugin://plugin.video.pov/?mode=play_media&amp;mediatype=movie&amp;tmdb_id=$INFO[VideoPlayer.UniqueID(tmdb)]&amp;autoplay=false)</onclick>
+						<onclick condition="VideoPlayer.Content(episodes)">RunPlugin(plugin://plugin.video.pov/?mode=play_media&amp;mediatype=episode&amp;tmdb_id=$INFO[VideoPlayer.UniqueID(tmdb)]&amp;season=$INFO[VideoPlayer.Season]&amp;episode=$INFO[VideoPlayer.Episode]&amp;autoplay=false)</onclick>
+					</control>
 					<control type="button" id="70038">
 						<height>80</height>
 						<width>150</width>
