@@ -762,7 +762,7 @@
 					<item>
 						<label>חיפוש</label>
 						<icon>special://skin/extras/icons/search2.png</icon>
-						<onclick>ActivateWindow(Videos,"plugin://plugin.video.pov/?mode=history.search&amp;action=tvshow&amp;iconImage=https%3A%2F%2Fi.imgur.com%2FxYTdX3O.png",return)</onclick>
+						<onclick>ActivateWindow(Videos,"plugin://plugin.video.pov/?mode=search_history&amp;action=tvshow&amp;iconImage=https%3A%2F%2Fi.imgur.com%2FxYTdX3O.png",return)</onclick>
 						<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom3)</visible>
 					</item>
 					
