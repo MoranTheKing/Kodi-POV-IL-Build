@@ -11,11 +11,14 @@
 </include>
 
 <include name="NetFlix_Based_Image">
+	<param name="flipy">false</param>
+	<definition>
 	<control type="image">
 		<nested />
-		<texture colordiffuse="$PARAM[colordiffuse]">$PARAM[texture]</texture>
+		<texture flipy="$PARAM[flipy]" colordiffuse="$PARAM[colordiffuse]">$PARAM[texture]</texture>
 		<visible>$PARAM[visible]</visible>
 	</control>
+	</definition>
 </include>
 
 <include name="Netflix_BorderBased_Image">

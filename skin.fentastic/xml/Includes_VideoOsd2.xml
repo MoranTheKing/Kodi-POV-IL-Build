@@ -23,9 +23,10 @@
 	<control type="image">
 		<left>-40</left>
 		<width>120%</width>
-		<height>600</height>
-		<bottom>-300</bottom>
+		<height>400</height>
+		<bottom>-115</bottom>
 		<texture flipy="true">frame/osdfade.png</texture>
+		<animation condition="[Window.IsActive(1126) | Window.IsActive(1127)]" effect="zoom" start="100,100" end="100,200" time="0">Conditional</animation>
 	</control>
 	<!-- <control type="image"> -->
 		<!-- <left>-40</left> -->
@@ -105,25 +106,37 @@
 		<!-- ####### -->
 	<include content="NetFlix_Based_Label">
 		<include content="NetFlix_ReSize">
-			<param name="width">Pad400</param>
+			<param name="width">fullwidth</param>
 			<param name="height">Pad25</param>
 			<param name="bottom">Pad41</param>
-			<param name="centerleft">89%</param>
+			<param name="centerleft">49%</param>
 		</include>
-		<param name="label">$INFO[Control.GetLabel(201)]</param>
+		<param name="label">[B]$INFO[Control.GetLabel(201)][/B]</param>
 		<param name="font">font12</param>
 		<param name="align">right</param>
 		<param name="visible">Control.HasFocus(201)</param>
+	</include>
+	<include content="NetFlix_Based_Label">
+		<include content="NetFlix_ReSize">
+			<param name="width">fullwidth</param>
+			<param name="height">Pad25</param>
+			<param name="bottom">Pad41</param>
+			<param name="centerleft">49%</param>
+		</include>
+		<param name="label">[B]$INFO[Control.GetLabel(202)][/B]</param>
+		<param name="font">font12</param>
+		<param name="align">right</param>
+		<param name="visible">Control.HasFocus(202)</param>
 	</include>
 	<!-- ####### -->
 	
 	<!-- ####### -->
 	<include content="NetFlix_Based_Label">
 		<include content="NetFlix_ReSize">
-			<param name="width">Pad400</param>
+			<param name="width">fullwidth</param>
 			<param name="height">Pad25</param>
 			<param name="bottom">Pad41</param>
-			<param name="centerleft">89%</param>
+			<param name="centerleft">49%</param>
 		</include>
 		<param name="label">$VAR[NetFlixMenuRightLabel]</param>
 		<param name="font">font12</param>
@@ -135,86 +148,59 @@
 	<!-- ####### -->
 	<include content="NetFlix_Based_Image">
 		<include content="NetFlix_ReSize">
-			<param name="width">Pad10</param>
+			<param name="width">25</param>
 			<param name="height">25</param>
-			<param name="bottom">-80</param>
-			<param name="centerleft">99%</param>
+			<param name="bottom">-88</param>
+			<param name="centerleft">50%</param>
 		</include>
 			<param name="texture">https://www.iconsdb.com/icons/preview/white/arrow-189-xxl.png</param>
 			<param name="colordiffuse">95FFFFFF</param>
-			<param name="visible">!Window.IsActive(1126)</param>
+			<param name="visible">![Window.IsActive(1126) | Window.IsActive(1127)]</param>
 	</include>
 	<include content="NetFlix_Based_Label">
 		<include content="NetFlix_ReSize">
 			<param name="width">Pad215</param>
 			<param name="height">Pad35</param>
-			<param name="bottom">-85</param>
-			<param name="centerleft">92.8%</param>
+			<param name="bottom">-91</param>
+			<param name="centerleft">50.5%</param>
 		</include>
 			<param name="align">right</param>
 			<param name="font">font10</param>
-			<param name="visible">!Window.IsActive(1126)</param>
-			<param name="textcolor">95FFFFFF</param>
-			<param name="label">$VAR[__NetflixCheckStatuNoWindowOpen_Osd__]</param>
-	</include>
-	<!-- ####### -->
-	
-	
-		<!-- ####### -->
-	<include content="NetFlix_Based_Image">
-		<include content="NetFlix_ReSize">
-			<param name="width">Pad10</param>
-			<param name="height">25</param>
-			<param name="bottom">-80</param>
-			<param name="centerleft">99%</param>
-		</include>
-			<param name="texture">https://www.iconsdb.com/icons/preview/white/arrow-189-xxl.png</param>
-			<param name="colordiffuse">95FFFFFF</param>
-			<param name="visible">Window.IsActive(1126)</param>
-	</include>
-	<include content="NetFlix_Based_Label">
-		<include content="NetFlix_ReSize">
-			<param name="width">Pad215</param>
-			<param name="height">Pad35</param>
-			<param name="bottom">-85</param>
-			<param name="centerleft">92.8%</param>
-		</include>
-			<param name="align">right</param>
-			<param name="font">font10</param>
-			<param name="visible">Window.IsActive(1126)</param>
+			<param name="visible">true</param>
 			<param name="textcolor">95FFFFFF</param>
 			<param name="label">$VAR[__NetflixCheckStatuWindowOpen_Osd__]</param>
 	</include>
 	<!-- ####### -->
-
-
-		<!-- ####### -->
+	
+	
+	<!-- ####### -->
 	<include content="NetFlix_Based_Image">
 		<include content="NetFlix_ReSize">
-			<param name="width">Pad10</param>
+			<param name="width">25</param>
 			<param name="height">25</param>
-			<param name="bottom">-80</param>
-			<param name="centerleft">99%</param>
+			<param name="bottom">-88</param>
+			<param name="centerleft">50%</param>
 		</include>
-			<param name="texture">https://www.iconsdb.com/icons/preview/white/arrow-127-xxl.png</param>
+			<param name="texture">https://www.iconsdb.com/icons/preview/white/arrow-189-xxl.png</param>
+			<param name="flipy">true</param>
 			<param name="colordiffuse">95FFFFFF</param>
-			<param name="visible">Window.IsActive(1127)</param>
+			<param name="visible">Window.IsActive(1126)</param>
 	</include>
 	<include content="NetFlix_Based_Label">
 		<include content="NetFlix_ReSize">
 			<param name="width">Pad215</param>
 			<param name="height">Pad35</param>
-			<param name="bottom">-85</param>
-			<param name="centerleft">92.8%</param>
+			<param name="bottom">-91</param>
+			<param name="centerleft">52%</param>
 		</include>
 			<param name="align">right</param>
 			<param name="font">font10</param>
-			<param name="visible">Window.IsActive(1127)</param>
+			<param name="visible">Window.IsActive(1126)</param>
 			<param name="textcolor">95FFFFFF</param>
-			<param name="label">$VAR[__NetflixCheckStatuWindowOpenIdan_Osd__]</param>
+			<param name="label">חזרה לתפריט</param>
 	</include>
 	<!-- ####### -->
-
+	
 	<!-- ####### -->
 	<include content="NetFlix_Base_Info">
 		<param name="orientation">vertical</param>
@@ -260,158 +246,136 @@
 	<onup>false</onup>
 	<ondown>ActivateWindow(1126)</ondown>
 	<onright>202</onright>
-	<itemlayout width="55" height="55">
+	<itemlayout width="65" height="55">
 	<control type="group">
 	<width>55</width>
 	<height>55</height>
 	<control type="image">
-		<top>10</top>
-		<left>10</left>
-		<width>35</width>
-		<height>35</height>
+		<texture colordiffuse="25FFFFFF">masks/circle.png</texture>
+		<visible>!Skin.HasSetting(removenetflixbuttonsbg)</visible>
+	</control>
+	<control type="image">
+		<top>12</top>
+		<left>12</left>
+		<right>12</right>
+		<bottom>12</bottom>
+		<width>30</width>
+		<height>30</height>
+		<centerleft>50%</centerleft>
+		<centertop>50%</centertop>
 		<texture>$INFO[ListItem.Icon]</texture>
 	</control>
 	<control type="image">
 		<top>12</top>
-		<left>15</left>
-		<width>25</width>
-		<height>32</height>
-		<texture>$INFO[ListItem.Property(resizedicon)]</texture>
-	</control>
-	<control type="image">
-		<top>12</top>
-		<left>15</left>
-		<width>25</width>
-		<height>32</height>
+		<left>12</left>
+		<right>12</right>
+		<bottom>12</bottom>
+		<width>30</width>
+		<height>30</height>
+		<centerleft>50%</centerleft>
+		<centertop>50%</centertop>
 		<texture colordiffuse="orange">$INFO[ListItem.Property(subson)]</texture>
 		<visible>VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</visible>
 	</control>
 	<control type="image">
 		<top>12</top>
-		<left>15</left>
-		<width>25</width>
-		<height>32</height>
+		<left>12</left>
+		<right>12</right>
+		<bottom>12</bottom>
+		<width>30</width>
+		<height>30</height>
+		<centerleft>50%</centerleft>
+		<centertop>50%</centertop>
 		<texture>$INFO[ListItem.Property(subsoff)]</texture>
 		<visible>VideoPlayer.HasSubtitles + !VideoPlayer.SubtitlesEnabled</visible>
-	</control>
-	<control type="image">
-		<top>8</top>
-		<left>8</left>
-		<width>40</width>
-		<height>35</height>
-		<texture>$INFO[ListItem.Property(arrowup)]</texture>
 	</control>	
-	<control type="image">
-		<top>10</top>
-		<left>8</left>
-		<width>40</width>
-		<height>35</height>
-		<texture>$INFO[ListItem.Property(arrowdown)]</texture>
-	</control>		
 	</control>
 	</itemlayout>
-	<focusedlayout width="55" height="55">
+	<focusedlayout width="65" height="55">
 	<control type="group">
 	<width>55</width>
 	<height>55</height>
 	<control type="image">
-	<texture>masks/circle.png</texture>
-	<visible>control.hasfocus(201)</visible>
+		<texture colordiffuse="25FFFFFF">masks/circle.png</texture>
+		<visible>!Skin.HasSetting(removenetflixbuttonsbg)</visible>
 	</control>
 	<control type="image">
-		<top>10</top>
-		<left>10</left>
-		<width>35</width>
-		<height>35</height>
+		<texture>masks/circle.png</texture>
+		<visible>Control.HasFocus(201)</visible>
+	</control>
+	<control type="image">
+		<top>12</top>
+		<left>12</left>
+		<right>12</right>
+		<bottom>12</bottom>
+		<width>30</width>
+		<height>30</height>
+		<centerleft>50%</centerleft>
+		<centertop>50%</centertop>
 		<texture>$INFO[ListItem.Icon]</texture>
 	</control>
 	<control type="image">
-		<top>10</top>
-		<left>10</left>
-		<width>35</width>
-		<height>35</height>
+		<top>12</top>
+		<left>12</left>
+		<right>12</right>
+		<bottom>12</bottom>
+		<width>30</width>
+		<height>30</height>
+		<centerleft>50%</centerleft>
+		<centertop>50%</centertop>
 		<texture colordiffuse="98000000">$INFO[ListItem.Icon]</texture>
 		<visible>Control.HasFocus(201)</visible>
 	</control>	
 	<control type="image">
 		<top>12</top>
-		<left>15</left>
-		<width>25</width>
-		<height>32</height>
-		<texture>$INFO[ListItem.Property(resizedicon)]</texture>
-	</control>
-	<control type="image">
-		<top>12</top>
-		<left>15</left>
-		<width>25</width>
-		<height>32</height>
-		<texture colordiffuse="98000000">$INFO[ListItem.Property(resizedicon)]</texture>
-		<visible>Control.HasFocus(201)</visible>
-	</control>
-	<control type="image">
-		<top>12</top>
-		<left>15</left>
-		<width>25</width>
-		<height>32</height>>
+		<left>12</left>
+		<right>12</right>
+		<bottom>12</bottom>
+		<width>30</width>
+		<height>30</height>
+		<centerleft>50%</centerleft>
+		<centertop>50%</centertop>
 		<texture colordiffuse="orange">$INFO[ListItem.Property(subson)]</texture>
 		<visible>VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</visible>
 	</control>
 	<control type="image">
 		<top>12</top>
-		<left>15</left>
-		<width>25</width>
-		<height>32</height>
+		<left>12</left>
+		<right>12</right>
+		<bottom>12</bottom>
+		<width>30</width>
+		<height>30</height>
+		<centerleft>50%</centerleft>
+		<centertop>50%</centertop>
 		<texture colordiffuse="98000000">$INFO[ListItem.Property(subson)]</texture>
 		<visible>Control.HasFocus(201)</visible>
 		<visible>VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</visible>
 	</control>
 	<control type="image">
 		<top>12</top>
-		<left>15</left>
-		<width>25</width>
-		<height>32</height>
+		<left>12</left>
+		<right>12</right>
+		<bottom>12</bottom>
+		<width>30</width>
+		<height>30</height>
+		<centerleft>50%</centerleft>
+		<centertop>50%</centertop>
 		<texture>$INFO[ListItem.Property(subsoff)]</texture>
 		<visible>VideoPlayer.HasSubtitles + !VideoPlayer.SubtitlesEnabled</visible>
 	</control>
 	<control type="image">
 		<top>12</top>
-		<left>15</left>
-		<width>25</width>
-		<height>32</height>
+		<left>12</left>
+		<right>12</right>
+		<bottom>12</bottom>
+		<width>30</width>
+		<height>30</height>
+		<centerleft>50%</centerleft>
+		<centertop>50%</centertop>
 		<texture colordiffuse="98000000">$INFO[ListItem.Property(subsoff)]</texture>
 		<visible>VideoPlayer.HasSubtitles + !VideoPlayer.SubtitlesEnabled</visible>
 		<visible>Control.HasFocus(201)</visible>
 	</control>
-	<control type="image">
-		<top>8</top>
-		<left>8</left>
-		<width>40</width>
-		<height>35</height>
-	<texture>$INFO[ListItem.Property(arrowup)]</texture>
-	</control>	
-	<control type="image">
-		<top>8</top>
-		<left>8</left>
-		<width>40</width>
-		<height>35</height>
-		<texture colordiffuse="98000000">$INFO[ListItem.Property(arrowup)]</texture>
-		<visible>Control.HasFocus(201)</visible>
-	</control>	
-	<control type="image">
-		<top>10</top>
-		<left>8</left>
-		<width>40</width>
-		<height>35</height>
-	<texture>$INFO[ListItem.Property(arrowdown)]</texture>
-	</control>	
-	<control type="image">
-		<top>10</top>
-		<left>8</left>
-		<width>40</width>
-		<height>35</height>
-		<texture colordiffuse="98000000">$INFO[ListItem.Property(arrowdown)]</texture>
-		<visible>Control.HasFocus(201)</visible>
-	</control>	
 	</control>
 	</focusedlayout>
 	<content>
@@ -452,7 +416,7 @@
 	</item>
 	<item>
 		<label>חפש כתובית</label>
-		<property name="resizedicon">osd/fullscreen/buttons/subs3.png</property>
+		<icon>osd/fullscreen/buttons/subs3.png</icon>
 		<onclick>ActivateWindow(subtitlesearch)</onclick>
 		<visible>!$EXP[__livetv_OSD]</visible>
 	</item>	
@@ -470,13 +434,13 @@
 	</item>
 	<item>
 		<label>סנכרן כתוביות</label>
-		<property name="arrowup">masks/arrowup.png</property>
+		<icon>masks/arrowup.png</icon>
 		<onclick>SubtitleDelayPlus</onclick>
 		<visible>VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</visible>
 	</item>	
 	<item>
 		<label>סנכרן כתוביות</label>
-		<property name="arrowdown">masks/arrowdown.png</property>
+		<icon>masks/arrowdown.png</icon>
 		<onclick>SubtitleDelayMinus</onclick>
 		<visible>VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</visible>
 	</item>
@@ -496,46 +460,143 @@
 	</content>
 	</control>
 
-	<!-- ####### -->
-	<control type="grouplist" id="202">
+
+
+	<control type="list" id="202">
 	<orientation>horizontal</orientation>
-	<align>right</align>
-	<right>200</right>
-	<itemgap>10</itemgap>
-	<height>80</height>
-	<top>320</top>
-	<onup>52000</onup>
+	<left>1530</left>
+	<height>55</height>
+	<bottom>-95</bottom>
+	<onup>false</onup>
 	<ondown>ActivateWindow(1126)</ondown>
-	<onleft>Control.SetFocus(201)</onleft>
-	<include content="Netflix_Base_Menu_Items">
-		<param name="button_id">43313</param>
-		<param name="radioicon">osd/fullscreen/buttons/settings.png</param>
-		<param name="onclick">ActivateWindow(osdvideosettings)</param>
-	</include>
-	<include content="Netflix_Base_Menu_Items">
-		<param name="button_id">43314</param>
-		<param name="radioicon">osd/fullscreen/buttons/audio.png</param>
-		<param name="onclick">ActivateWindow(osdaudiosettings)</param>
-	</include>
-	<include content="Netflix_Base_Menu_Items">
-		<param name="button_id">43315</param>
-		<param name="radioicon">osd/fullscreen/buttons/guide.png</param>
-		<param name="onclick"></param>
-		<param name="__Onclick">__ChooseSourceOsd__</param>
-	</include>	
-	<include content="Netflix_Base_Menu_Items">
-		<param name="button_id">43316</param>
-		<param name="radiowidth">25</param>
-		<param name="radioheight">25</param>
-		<param name="radioposx">15</param>
-		<param name="radioposy">15</param>
-		<param name="radioicon">icons\infodialogs\update.png</param>
-		<param name="onclick"></param>
-		<param name="__Onclick">__GlobalPlayerReplacment__OSD</param>
-	</include>	
+	<onleft>201</onleft>
+	<itemlayout width="65" height="55">
+	<control type="group">
+	<width>55</width>
+	<height>55</height>
+	<control type="image">
+	<texture colordiffuse="25FFFFFF">masks/circle.png</texture>
+	<visible>!Skin.HasSetting(removenetflixbuttonsbg)</visible>
 	</control>
-	<!-- ####### -->
-	
+	<control type="image">
+		<top>12</top>
+		<left>12</left>
+		<right>12</right>
+		<bottom>12</bottom>
+		<width>30</width>
+		<height>30</height>
+		<centerleft>50%</centerleft>
+		<centertop>50%</centertop>
+		<texture>$INFO[ListItem.Icon]</texture>
+	</control>
+	<control type="image">
+		<top>15</top>
+		<left>15</left>
+		<right>15</right>
+		<bottom>15</bottom>
+		<width>25</width>
+		<height>25</height>
+		<centerleft>50%</centerleft>
+		<centertop>50%</centertop>
+		<texture>$INFO[ListItem.Property(resizedicon)]</texture>
+	</control>
+	</control>
+	</itemlayout>
+	<focusedlayout width="65" height="55">
+	<control type="group">
+	<width>55</width>
+	<height>55</height>
+	<control type="image">
+	<texture colordiffuse="25FFFFFF">masks/circle.png</texture>
+	<visible>!Skin.HasSetting(removenetflixbuttonsbg)</visible>
+	</control>
+	<control type="image">
+	<texture>masks/circle.png</texture>
+	<visible>Control.HasFocus(202)</visible>
+	</control>
+	<control type="image">
+		<top>12</top>
+		<left>12</left>
+		<right>12</right>
+		<bottom>12</bottom>
+		<width>30</width>
+		<height>30</height>
+		<centerleft>50%</centerleft>
+		<centertop>50%</centertop>
+		<texture>$INFO[ListItem.Icon]</texture>
+	</control>
+	<control type="image">
+		<top>12</top>
+		<left>12</left>
+		<right>12</right>
+		<bottom>12</bottom>
+		<width>30</width>
+		<height>30</height>
+		<centerleft>50%</centerleft>
+		<centertop>50%</centertop>
+		<texture colordiffuse="98000000">$INFO[ListItem.Icon]</texture>
+		<visible>Control.HasFocus(202)</visible>
+	</control>
+	<control type="image">
+		<top>15</top>
+		<left>15</left>
+		<right>15</right>
+		<bottom>15</bottom>
+		<width>25</width>
+		<height>25</height>
+		<centerleft>50%</centerleft>
+		<centertop>50%</centertop>
+		<texture>$INFO[ListItem.Property(resizedicon)]</texture>
+	</control>
+	<control type="image">
+		<top>15</top>
+		<left>15</left>
+		<right>15</right>
+		<bottom>15</bottom>
+		<width>25</width>
+		<height>25</height>
+		<centerleft>50%</centerleft>
+		<centertop>50%</centertop>
+		<texture colordiffuse="98000000">$INFO[ListItem.Property(resizedicon)]</texture>
+		<visible>Control.HasFocus(202)</visible>
+	</control>
+	</control>
+	</focusedlayout>
+	<content>
+	<item>
+		<label>הגדרות וידאו</label>
+		<icon>osd/fullscreen/buttons/settings.png</icon>
+		<onclick>ActivateWindow(osdvideosettings)</onclick>
+	</item>	
+	<item>
+		<label>הגדרות אודיו</label>
+		<icon>osd/fullscreen/buttons/audio.png</icon>
+		<onclick>ActivateWindow(osdaudiosettings)</onclick>
+	</item>
+	<item>
+		<label>$VAR[__PlayerChoose]</label>
+		<icon>osd/fullscreen/buttons/guide.png</icon>
+		<include>__GlobalPlayerReplacment__OSD</include>
+	</item>
+	<item>
+		<label>החלף מקור</label>
+		<property name="resizedicon">icons\infodialogs\update.png</property>
+		<include>__ChooseSourceOsd__</include>
+	</item>
+	<item>
+		<label>$VAR[NetFlixMenuRightLabel]</label>
+		<property name="resizedicon">https://www.iconsdb.com/icons/preview/white/arrow-189-xxl.png</property>
+		<onclick>ActivateWindow(1127)</onclick>
+	</item>
+	<item>
+		<label>$VAR[CheckNetflixBgButtonsStatus]</label>
+		<icon>dialogs/close.png</icon>
+		<onclick>Skin.ToggleSetting(removenetflixbuttonsbg)</onclick>
+	</item>
+	</content>
+	</control>
+
+
 	
 	<!-- ####### seek forward -->
 	<control type="list" id="40021">
@@ -555,6 +616,7 @@
 		<effect type="fade" start="100" end="0" time="250" tween="sine" easing="inout"/>
 	</animation>
 	<visible>String.IsEqual(Container(201).ListItem.Property(id),forward)</visible>
+	<visible>!Control.HasFocus(202)</visible>
 	<itemlayout width="145">
 	<control type="group">
 	<width>125</width>
@@ -632,6 +694,7 @@
 		<effect type="fade" start="100" end="0" time="250" tween="sine" easing="inout"/>
 	</animation>
 	<visible>String.IsEqual(Container(201).ListItem.Property(id),rewind)</visible>
+	<visible>!Control.HasFocus(202)</visible>
 	<itemlayout width="145">
 	<control type="group">
 	<width>125</width>
