@@ -138,11 +138,6 @@
                         </focusedlayout>
 				<content>
 					<item>
-						<label>סדרות - DRAX</label>
-						<icon>special://skin/extras/icons/tvsubs.png</icon>
-						<onclick>ActivateWindow(10025,"plugin://plugin.video.pov/?action=tmdb_movies_popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;name=32459",return)</onclick>
-					</item>
-					<item>
 						<label>לוהט כעת</label>
 						<icon>special://skin/extras/icons/hot.png</icon>
 						<onclick>ActivateWindow(Videos,"plugin://plugin.video.pov/?name=32458&amp;action=trakt_tv_trending&amp;iconImage=trending.png&amp;mode=build_tvshow_list",return)</onclick>
@@ -164,11 +159,6 @@
 						<icon>special://skin/extras/icons/israel.png</icon>
 						<onclick>ActivateWindow(Videos,"plugin://plugin.video.pov/?mode=build_tvshow_list&amp;action=tmdb_tv_languages&amp;language=he&amp;iconImage=https%3A%2F%2Fi.imgur.com%2FgxgLI0J.png",return)</onclick>
 					</item> -->
-					<item>
-						<label>סדרות זרות</label>
-						<icon>special://skin/extras/icons/vip2.png</icon>
-						<onclick>ActivateWindow(10025,"plugin://plugin.video.pov/?action=tmdb_movies_popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;name=32459",return)</onclick>
-					</item>
 					<item>
 						<label>רשתות</label>
 						<icon>special://skin/extras/icons/tvshow3.png</icon>
@@ -200,11 +190,6 @@
 						<onclick>ActivateWindow(Videos,"plugin://plugin.video.pov/?name=32470&amp;iconImage=genres.png&amp;mode=navigator.genres&amp;menu_type=tvshow",return)</onclick>
 					</item>
 					<item>
-						<label>סדרות ברוסית</label>
-						<icon>special://skin/extras/icons/russian.png</icon>
-						<onclick>ActivateWindow(Videos,"plugin://plugin.video.pov/?name=32028&amp;iconImage=movies&amp;mode=navigator.main&amp;action=MovieList",return)</onclick>
-					</item>
-					<item>
 						<label>שנים</label>
 						<icon>special://skin/extras/icons/years2.png</icon>
 						<onclick>ActivateWindow(Videos,"plugin://plugin.video.pov/?name=32472&amp;iconImage=calender.png&amp;mode=navigator.years&amp;menu_type=tvshow",return)</onclick>
@@ -214,11 +199,6 @@
 						<icon>special://skin/extras/icons/tvlang.png</icon>
 						<onclick>ActivateWindow(10025,"plugin://plugin.video.pov/?iconImage=languages&amp;menu_type=tvshow&amp;mode=navigator.languages&amp;name=32471",return)</onclick>
 					</item> -->
-					<item>
-						<label>קבוצות טלמדיה</label>
-						<icon>special://skin/extras/icons/tele.png</icon>
-						<onclick>ActivateWindow(Videos,"plugin://plugin.video.idanplus/?name=VOD&amp;url=&amp;mode=2&amp;iconimage=special%3A%2F%2Fhome%2Faddons%2Fplugin.video.idanplus%2Ficon.png&amp;module=&amp;moredata= &amp;data= &amp;original_title= &amp;id= &amp;season= &amp;episode= &amp;tmdbid= &amp;eng_name= &amp;show_original_year= &amp;isr=0&amp;fav_status=false&amp;groups_id=0&amp;next_page=0&amp;video_data=%7B%22title%22%3A+%22%5Cu05d4%5Cu05e7%5Cu05d1%5Cu05d5%5Cu05e6%5Cu05d5%5Cu05ea+%5Cu05e9%5Cu05dc%5Cu05d9%22%2C+%22label%22%3A+%22+%22%2C+%22OriginalTitle%22%3A+%22+%22%2C+%22imdbnumber%22%3A+%22+%22%2C+%22imdbid%22%3A+%22+%22%2C+%22year%22%3A+%22+%22%2C+%22mediatype%22%3A+%22movie%22%2C+%22TVshowtitle%22%3A+%22%22%2C+%22rating%22%3A+%220%22%2C+%22plot%22%3A+%22My+Groups%22%2C+%22dateadded%22%3A+%22+00%3A00%3A00%22%7D&amp;video_data=%7B%22title%22%3A+%22%5Cu05d4%5Cu05e7%5Cu05d1%5Cu05d5%5Cu05e6%5Cu05d5%5Cu05ea+%5Cu05e9%5Cu05dc%5Cu05d9%22%2C+%22label%22%3A+%22+%22%2C+%22OriginalTitle%22%3A+%22+%22%2C+%22imdbnumber%22%3A+%22+%22%2C+%22imdbid%22%3A+%22+%22%2C+%22year%22%3A+%22+%22%2C+%22mediatype%22%3A+%22movie%22%2C+%22TVshowtitle%22%3A+%22%22%2C+%22rating%22%3A+%220%22%2C+%22plot%22%3A+%22My+Groups%22%2C+%22dateadded%22%3A+%22+00%3A00%3A00%22%7D",return)</onclick>
-					</item>
 					<item>
 						<label>טראקט</label>
 						<icon>special://skin/extras/icons/trakt.png</icon>
