@@ -748,10 +748,6 @@ msgstr "מערכת"
 #~ msgid "Player process info"
 #~ msgstr "מידע על תהליך הנגן"
 
-msgctxt "#700070"
-msgid "Switch FENtastic Player"
-msgstr "החלפת נגן FENtastic"
-
 ################################################################
 
 # KODI-RD-IL CUSTOM ADDITIONS:

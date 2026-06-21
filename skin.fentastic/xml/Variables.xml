@@ -18,6 +18,18 @@
 	<value>colors/white.png</value>
 	</variable>
 	
+	<variable name="__NetflixCheckStatuNoWindowOpen_Osd__">
+	<value condition="![Window.IsActive(1126) | Window.IsActive(1127)]">הצג flags</value>
+	</variable>	
+	
+	<variable name="__NetflixCheckStatuWindowOpen_Osd__">
+	<value condition="Window.IsActive(1126)">לוידג'ט עידן פלוס</value>
+	</variable>
+
+	<variable name="__NetflixCheckStatuWindowOpenIdan_Osd__">
+	<value condition="Window.IsActive(1127)">חזור לסגירה</value>
+	</variable>
+	
 	<variable name="NetFlixMenuLeftLabel">
 	<value condition="ControlGroup(201).HasFocus(43300)">הקודם</value>
 	<value condition="ControlGroup(201).HasFocus(43301)">העבר אחורה</value>
@@ -155,6 +167,11 @@
 	<value condition="$EXP[__Movies_OSD] | $EXP[__livetv_OSD]">$INFO[VideoPlayer.Title][CR][B][COLOR button_focus]שנה[/COLOR][/B] $INFO[VideoPlayer.Year,(,)]</value>
 	<value condition="$EXP[__episode_OSD]">$INFO[VideoPlayer.Title] [COLOR button_focus]$INFO[VideoPlayer.Year,(,)][/COLOR][CR]עונה:$INFO[VideoPlayer.Season,[COLOR button_focus](,)[/COLOR]] פרק:$INFO[VideoPlayer.Episode,[COLOR button_focus](,)[/COLOR]]</value>
 	<value>$INFO[VideoPlayer.Title]</value>
+	</variable>
+	
+	<variable name="FixIdanPlusContent__OSD">
+	<value condition="!VideoPlayer.Content(LiveTv)">plugin://plugin.video.idanplus/?iconimage=C%253A%255CUsers%255CNetag%255CAppData%255CRoaming%255CKodi%255Caddons%255Cplugin.video.idanplus%255Cicon.png&amp;mode=1&amp;module&amp;moredata&amp;name=%5bB%5d%d7%98%d7%9c%d7%95%d7%99%d7%96%d7%99%d7%94%5b%2fB%5d&amp;url</value>
+	<value condition="VideoPlayer.Content(LiveTv)">pvr://channels/tv/*</value>
 	</variable>
 	
 	<variable name="LeftCornerFixMiddle_osd">

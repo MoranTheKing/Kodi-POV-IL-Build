@@ -8,7 +8,8 @@
 <right>Padxy0</right>
 <height>280</height>
 <bottom>105</bottom>
-<animation condition="Window.IsActive(1126)" effect="slide" start="0,0" end="0,-100" time="250">Conditional</animation>
+<animation condition="Window.IsActive(1126)" effect="slide" start="0,0" end="0,-100" time="250" delay="250">Conditional</animation>
+<animation condition="Window.IsActive(1127)" effect="slide" start="0,0" end="0,-300" time="250">Conditional</animation>
 <include>Animation_BottomSlide</include>
 	<control type="button" id="52000"> <!-- faked button -->
 		<height>1</height>
@@ -136,12 +137,12 @@
 		<include content="NetFlix_ReSize">
 			<param name="width">Pad10</param>
 			<param name="height">25</param>
-			<param name="bottom">-75</param>
+			<param name="bottom">-80</param>
 			<param name="centerleft">99%</param>
 		</include>
-			<param name="texture">https://www.iconsdb.com/icons/preview/white/arrow-137-xxl.png</param>
+			<param name="texture">https://www.iconsdb.com/icons/preview/white/arrow-189-xxl.png</param>
 			<param name="colordiffuse">95FFFFFF</param>
-			<param name="visible">true</param>
+			<param name="visible">!Window.IsActive(1126)</param>
 	</include>
 	<include content="NetFlix_Based_Label">
 		<include content="NetFlix_ReSize">
@@ -152,12 +153,68 @@
 		</include>
 			<param name="align">right</param>
 			<param name="font">font10</param>
-			<param name="visible">true</param>
+			<param name="visible">!Window.IsActive(1126)</param>
 			<param name="textcolor">95FFFFFF</param>
-			<param name="label">מידע מורחב</param>
+			<param name="label">$VAR[__NetflixCheckStatuNoWindowOpen_Osd__]</param>
 	</include>
 	<!-- ####### -->
 	
+	
+		<!-- ####### -->
+	<include content="NetFlix_Based_Image">
+		<include content="NetFlix_ReSize">
+			<param name="width">Pad10</param>
+			<param name="height">25</param>
+			<param name="bottom">-80</param>
+			<param name="centerleft">99%</param>
+		</include>
+			<param name="texture">https://www.iconsdb.com/icons/preview/white/arrow-189-xxl.png</param>
+			<param name="colordiffuse">95FFFFFF</param>
+			<param name="visible">Window.IsActive(1126)</param>
+	</include>
+	<include content="NetFlix_Based_Label">
+		<include content="NetFlix_ReSize">
+			<param name="width">Pad215</param>
+			<param name="height">Pad35</param>
+			<param name="bottom">-85</param>
+			<param name="centerleft">92.8%</param>
+		</include>
+			<param name="align">right</param>
+			<param name="font">font10</param>
+			<param name="visible">Window.IsActive(1126)</param>
+			<param name="textcolor">95FFFFFF</param>
+			<param name="label">$VAR[__NetflixCheckStatuWindowOpen_Osd__]</param>
+	</include>
+	<!-- ####### -->
+
+
+		<!-- ####### -->
+	<include content="NetFlix_Based_Image">
+		<include content="NetFlix_ReSize">
+			<param name="width">Pad10</param>
+			<param name="height">25</param>
+			<param name="bottom">-80</param>
+			<param name="centerleft">99%</param>
+		</include>
+			<param name="texture">https://www.iconsdb.com/icons/preview/white/arrow-127-xxl.png</param>
+			<param name="colordiffuse">95FFFFFF</param>
+			<param name="visible">Window.IsActive(1127)</param>
+	</include>
+	<include content="NetFlix_Based_Label">
+		<include content="NetFlix_ReSize">
+			<param name="width">Pad215</param>
+			<param name="height">Pad35</param>
+			<param name="bottom">-85</param>
+			<param name="centerleft">92.8%</param>
+		</include>
+			<param name="align">right</param>
+			<param name="font">font10</param>
+			<param name="visible">Window.IsActive(1127)</param>
+			<param name="textcolor">95FFFFFF</param>
+			<param name="label">$VAR[__NetflixCheckStatuWindowOpenIdan_Osd__]</param>
+	</include>
+	<!-- ####### -->
+
 	<!-- ####### -->
 	<include content="NetFlix_Base_Info">
 		<param name="orientation">vertical</param>
@@ -200,7 +257,7 @@
 	<left>10</left>
 	<height>55</height>
 	<bottom>-95</bottom>
-	<onup>52000</onup>
+	<onup>false</onup>
 	<ondown>ActivateWindow(1126)</ondown>
 	<onright>202</onright>
 	<itemlayout width="55" height="55">
@@ -387,6 +444,11 @@
 		<label>עצור</label>
 		<icon>osd/fullscreen/buttons/stop.png</icon>
 		<onclick>PlayerControl(stop)</onclick>
+	</item>
+	<item>
+		<label>לחץ למידע על התוכנית</label>
+		<icon>osd/fullscreen/buttons/information.png</icon>
+		<onclick>SetFocus(52000)</onclick>
 	</item>
 	<item>
 		<label>חפש כתובית</label>
