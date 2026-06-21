@@ -769,6 +769,30 @@
 			<visible>!String.IsEmpty(VideoPlayer.Year)</visible>
 			<label>$INFO[VideoPlayer.Year]</label>
 		</control>
+		<control type="grouplist">
+			<height>34</height>
+			<orientation>horizontal</orientation>
+			<itemgap>8</itemgap>
+			<visible>!String.IsEmpty(VideoPlayer.VideoResolution) | !String.IsEmpty(VideoPlayer.AudioCodec) | !String.IsEmpty(VideoPlayer.AudioChannels)</visible>
+			<include content="MediaFlag">
+				<param name="width" value="62" />
+				<param name="height" value="32" />
+				<param name="texture" value="$INFO[VideoPlayer.VideoResolution,flags/videoresolution/,.png]" />
+				<param name="visible" value="!String.IsEmpty(VideoPlayer.VideoResolution)" />
+			</include>
+			<include content="MediaFlag">
+				<param name="width" value="62" />
+				<param name="height" value="32" />
+				<param name="texture" value="$INFO[VideoPlayer.AudioCodec,flags/audiocodec/,.png]" />
+				<param name="visible" value="!String.IsEmpty(VideoPlayer.AudioCodec)" />
+			</include>
+			<include content="MediaFlag">
+				<param name="width" value="62" />
+				<param name="height" value="32" />
+				<param name="texture" value="$INFO[VideoPlayer.AudioChannels,flags/audiochannel/,.png]" />
+				<param name="visible" value="!String.IsEmpty(VideoPlayer.AudioChannels)" />
+			</include>
+		</control>
 		<control type="label">
 			<height max="40">auto</height>
 			<visible>VideoPlayer.Content(episodes)</visible>
