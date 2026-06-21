@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="skin.povil.nox" version="1.0.0" name="Kodi POV IL - NOX"
+<addon id="skin.povil.nox" version="1.0.1" name="Kodi POV IL - NOX"
 	provider-name="MoranTheKing">
 	<requires>
-		<import addon="xbmc.gui" version="5.15.0" />
+		<!-- <import addon="xbmc.gui" version="5.17.0" /> -->
 		<import addon="script.fentastic.helper" />
 	</requires>
 	<extension point="xbmc.gui.skin" debugging="false">
