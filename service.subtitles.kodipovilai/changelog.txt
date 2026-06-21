@@ -1,9 +1,31 @@
-v0.2.62
+v0.2.64
+- Embedded ("[LOC]") subtitles now sink to the BOTTOM of their
+  language group in the DarkSubs picker instead of floating to the top
+  on their hard-coded 101% sync. On this streaming build the embedded
+  track can't be AI-translated (DarkSubs short-circuits embedded picks
+  with setSubtitleStream before the AI hook runs), so demoting it makes
+  the external, AI-translatable English source the natural first pick.
+  New self-healing patcher (AI_EMBEDDED_DEMOTE_v1), no-op when DarkSubs
+  isn't installed or its engine.py has changed shape.
+
+v0.2.63
 - AF3 phone/touch pass (iteration 1): enable Kodi's mouse/pointer support
   so the real home controls (widget rows, spotlight, the submenu buttons
   once open) respond to taps and lists can be drag-scrolled on a phone.
   AF3's main menu items are off-screen "fake-focus" controls, so a deeper
   overlay fix is still planned - this is the safe first step.
+
+v0.2.62
+- New self-healing patcher all_subs_samefile_patcher: wraps the 6
+  shutil.copy() calls in service.subtitles.all_subs_plus's
+  setLanguageSettings() in try/except shutil.SameFileError. On
+  Windows (NTFS junctions/hardlinks) the unpatched AllSubs raises
+  SameFileError at module-load time when source and destination
+  language .po files resolve to the same inode, killing autosub.py
+  before Kodi even shows the home screen -- user-visible Python
+  error every PC boot, AllSubs functionality fully broken. Patch
+  is idempotent, marker-gated (AI_SUBS_ALL_SUBS_SAMEFILE_v1), and
+  no-op on installs without AllSubs.
 
 v0.2.61
 - AF3 phone/touch pass: the home screen now uses Standard rows again
