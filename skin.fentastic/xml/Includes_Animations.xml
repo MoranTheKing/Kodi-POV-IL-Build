@@ -309,4 +309,13 @@
 		</animation>
 	</include>
 	
+	<include name="OpenCloseWindowFadeAnimation">
+	<animation type="WindowOpen">
+		<effect type="fade" start="0" end="100" time="350" delay="450"/>
+	</animation>		
+	<animation type="WindowClose">
+		<effect type="fade" start="100" end="0" time="250" delay="150"/>
+	</animation>
+	</include>
+	
 </includes>

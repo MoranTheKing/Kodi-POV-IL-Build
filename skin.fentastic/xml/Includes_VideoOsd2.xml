@@ -8,6 +8,7 @@
 <right>Padxy0</right>
 <height>280</height>
 <bottom>105</bottom>
+<animation condition="Window.IsActive(1126)" effect="slide" start="0,0" end="0,-100" time="350" delay="150">Conditional</animation>
 <include>GlobaLOSDBottom2TopAnimation</include>
 	<control type="button" id="52000"> <!-- faked button -->
 		<height>1</height>
@@ -22,9 +23,18 @@
 		<left>-40</left>
 		<width>120%</width>
 		<height>600</height>
-		<bottom>-200</bottom>
+		<bottom>-300</bottom>
 		<texture flipy="true">frame/osdfade.png</texture>
 	</control>
+	<!-- <control type="image"> -->
+		<!-- <left>-40</left> -->
+		<!-- <width>120%</width> -->
+		<!-- <height>300</height> -->
+		<!-- <bottom>-400</bottom> -->
+		<!-- <visible>Window.IsActive(1126)</visible> -->
+		<!-- <animation condition="true" effect="fade" start="100" end="50" time="0">Conditional</animation> -->
+		<!-- <texture colordiffuse="black">colors/white.png</texture> -->
+	<!-- </control> -->
 	<!-- ####### BASED LINE -->
 	<include content="NetFlix_Based_Image">
 		<include content="NetFlix_ReSize">
@@ -120,14 +130,16 @@
 	<!-- ####### -->
 	<include content="NetFlix_Base_Info">
 		<param name="orientation">vertical</param>
-		<param name="height">175</param>
+		<param name="height">245</param>
 		<param name="width">750</param>
-		<param name="bottom">40</param>
-		<param name="iGap">5</param>
+		<param name="bottom">85</param>
+		<param name="iGap">-5</param>
+		<param name="groupalign">bottom</param>
 		<param name="visible">Control.HasFocus(52000) | Player.Paused</param>
 		<param name="label1">$VAR[osd_middle_info_var]</param>
-		<param name="label2">$INFO[VideoPlayer.Title] $INFO[VideoPlayer.Year,(,)]</param>
+		<param name="label2">$VAR[osd_top_info_var]</param>
 		<param name="label3">$INFO[VideoPlayer.Plot]</param>
+		<param name="label3visible">!String.IsEmpty(VideoPlayer.Plot)</param>
 	</include>
 	
 	<!-- ####### progress-->
@@ -160,6 +172,7 @@
 	<top>320</top>
 	<onup>52000</onup>
 	<onright>Control.SetFocus(202)</onright>
+	<ondown>ActivateWindow(1126)</ondown>
 	<include content="Netflix_Base_Menu_Items">
 		<param name="button_id">43300</param>
 		<param name="radioicon">osd/fullscreen/buttons/previous.png</param>
@@ -214,7 +227,7 @@
 		<param name="radioposx">12.5</param>
 		<param name="radioposy">12.5</param>
 		<param name="radioicon">osd/fullscreen/buttons/subs.png</param>
-		<param name="visible">VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</param>
+		<param name="visible">$EXP[__SubtitleCheckTrueOrFalse]</param>
 		<param name="onclick">ShowSubtitles</param>
 		<param name="nofocuscolor">orange</param>
 		<param name="radiooffnofocus">orange</param>
@@ -223,11 +236,13 @@
 		<param name="button_id">43309</param>
 		<param name="radioicon">masks/arrowdown.png</param>
 		<param name="onclick">SubtitleDelayPlus</param>
+		<param name="visible">$EXP[__SubtitleCheckTrueOrFalse]</param>
 	</include>
 	<include content="Netflix_Base_Menu_Items">
 		<param name="button_id">43310</param>
 		<param name="radioicon">masks/arrowup.png</param>
 		<param name="onclick">SubtitleDelayMinus</param>
+		<param name="visible">$EXP[__SubtitleCheckTrueOrFalse]</param>
 	</include>
 	<include content="Netflix_Base_Menu_Items">
 		<param name="button_id">43311</param>
@@ -252,6 +267,7 @@
 	<height>80</height>
 	<top>320</top>
 	<onup>52000</onup>
+	<ondown>ActivateWindow(1126)</ondown>
 	<onleft>Control.SetFocus(201)</onleft>
 	<include content="Netflix_Base_Menu_Items">
 		<param name="button_id">43313</param>
@@ -269,6 +285,7 @@
 		<param name="onclick">ActivateWindow(videoplaylist)</param>
 		<param name="nofocuscolor">orange</param>
 		<param name="radiooffnofocus">gray</param>
+		<param name="__Onclick">__CloseOSd__</param>
 	</include>	
 	</control>
 	<!-- ####### -->

@@ -24,4 +24,14 @@
 	<expression name="NextItemExist_OSd">!String.IsEmpty(VideoPlayer.offset(1).Title)</expression>
 	<expression name="PreviousItemExist_OSd">!String.IsEmpty(VideoPlayer.offset(-1).Title)</expression>
 	<expression name="PreviousNextItemCheck">[Container(201).HasFocus(100) + String.IsEmpty(VideoPlayer.offset(-1).Title)] | [Container(201).HasFocus(109) + String.IsEmpty(VideoPlayer.offset(1).Title)]</expression>
+	<expression name="__Movies">String.IsEqual(ListItem.DBTYPE,movie)</expression>
+	<expression name="__tvshow">String.IsEqual(ListItem.DBTYPE,tvshow)</expression>
+	<expression name="__season">String.IsEqual(ListItem.DBTYPE,season)</expression>
+	<expression name="__episode">String.IsEqual(ListItem.DBTYPE,episode)</expression>
+	<expression name="__livetv">String.IsEqual(ListItem.DBTYPE,livetv)</expression>
+	<expression name="__Movies_OSD">VideoPlayer.Content(movies)</expression>
+	<expression name="__episode_OSD">VideoPlayer.Content(episodes)</expression>
+	<expression name="__livetv_OSD">VideoPlayer.Content(LiveTv)</expression>
+	<expression name="__SubtitleCheckTrueOrFalse">VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</expression>
+	<expression name="__LiveTvTrueOrFalse">$EXP[__Movies_OSD] | $EXP[__episode_OSD]</expression>
 </includes>
