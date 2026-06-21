@@ -163,11 +163,15 @@ class Episodes:
 						'mode': 'mark_as_watched_unwatched_episode', 'action': 'mark_as_watched', 'year': year,
 						'tmdb_id': tmdb_id, 'tvdb_id': tvdb_id, 'season': season, 'episode': episode,  'title': title
 				})))
-			if self.watched_indicators == 1: cm_append((
-				self.cm_sort['trakt'], traktmanager_str, run_plugin % build_url({
-					'mode': 'trakt_manager_choice', 'mediatype': 'tvshow',
-					'tmdb_id': tmdb_id, 'imdb_id': imdb_id, 'tvdb_id': tvdb_id
-			})))
+			# Hide "Trakt Manager" entry when a personal TMDB account is
+			# connected -- TMDB Manager handles favorites/watchlist/lists
+			# without Trakt's rate limits or restricted Collections UI.
+			if self.watched_indicators == 1 and not kodi_utils.get_setting('tmdb.account_id'):
+				cm_append((
+					self.cm_sort['trakt'], traktmanager_str, run_plugin % build_url({
+						'mode': 'trakt_manager_choice', 'mediatype': 'tvshow',
+						'tmdb_id': tmdb_id, 'imdb_id': imdb_id, 'tvdb_id': tvdb_id
+				})))
 			if self.watched_indicators == 2: cm_append((
 				self.cm_sort['mdblist'], mdblmanager_str, run_plugin % build_url({
 					'mode': 'mdbl_manager_choice', 'mediatype': 'tvshow',

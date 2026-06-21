@@ -106,7 +106,11 @@ class TVShows:
 				cm_append((self.cm_sort['extras'], browse_str, container_update % url_params))
 			else:
 				cm_append((self.cm_sort['extras'], extras_str, run_plugin % extras_params))
-			cm_append((self.cm_sort['trakt'], traktmanager_str, run_plugin % trakt_manager_params))
+			# Hide "Trakt Manager" entry when a personal TMDB account is
+			# connected -- TMDB Manager handles favorites/watchlist/lists
+			# without Trakt's rate limits or restricted Collections UI.
+			if not kodi_utils.get_setting('tmdb.account_id'):
+				cm_append((self.cm_sort['trakt'], traktmanager_str, run_plugin % trakt_manager_params))
 			cm_append((self.cm_sort['mdblist'], mdblmanager_str, run_plugin % mdbl_manager_params))
 			cm_append((self.cm_sort['tmdblist'], tmdbmanager_str, run_plugin % tmdb_manager_params))
 			cm_append((self.cm_sort['favorites'], favmanager_str, run_plugin % fav_manager_params))
