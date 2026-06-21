@@ -93,22 +93,31 @@
 						<visible>System.HasShutdown + System.IdleShutdownInhibited</visible>
 					</item>
 					<item>
-						<label>Skin settings</label>
+						<label>החלף סקין</label>
+						<onclick>Dialog.Close(all)</onclick>
+						<onclick>PlayMedia(&quot;plugin://plugin.program.kodipovilwizard/?mode=install&amp;action=build_switch_skin&quot;)</onclick>
+					</item>
+					<item>
+						<label>ניקוי קאש POV</label>
+						<onclick>RunPlugin(&quot;plugin://plugin.video.pov/?mode=clear_all_cache&amp;isFolder=false&quot;)</onclick>
+					</item>
+					<item>
+						<label>הגדרות סקין</label>
 						<onclick>Dialog.Close(all)</onclick>
 						<onclick>ActivateWindow(SkinSettings.xml)</onclick>
 					</item>
 					<item>
-						<label>System information</label>
+						<label>מידע מערכת</label>
 						<onclick>Dialog.Close(all)</onclick>
 						<onclick>ActivateWindow(systeminfo)</onclick>
 					</item>
 					<item>
-						<label>Toggle debugging</label>
+						<label>מצב ניפוי באגים</label>
 						<onclick>Dialog.Close(all)</onclick>
 						<onclick>Skin.ToggleDebug()</onclick>
 					</item>
 					<item>
-						<label>Reload Skin</label>
+						<label>טען סקין מחדש</label>
 						<onclick>Dialog.Close(all)</onclick>
 						<onclick>ReloadSkin()</onclick>
 					</item>

@@ -149,7 +149,7 @@
 						<onclick>ActivateWindow(Videos,"plugin://plugin.video.pov/?name=32459&amp;action=tmdb_tv_popular&amp;iconImage=popular.png&amp;mode=build_tvshow_list",return)</onclick>
 					</item>
 					<item>
-						<label>סדרות - VIP</label>
+						<label>סדרות פופולריות</label>
 						<icon>special://skin/extras/icons/vip2.png</icon>
 						<onclick>ActivateWindow(2109)</onclick>
 						<visible>false</visible>

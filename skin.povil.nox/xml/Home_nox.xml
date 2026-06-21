@@ -351,7 +351,7 @@
 						<include content="IconButtonNox" condition="!Skin.HasSetting(NoSearchResultsWindow) + !Skin.HasSetting(DefaultSearchWindowBehavior)">
 							<param name="control_id" value="806" />
 							<!-- <param name="onclick" value="RunScript(script.fentastic.helper,mode=open_search_window)" /> -->
-							<param name="onclick" value="ActivateWindow(10025,&quot;plugin://plugin.video.idanplus/?name=VOD&amp;url=&amp;mode=2&amp;iconimage=special%3A%2F%2Fhome%2Faddons%2Fplugin.video.idanplus%2Ficon.png&amp;module=&amp;moredata=)" />
+							<param name="onclick" value="ActivateWindow(1107)" />
 							<param name="icon" value="icons/search.png" />
 							<param name="label" value="$LOCALIZE[137]" />
 						</include>
@@ -442,7 +442,7 @@
 					  <texture>special://skin/media/logos/K-logo.png</texture>
 					</control>
 					<control type="image">
-					<visible>Skin.HasSetting(HomeMenuNoCustom4Button)</visible>
+					<visible>false</visible>
 					  <left>120</left>
 					  <top>0</top>
 					  <aspectratio>keep</aspectratio>

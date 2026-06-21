@@ -1,29 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <includes>
     <include name="MovieWidgetsNox">
-<!--         <include content="WidgetListCategory">
-            <param name="content_path" value="plugin://plugin.video.pov/?mode=navigator.build_shortcut_folder_list&amp;name=%D7%A1%D7%A8%D7%98%D7%99%D7%9D+-+%D7%9C%D7%A4%D7%99+%D7%96%27%D7%90%D7%A0%D7%A8&amp;iconImage=genres&amp;shortcut_folder=True&amp;external_list_item=True"/>
-            <param name="widget_header" value="ז'אנר"/>
-            <param name="widget_target" value="videos"/>
-            <param name="list_id" value="19011"/>
-        </include>
-        <include content="WidgetListBigLandscape">
-            <param name="content_path" value="plugin://plugin.video.pov/?name=32476&amp;iconImage=player&amp;mode=build_movie_list&amp;action=in_progress_movies"/>
-            <param name="widget_header" value="בתהליך צפיה..."/>
-            <param name="widget_target" value="videos"/>
-            <param name="list_id" value="19012"/>
-        </include> -->
-        <include content="WidgetListBigPosterNox" condition="!Skin.HasSetting(novix_widget)">
+        <include content="WidgetListBigPosterNox">
             <param name="content_path" value="plugin://plugin.video.pov/?action=tmdb_movies_popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;name=32459"/>
-            <param name="widget_header" value="סרטים VIP"/>
+            <param name="widget_header" value="סרטים פופולריים"/>
             <param name="widget_target" value="videos"/>
             <param name="list_id" value="19013"/>
         </include>
-        <include content="WidgetListBigPosterNox" condition="Skin.HasSetting(novix_widget)">
+        <include content="WidgetListBigPosterNox">
             <param name="content_path" value="plugin://plugin.video.pov/?action=tmdb_movies_latest_releases&amp;iconImage=dvd&amp;mode=build_movie_list&amp;name=32461"/>
-            <param name="widget_header" value="שחרורים אחרונים"/>
+            <param name="widget_header" value="סרטים חדשים"/>
             <param name="widget_target" value="videos"/>
-            <param name="list_id" value="19013"/>
+            <param name="list_id" value="19014"/>
         </include>
     </include>
 </includes>
