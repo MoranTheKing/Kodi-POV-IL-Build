@@ -39,17 +39,7 @@
 			<visible>Player.Rewinding | Player.Forwarding</visible>
 		</control>	
 		<!-- OSD MAIN MENU -->
-		
-			<!-- KODI-POV-IL - OSD bottom backplate -->
-			<control type="image">
-				<left>-40</left>
-				<width>120%</width>
-				<height>110</height>
-				<bottom>0</bottom>
-				<texture>colors/black.png</texture>
-				<colordiffuse>B0000000</colordiffuse>
-			</control>
-			<control type="list" id="201">
+		<control type="list" id="201">
 		<orientation>horizontal</orientation>
 		<height>60</height>
 		<bottom>0</bottom>
@@ -138,11 +128,10 @@
 		<item id="100">
 			<label>מעבר לתכנית הקודמת או לפרק הקודם</label>
 			<icon>osd/fullscreen/buttons/previous.png</icon>
-			<property name="id">previous</property>
 			<onclick>SkipPrevious</onclick>
 			<visible>Player.Chapter | !String.IsEmpty(VideoPlayer.offset(-1).Title)</visible>
 		</item>
-		<item id="250">
+		<item>
 			<label>הרץ קדימה</label>
 			<icon>osd/fullscreen/buttons/rewind.png</icon>
 			<visible>Player.SeekEnabled</visible>
@@ -155,7 +144,6 @@
 			<icon>osd/fullscreen/buttons/information.png</icon>
 			<property name="info">info</property>
 			<visible>!String.IsEmpty(VideoPlayer.Plot)</visible>
-			<visible>!Player.Paused</visible>
 			<onclick>Dialog.Close(videoosd)</onclick>
 			<onclick>ActivateWindow(1125)</onclick>
 		</item>
@@ -180,14 +168,6 @@
 			<property name="timer">icons\infodialogs\timer.png</property>
 			<label>הנגן יסגר בעוד $INFO[Skin.String(OSDAutoCloseTime)] שניות</label>
 			<onclick>Skin.SetNumeric(OSDAutoCloseTime,20)</onclick>
-			<visible>Skin.HasSetting(playerclosedelay)</visible>
-		</item>
-		<item>
-			<label>קיים פלייליסט</label>
-			<icon>osd/fullscreen/buttons/playlist.png</icon>
-			<onclick>ActivateWindow(videoplaylist)</onclick>
-			<visible>Integer.IsGreater(Playlist.Length(video),0)</visible>
-			<visible>Skin.HasSetting(playerplaylist_osd)</visible>
 		</item>
 		<item id="105">
 			<label>כתובית מופעלת</label>
@@ -215,7 +195,6 @@
 			<property name="onup">$NUMBER[49994]</property>
 			<onclick>Control.SetFocus(49994)</onclick>
 			<visible>!VideoPlayer.Content(LiveTv) + !String.Contains(Player.FolderPath,idanplus)</visible>
-			<visible>!Player.Paused</visible>
 		</item>
 		<item>
 			<label>ערוצי עידן פלוס</label>
@@ -223,8 +202,6 @@
 			<property name="onup">$NUMBER[60015]</property>
 			<property name="idanchannels">idanchannels</property>
 			<onclick>Control.SetFocus(60015)</onclick>
-			<visible>Skin.HasSetting(disableidan)</visible>
-			<visible>!Player.Paused</visible>
 		</item>
 		<item id="108">
 		<label>הגדרות ויאודו / אודיו / נגן</label>
@@ -243,7 +220,7 @@
 			<onclick>SubtitleDelayMinus</onclick>
 			<visible>$EXP[osdmoviestvshowvisible]</visible>
 		</item>
-		<item id="251">
+		<item>
 			<label>הרץ קדימה</label>
 			<icon>osd/fullscreen/buttons/forward.png</icon>
 			<visible>Player.SeekEnabled</visible>
@@ -254,7 +231,6 @@
 		<item id="109">
 			<label>מעבר לתוכנית הבאה או לא לפרק הבא</label>
 			<icon>osd/fullscreen/buttons/next.png</icon>
-			<property name="id">next</property>
 			<onclick>SkipNext</onclick>
 			<visible>Player.Chapter | !String.IsEmpty(VideoPlayer.offset(1).Title)</visible>
 		</item>
@@ -284,8 +260,6 @@
 
 <include>LeftOsdTopBar</include>
 
-<include>PauseTendViewType</include>
-
 <include content="__OsdFixedFlags">
 <param name="visible">$EXP[OsdFlagsVisible]</param>
 <param name="animation">bottom2topslideanimation</param>
@@ -310,11 +284,10 @@
 <visible>String.IsEqual(Container(201).ListItem.Property(forward),forward)</visible>
 <orientation>horizontal</orientation>
 <height>120</height>
-<bottom>110</bottom>
+<bottom>120</bottom>
 <itemgap>7</itemgap>
 <onback>201</onback>
 <ondown>201</ondown>
-<visible>!Player.Paused</visible>
 	<include content="_PoweredSeekTime">
 		<param name="id">500</param>
 		<param name="actiononclick">PlayerControl(forward)</param>
@@ -405,11 +378,10 @@
 <orientation>horizontal</orientation>
 <include>bottom2topslideanimation</include>
 <height>120</height>
-<bottom>110</bottom>
+<bottom>120</bottom>
 <itemgap>7</itemgap>
 <onback>201</onback>
 <ondown>201</ondown>
-<visible>!Player.Paused</visible>
 	<include content="_PoweredSeekTime">
 		<param name="id">500</param>
 		<param name="actiononclick">PlayerControl(rewind)</param>
@@ -981,7 +953,6 @@
 	<include name="__OsdFixedFlags">
 	<control type="grouplist">
 	<align>center</align>
-	<visible>!Player.Paused</visible>
 	<visible>$PARAM[visible]</visible>
 	<include>$PARAM[animation]</include>
 	<orientation>horizontal</orientation>
@@ -990,30 +961,21 @@
 	<bottom>120</bottom>
 	<itemgap>10</itemgap>
 	<include content="_FixOsdFlags">
-		<param name="left">Padxy5</param>
 		<param name="flaglabel">VideoResolution</param>
 	</include>
 	<include content="_FixOsdFlags">
-		<param name="left">Padxy5</param>
 		<param name="flaglabel">VideoCodec</param>
 	</include>	
 	<include content="_FixOsdFlags">
-		<param name="left">Padxy5</param>
 		<param name="flaglabel">VideoAspect</param>
 	</include>
 	<include content="_FixOsdFlags">
-		<param name="left">Padxy5</param>
-		<param name="flaglabel">AudioChannels, ערוצי שמע </param>
-	</include>
-	<include content="_FixOsdFlags">
-		<param name="left">Padxy10</param>
-		<param name="label2">$VAR[_FixaudiolangugeOsd] </param>
+		<param name="flaglabel">AudioLanguage</param>
 		<param name="texture">https://www.iconsdb.com/icons/preview/white/speaker-xxl.png</param>
 		<param name="visible">true</param>
 	</include>
 	<include content="_FixOsdFlags">
-		<param name="left">Padxy10</param>
-		<param name="label2">$VAR[_FixsublanguageOsd]</param>
+		<param name="flaglabel">SubtitlesLanguage</param>
 		<param name="texture">osd/fullscreen/buttons/subs3.png</param>
 		<param name="visible">true</param>
 	</include>
