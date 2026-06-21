@@ -4,23 +4,222 @@
 	<backgroundcolor>background</backgroundcolor>
 	<controls>
 	
+	<control type="group">
+	<animation type="WindowOpen">
+	<effect type="slide" start="-550,0" end="0,0" time="650" tween="back" easing="inout"/>
+	</animation>
+	<animation type="WindowClose">
+	<effect type="slide" start="0,0" end="-550,0" time="650" tween="back" easing="inout"/>
+	</animation>
+	<left>20</left>
+	<width>420</width>
+	<height>600</height>
+	<centertop>50%</centertop>
 	<include>BaseMainMenu</include>
-	<include content="BaseMainMenu">
-		<param name="id" value="9001"/>
-		<param name="basedmenuleft">500</param>
-		<param name="movement">Padxy5</param>
-		<param name="headlinebackgroundheight">10%</param>
-		<param name="top_list">85</param>
-		<param name="list_left">Padxy10</param>
-		<param name="basedmenuwidth">435</param>
-		<param name="list_height">520</param>
-		<param name="onback">9000</param>
-		<param name="TopHeadLineBaseMenu">BasedSettingLabel</param>
-		<param name="animation" value="SecondBasedMenuAnimationOsdSettings"/>
-		<param name="visible" value="Control.HasFocus(9001)"/>
-		<param name="items" value="BasedMenuOsdSecondMenu"/>
-		<param name="layout" value="SecondOsdSettingBasedMenu"/>
-	</include>
+	<control type="image">
+		<top>10</top>
+		<left>20</left>
+		<width>380</width>
+		<height>105</height>
+		<texture colordiffuse="65FFFFFF">masks/categorywidget-unfocused.png</texture>
+	</control>
+		<control type="label">
+			<top>-5</top>
+			<align>center</align>
+			<height max="75">auto</height>
+			<font>font_clock</font>
+			<label>$INFO[System.Time]</label>
+		</control>
+		<control type="label">
+			<top>70</top>
+			<align>center</align>
+			<height max="45">auto</height>
+			<font>font32</font>
+			<label>$INFO[System.Date]</label>
+		</control>
+	<control type="list" id="9000">
+	<top>150</top>
+	<left>5</left>
+	<orientation>vertical</orientation>
+	<itemlayout width="410" height="85">
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture colordiffuse="65FFFFFF">masks/categorywidget-unfocused.png</texture>
+	</control>
+	<control type="image">
+		<left>25</left>
+		<top>32</top>
+		<width>25</width>
+		<height>25</height>
+		<aspectratio>keep</aspectratio>
+		<texture>$INFO[ListItem.Icon]</texture>
+	</control>
+	<control type="label">
+		<left>100</left>
+		<top>20</top>
+		<label>$INFO[ListItem.Label]</label>
+	</control>
+	</itemlayout>
+	<focusedlayout width="410" height="85">
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture colordiffuse="65FFFFFF">masks/categorywidget-unfocused.png</texture>
+	</control>
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture colordiffuse="button_focus">masks/categorywidget.png</texture>
+	</control>
+	<control type="image">
+		<left>25</left>
+		<top>32</top>
+		<width>25</width>
+		<height>25</height>
+		<aspectratio>keep</aspectratio>
+		<texture>$INFO[ListItem.Icon]</texture>
+	</control>
+	<control type="label">
+		<left>100</left>
+		<top>20</top>
+		<label>$INFO[ListItem.Label]</label>
+	</control>
+	</focusedlayout>
+	<content>
+	<item>
+		<label>הגדרות אודיו</label>
+		<icon>https://www.iconsdb.com/icons/preview/white/speaker-xxl.png</icon>
+		<onclick>ActivateWindow(osdaudiosettings)</onclick>
+	</item>
+	<item>
+		<label>הגדרות וידאו</label>
+		<icon>https://www.iconsdb.com/icons/preview/white/video-play-2-xxl.png</icon>
+		<onclick>ActivateWindow(osdvideosettings)</onclick>
+	</item>
+	<item>
+		<label>הגדרות כתוביות</label>
+		<icon>osd/fullscreen/buttons/subs3.png</icon>
+		<onclick>ActivateWindow(osdsubtitlesettings)</onclick>
+	</item>
+	<item>
+		<label>הגדרות נגן</label>
+		<icon>https://www.iconsdb.com/icons/preview/white/play-3-xxl.png</icon>
+		<onclick>Control.SetFocus(9001)</onclick>
+	</item>
+	</content>
+	</control>
+	</control>
+	
+	<control type="group">
+	<left>500</left>
+	<width>420</width>
+	<height>600</height>
+	<centertop>50%</centertop>
+	<include>BaseMainMenu</include>
+	<animation type="Visible">
+	<effect type="slide" start="-20" end="0" time="150" tween="sine" easing="inout"/>
+	<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
+	</animation>
+	<animation type="Hidden">
+	<effect type="slide" start="0" end="-20" time="150" tween="sine" easing="inout"/>
+	<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
+	</animation>
+	<visible allowhiddenfocus="true">Control.HasFocus(9001)</visible>
+	<control type="list" id="9001">
+	<onback>9000</onback>
+	<itemlayout width="415" height="95">
+	<control type="group">
+	<height>85</height>
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture colordiffuse="65FFFFFF">masks/categorywidget-unfocused.png</texture>
+	</control>
+	<control type="label">
+		<left>20</left>
+		<top>5</top>
+		<align>left</align>
+		<font>font12</font>
+		<label>[B]$INFO[ListItem.Label][/B]</label>
+	</control>
+	<control type="label">
+		<left>20</left>
+		<top>45</top>
+		<align>left</align>
+		<font>font10</font>
+		<label>$INFO[ListItem.Label2]</label>
+	</control>
+	</control>
+	</itemlayout>
+	<focusedlayout width="415" height="95">
+	<control type="group">
+	<height>85</height>
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture colordiffuse="65FFFFFF">masks/categorywidget-unfocused.png</texture>
+	</control>
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture colordiffuse="button_focus">masks/categorywidget.png</texture>
+	</control>
+	<control type="label">
+		<left>20</left>
+		<top>5</top>
+		<align>left</align>
+		<font>font12</font>
+		<label>[B]$INFO[ListItem.Label][/B]</label>
+	</control>
+	<control type="label">
+		<left>20</left>
+		<top>45</top>
+		<align>left</align>
+		<font>font10</font>
+		<label>$INFO[ListItem.Label2]</label>
+	</control>
+	</control>
+	</focusedlayout>
+	<content>
+	<item>
+		<label>הצג חלון כתובית דארקסאבס</label>
+		<label2>$VAR[_ReplaceSubtitle]</label2>
+		<onclick condition="String.IsEmpty(Skin.String(subtitlesearch,darksubs)">Skin.SetString(subtitlesearch,darksubs)</onclick>
+		<onclick condition="Skin.String(subtitlesearch,darksubs)">Skin.SetString(subtitlesearch,kodisubtitle)</onclick>
+		<onclick condition="Skin.String(subtitlesearch,kodisubtitle)">Skin.SetString(subtitlesearch,darksubs)</onclick>
+	</item>	
+	<item>
+		<label>שנה צבע פוקוס בכתפורי הנגן</label>
+		<label2>$INFO[Skin.String(osdbuttonfocuscolor)]</label2>
+		<colorbox>$INFO[Skin.String(osdbuttonfocuscolor)]</colorbox>
+		<onclick>Skin.SetColor(osdbuttonfocuscolor, player)</onclick>
+	</item>
+	<item>
+		<label>שנה צבע מסגרת פוקוס כפתורים</label>
+		<label2>$INFO[Skin.String(osdframebuttoncolor)]</label2>
+		<colorbox>$INFO[Skin.String(osdframebuttoncolor)]</colorbox>
+		<onclick>Skin.SetColor(osdframebuttoncolor, player)</onclick>
+	</item>
+	<item>
+		<label>הגדר עוצמת רקע ב INFO</label>
+		<label2>שקיפות הרקע שונתה ל $INFO[Skin.String(backwindowopecitychange)]</label2>
+		<include>InfoBackWindowOpecityChange</include>
+	</item>
+	<item>
+		<label>החלף נגן</label>
+		<label2>$VAR[osdchangeplayervar]</label2>
+		<onclick>Skin.ToggleSetting(chooseosdplayer)</onclick>
+	</item>
+	</content>
+	</control>
+	</control>
 	
 	</controls>
 </window>

@@ -71,7 +71,15 @@
 						<onclick>NextSubtitle</onclick>
 						<visible>VideoPlayer.HasSubtitles</visible>
 					</control>
-					
+					<control type="button" id="11109">
+						<width>700</width>
+						<include>DialogSettingButton</include>
+						<label>בחר נגן</label>
+						<label2>$VAR[osdchangeplayervar]</label2>
+						<onclick>Skin.ToggleSetting(chooseosdplayer)</onclick>
+						<selected>Skin.ToggleSetting(chooseosdplayer)</selected>
+						
+					</control>
 					<!-- KODI-RD-IL ADDITION -->
 					<control type="radiobutton" id="11110">
 						<width>700</width>
