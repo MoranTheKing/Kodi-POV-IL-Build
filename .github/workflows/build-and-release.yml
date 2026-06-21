@@ -1,0 +1,133 @@
+name: Build addon zips and release
+
+# Runs PARALLEL to the legacy quickfix mechanism. It never touches it.
+#
+# What it does:
+#   1. Detects which addon folder(s) changed in the push (or all, on a
+#      manual / seed run).
+#   2. Packages each changed addon into a valid, deterministic Kodi zip
+#      (<id>-<version>.zip).
+#   3. Publishes them to a single rolling GitHub Release (tag: addons-latest),
+#      replacing the old zip of that addon (old versions are deleted).
+#   4. Regenerates manifest.json from the live addon.xml files and commits it.
+
+on:
+  push:
+    branches: [main]
+    # Trigger only when an actual addon folder changes. Kodi addon ids are
+    # always prefixed by their kind, so these globs cover all 8 addons (and
+    # any future one) while ignoring manifest.json, README, .github, etc.
+    paths:
+      - "plugin.*/**"
+      - "script.*/**"
+      - "service.*/**"
+      - "skin.*/**"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+# Never run two releases at once: they share one rolling release + manifest.
+concurrency:
+  group: build-and-release
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: addons-latest
+  REPO: ${{ github.repository }}
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history for diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Detect changed addons
+        id: detect
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            IDS=$(python .github/scripts/list_changed.py all)
+          else
+            IDS=$(python .github/scripts/list_changed.py diff "${{ github.event.before }}" "${{ github.sha }}")
+          fi
+          echo "Changed addons:"
+          echo "${IDS:-<none>}"
+          JOINED=$(printf '%s' "$IDS" | tr '\n' ' ' | sed -e 's/^ *//' -e 's/ *$//')
+          echo "ids=$JOINED" >> "$GITHUB_OUTPUT"
+          if [ -z "$JOINED" ]; then
+            echo "any=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "any=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build addon zips
+        if: steps.detect.outputs.any == 'true'
+        run: |
+          set -euo pipefail
+          python .github/scripts/build_addons.py ${{ steps.detect.outputs.ids }}
+          echo "--- dist ---"
+          ls -la dist/
+
+      - name: Publish to rolling release
+        if: steps.detect.outputs.any == 'true'
+        run: |
+          set -euo pipefail
+          TAG="$RELEASE_TAG"
+
+          # Ensure the rolling release exists.
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Creating release $TAG"
+            gh release create "$TAG" \
+              --title "POV IL Addons (latest)" \
+              --notes "Rolling release that always holds the current zip of every addon. Updated automatically by CI; consumed via manifest.json." \
+              --target main
+          fi
+
+          # For each changed addon, delete its previous (any-version) asset so
+          # only the current zip remains, then upload the freshly built zips.
+          for id in ${{ steps.detect.outputs.ids }}; do
+            OLD=$(gh release view "$TAG" --json assets -q ".assets[].name" 2>/dev/null \
+                    | grep -E "^${id}-.*\.zip$" || true)
+            for asset in $OLD; do
+              echo "Removing stale asset: $asset"
+              gh release delete-asset "$TAG" "$asset" -y || true
+            done
+          done
+
+          echo "Uploading new zips:"
+          gh release upload "$TAG" dist/*.zip --clobber
+
+      - name: Regenerate manifest.json
+        if: steps.detect.outputs.any == 'true'
+        run: |
+          set -euo pipefail
+          python .github/scripts/gen_manifest.py
+
+      - name: Commit manifest.json
+        if: steps.detect.outputs.any == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          if git diff --cached --quiet; then
+            echo "manifest.json unchanged -- nothing to commit"
+            exit 0
+          fi
+          git commit -m "chore(manifest): update addon manifest [skip ci]"
+          BRANCH="${{ github.ref_name }}"
+          # Retry once after rebasing in case another commit landed meanwhile.
+          if ! git push origin "HEAD:${BRANCH}"; then
+            git pull --rebase origin "${BRANCH}"
+            git push origin "HEAD:${BRANCH}"
+          fi
