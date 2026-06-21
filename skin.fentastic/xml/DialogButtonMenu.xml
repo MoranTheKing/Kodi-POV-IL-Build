@@ -80,10 +80,11 @@
 						<onclick>ReloadSkin()</onclick>
 					</item>
 					<item>
-						<!-- Switch FENtastic Player -->
-						<label>[B][COLOR blue]$LOCALIZE[700070][/COLOR][/B]</label>
-						<onclick>Dialog.Close(all)</onclick>
-						<onclick>RunScript(service.subtitles.kodipovilai,action=fentastic_player_switch)</onclick>
+						<!-- Choose FENtastic player -->
+						<label>[B][COLOR blue]??? ???[/COLOR][/B]</label>
+						<label2>$VAR[osdchangeplayervar]</label2>
+						<onclick>Skin.ToggleSetting(chooseosdplayer)</onclick>
+						<selected>Skin.HasSetting(chooseosdplayer)</selected>
 					</item>
 					<!-- ##################### -->
 				</content>

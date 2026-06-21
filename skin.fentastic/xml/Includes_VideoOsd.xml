@@ -144,6 +144,7 @@
 			<icon>osd/fullscreen/buttons/information.png</icon>
 			<property name="info">info</property>
 			<visible>!String.IsEmpty(VideoPlayer.Plot)</visible>
+			<visible>!Player.Paused</visible>
 			<onclick>Dialog.Close(videoosd)</onclick>
 			<onclick>ActivateWindow(1125)</onclick>
 		</item>
@@ -194,6 +195,7 @@
 			<property name="plyersource">plyersource</property>
 			<property name="onup">$NUMBER[49994]</property>
 			<onclick>Control.SetFocus(49994)</onclick>
+			<visible>!Player.Paused</visible>
 			<visible>!VideoPlayer.Content(LiveTv) + !String.Contains(Player.FolderPath,idanplus)</visible>
 		</item>
 		<item>
@@ -201,6 +203,7 @@
 			<property name="timer">icons\submenu\channels.png</property>
 			<property name="onup">$NUMBER[60015]</property>
 			<property name="idanchannels">idanchannels</property>
+			<visible>!Player.Paused</visible>
 			<onclick>Control.SetFocus(60015)</onclick>
 		</item>
 		<item id="108">

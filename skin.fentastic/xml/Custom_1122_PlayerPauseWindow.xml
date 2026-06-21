@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <window type="dialog" id="12209">
-		<visible>Window.IsActive(fullscreenvideo) + !Window.IsActive(videoosd)</visible>
+		<visible>Window.IsActive(fullscreenvideo) + Player.Paused</visible>
 		<include>top2bottomslideanimation</include>
 	<controls>
-		
+	
+	<control type="group">
+	<visible>!Window.IsActive(1125)</visible>
 	<control type="group">
 		<control type="image" id="1">
 			<animation type="Visible">
@@ -279,6 +281,7 @@
 					<font>font10</font>
 			</control>
 		</control>
+
 		<control type="grouplist">
 		<animation type="Visible">
 		<effect type="slide" start="150" end="0" time="250" tween="sine" easing="inout"/>
@@ -331,6 +334,7 @@
 					<param name="freetext">fps</param>
 				</include>
 			</include>
+		</control>
 		</control>
 		
 	<include content="SetFadeLabel">
