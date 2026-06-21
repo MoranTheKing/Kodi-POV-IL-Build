@@ -206,13 +206,12 @@ class Indexer(Debrid):
 			append(ls(32750) % expires.strftime('%Y-%m-%d'))
 			append(ls(32751) % days_remaining)
 			append('[B]Downloaded[/B]: %s' % account_info['total_downloaded'])
-			usage_30 = _find_usage_30(account_info)
+			try: usage_30 = _find_usage_30(self.user_stats())
+			except Exception: usage_30 = None
 			if usage_30 in (None, ''):
-				try: usage_30 = _find_usage_30(self.user_stats())
-				except Exception: usage_30 = None
+				usage_30 = _find_usage_30(account_info)
 			usage_30 = _format_usage(usage_30)
-			if usage_30:
-				append('[B]שימוש 30 יום[/B]: %s' % usage_30)
+			append('[B]שימוש 30 יום[/B]: %s' % (usage_30 or 'לא זמין'))
 			kodi_utils.hide_busy_dialog()
 			return kodi_utils.show_text('TorBox'.upper(), '\n\n'.join(body), font_size='large')
 		except: kodi_utils.hide_busy_dialog()
