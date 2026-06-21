@@ -70,7 +70,7 @@
 	        <item>
             <!-- KODI-POV-IL - OSD player mode -->
             <label>שנה נגן</label>
-            <label2>$VAR[OSDPlayerModeVar]</label2>
+            <label2>$VAR[osdchangeplayervar]</label2>
             <onclick>Skin.ToggleSetting(chooseosdplayer)</onclick>
             <onclick>ReloadSkin()</onclick>
         </item>

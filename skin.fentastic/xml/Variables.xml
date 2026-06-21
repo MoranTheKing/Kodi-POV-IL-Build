@@ -13,6 +13,21 @@
 	<variable name="AutoCompletionContentVar">
 		<value condition="System.AddonIsEnabled(plugin.program.autocompletion) + !System.HasHiddenInput">plugin://plugin.program.autocompletion?info=autocomplete&amp;&amp;id=$INFO[Control.GetLabel(312).index(1)]&amp;&amp;limit=9</value>
 	</variable>
+	
+	<variable name="_FixaudiolangugeOsd">
+		<value condition="String.IsEqual(VideoPlayer.AudioLanguage,eng)">אנגלית</value>
+		<value condition="String.IsEqual(VideoPlayer.AudioLanguage,heb)">עברית</value>
+		<value condition="String.IsEqual(VideoPlayer.AudioLanguage,ita)">איטלקית</value>
+		<value>$INFO[VideoPlayer.AudioLanguage]</value>
+	</variable>
+
+	<variable name="_FixsublanguageOsd">
+		<value condition="String.IsEqual(VideoPlayer.SubtitlesLanguage,eng)">אנגלית</value>
+		<value condition="String.IsEqual(VideoPlayer.SubtitlesLanguage,heb)">עברית</value>
+		<value condition="String.IsEqual(VideoPlayer.SubtitlesLanguage,ita)">איטלקית</value>
+		<value>$INFO[VideoPlayer.AudioLanguage]</value>
+	</variable>
+	
 	<variable name="InfoListPathVar">
 		<value condition="String.IsEmpty(Container.PluginName)">$INFO[ListItem.FolderPath]</value>
 		<value></value>
@@ -21,6 +36,20 @@
 		<value condition="Integer.IsGreater(System.AddonUpdateCount,0)">$INFO[System.AddonUpdateCount]</value>
 		<value>$INFO[System.AddonUpdateCount,[COLOR grey],[/COLOR]]</value>
 	</variable>
+	<variable name="idanplusdisablebutton_OSD">
+		<value condition="Skin.HasSetting(disableidan)">התווסף לרשימת הכפתורים</value>
+		<value condition="!Skin.HasSetting(disableidan)">הוסר מרשימת הכפתורים</value>
+	</variable>
+
+	<variable name="OsdPlayerClose">
+		<value condition="Skin.HasSetting(playerclosedelay)">התווסף לרשימת הכפתורים</value>
+		<value condition="!Skin.HasSetting(playerclosedelay)">הוסר מרשימת הכפתורים</value>
+	</variable>
+	<variable name="OsdPlayerPlaylist">
+		<value condition="Skin.HasSetting(playerplaylist_osd)">התווסף לרשימת הכפתורים</value>
+		<value condition="!Skin.HasSetting(playerplaylist_osd)">הוסר מרשימת הכפתורים</value>
+	</variable>
+	
 	<variable name="MusicInfoTextboxVar">
 		<value condition="String.IsEqual(ListItem.DbType,song)">$INFO[ListItem.Comment,[B]$LOCALIZE[569][/B][CR][COLOR=white],[/COLOR]]</value>
 		<value condition="String.IsEqual(ListItem.DbType,album)">$INFO[ListItem.Property(Album_Description),[COLOR=white],[/COLOR]]</value>
@@ -44,10 +73,6 @@
 		<value condition="!String.IsEmpty(Player.Icon)">$INFO[Player.Icon]</value>
 		<value>DefaultTVShows.png</value>
 		<!-- ##################### -->
-	</variable>
-	<variable name="osdchangeplayervar">
-	<value condition="Skin.HasSetting(chooseosdplayer)">נגן פשוט</value>
-	<value condition="!Skin.HasSetting(chooseosdplayer)">נגן מתקדם</value>
 	</variable>
 	<variable name="ShiftThumbVar">
 		<value condition="!String.IsEmpty(Listitem.Art(poster))">$INFO[Listitem.Art(poster)]</value>
@@ -1156,4 +1181,9 @@
 	
 
 	
+
+    <variable name="osdchangeplayervar">
+        <value condition="Skin.HasSetting(chooseosdplayer)">נגן רגיל</value>
+        <value>נגן מתקדם</value>
+    </variable>
 </includes>
