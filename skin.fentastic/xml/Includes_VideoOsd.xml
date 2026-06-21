@@ -128,6 +128,7 @@
 		<item id="100">
 			<label>מעבר לתכנית הקודמת או לפרק הקודם</label>
 			<icon>osd/fullscreen/buttons/previous.png</icon>
+			<property name="id">previous</property>
 			<onclick>SkipPrevious</onclick>
 			<visible>Player.Chapter | !String.IsEmpty(VideoPlayer.offset(-1).Title)</visible>
 		</item>
@@ -243,6 +244,7 @@
 		<item id="109">
 			<label>מעבר לתוכנית הבאה או לא לפרק הבא</label>
 			<icon>osd/fullscreen/buttons/next.png</icon>
+			<property name="id">next</property>
 			<onclick>SkipNext</onclick>
 			<visible>Player.Chapter | !String.IsEmpty(VideoPlayer.offset(1).Title)</visible>
 		</item>
@@ -251,20 +253,48 @@
 </control>
 <!-- END OSD MAIN MENU -->
 
-<!-- OSD INFO -->
+<!-- OSD CURRENT INFO -->
 <include content="PoweredOsdInfo">
 <param name="groupheight">550</param>
-<param name="visible">String.IsEqual(Container(201).ListItem.Property(info),info) + !String.Contains(Player.FolderPath,idanplus)</param>
-</include>
-
-<include content="PoweredOsdInfo">
-<param name="groupheight">400</param>
-<param name="itemgap">5</param>
-<param name="texture">$INFO[Player.Icon]</param>
+<param name="texture">$VAR[_FixOsdIcon]</param>
+<param name="bottomlabel">$INFO[VideoPlayer.Plot]</param>
+<param name="middlelabel">$VAR[middlelabelInfo_OSD_Var]</param>
 <param name="grouplistheight">250</param>
-<param name="label">$INFO[VideoPlayer.Title] $INFO[VideoPlayer.Year,(,)]</param>
-<param name="visible">String.IsEqual(Container(201).ListItem.Property(info),info) + String.Contains(Player.FolderPath,idanplus)</param>
+<param name="visible">String.IsEqual(Container(201).ListItem.Property(info),info) + !$EXP[IDANPlusCheck_OSd]</param>
 </include>
+<include content="PoweredOsdInfo">
+<param name="groupheight">250</param>
+<param name="texture">$INFO[Player.Icon]</param>
+<param name="bottomlabel">$INFO[VideoPlayer.Plot]</param>
+<param name="middlelabel">$VAR[middlelabelInfo_OSD_Var]</param>
+<param name="grouplistheight">150</param>
+<param name="visible">String.IsEqual(Container(201).ListItem.Property(info),info) + $EXP[IDANPlusCheck_OSd]</param>
+</include>
+<!-- END OSD CURRENT INFO -->
+
+<!-- OSD NEXT SHOW INFO -->
+<include content="PoweredOsdInfo">
+<param name="groupheight">250</param>
+<param name="texture">$VAR[NextShowIcon_OSD_Var]</param>
+<param name="label">$VAR[NextTitleInfo_Next_OSD] $VAR[NextTitleInfoYear_Next_OSD]</param>
+<param name="bottomlabel">$VAR[bottomlabelinfo_Next_OSD_Var]</param>
+<param name="middlelabel">$VAR[middlelabelInfo_Next_OSD_Var]</param>
+<param name="grouplistheight">150</param>
+<param name="visible">String.IsEqual(Container(201).ListItem.Property(id),next) + $EXP[IDANPlusCheck_OSd] + $EXP[NextItemExist_OSd]</param>
+</include>
+<!-- END OSD NEXT SHOW INFO -->
+
+<!-- OSD PREVIOUS SHOW INFO -->
+<include content="PoweredOsdInfo">
+<param name="groupheight">250</param>
+<param name="texture">$VAR[PreviousShowIcon_OSD_Var]</param>
+<param name="label">$VAR[PreviousTitleInfo_Next_OSD] $VAR[PreviousTitleInfoYear_Next_OSD]</param>
+<param name="bottomlabel">$VAR[bottomlabelinfo_Previous_OSD_Var]</param>
+<param name="middlelabel">$VAR[middlelabelInfo_Previous_OSD_Var]</param>
+<param name="grouplistheight">150</param>
+<param name="visible">String.IsEqual(Container(201).ListItem.Property(id),previous) + $EXP[IDANPlusCheck_OSd] + $EXP[PreviousItemExist_OSd]</param>
+</include>
+<!-- END OSD PREVIOUS SHOW INFO -->
 
 <include>_FixedCachedOSd</include>
 
@@ -693,13 +723,13 @@
 		<height max="40">auto</height>
 		<font>font32</font>
 		<textcolor>yellow</textcolor>
-		<label>$INFO[VideoPlayer.Genre]</label>
-		<visible>!String.IsEmpty(VideoPlayer.Genre)</visible>
+		<label>$PARAM[middlelabel]</label>
 	</control>
 	<control type="textbox">
 		<height max="145">auto</height>
 		<font>font37</font>
-		<label>$INFO[VideoPlayer.Plot]</label>
+		<label>$PARAM[bottomlabel]</label>
+		<visible>$PARAM[bottomlabevisible]</visible> <!-- IF NO PLOT -->
 		<autoscroll time="5000" fade="5000" repeat="5000">true</autoscroll>
 	</control>
 </control>
