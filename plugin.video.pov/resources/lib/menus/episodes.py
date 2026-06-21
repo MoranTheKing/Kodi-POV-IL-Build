@@ -163,10 +163,13 @@ class Episodes:
 						'mode': 'mark_as_watched_unwatched_episode', 'action': 'mark_as_watched', 'year': year,
 						'tmdb_id': tmdb_id, 'tvdb_id': tvdb_id, 'season': season, 'episode': episode,  'title': title
 				})))
-			# Hide "Trakt Manager" entry when a personal TMDB account is
-			# connected -- TMDB Manager handles favorites/watchlist/lists
-			# without Trakt's rate limits or restricted Collections UI.
-			if self.watched_indicators == 1 and not kodi_utils.get_setting('tmdb.account_id'):
+			# Show Trakt Manager only if the user is on Trakt AND
+			# hasn't connected a personal TMDB account (TMDB
+			# Manager covers the same actions with no rate
+			# limits or restricted Collections UI).
+			if (self.watched_indicators == 1
+			    and kodi_utils.get_setting('trakt_user', '')
+			    and not kodi_utils.get_setting('tmdb.account_id')):
 				cm_append((
 					self.cm_sort['trakt'], traktmanager_str, run_plugin % build_url({
 						'mode': 'trakt_manager_choice', 'mediatype': 'tvshow',
