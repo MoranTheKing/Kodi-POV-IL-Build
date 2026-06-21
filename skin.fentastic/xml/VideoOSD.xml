@@ -240,7 +240,7 @@
 					
 					<!-- KODI-RD-IL ADDITION -->
 					<control type="radiobutton" id="700456">
-						<description>Twilight Next Episode Button</description>
+						<description>POV Next Episode Button</description>
 						<include content="OSDButtonAdvanced">
 							<param name="texture" value="kodirdil/twilight_icon/twilight.png"/>
 							<param name="label">$LOCALIZE[700059]</param>
@@ -253,7 +253,7 @@
 						</include>
 						<!-- If current playing media is episode -->
 						<visible>VideoPlayer.Content(episodes)</visible>
-						<!-- If season_number_for_next_episode_button AND episode_number_for_next_episode_button (from Twilight - player.py) are NOT 0 -->
+						<!-- If season_number_for_next_episode_button AND episode_number_for_next_episode_button (from POV - player.py) are NOT 0 -->
 						<visible>!String.IsEqual(VideoPlayer.UniqueID(season_number_for_next_episode_button), 0) + !String.IsEqual(VideoPlayer.UniqueID(episode_number_for_next_episode_button), 0)</visible>
 						<!-- If current playing addon is NOT Idan Plus -->
 						<visible>!String.Contains(Player.Folderpath, plugin.video.idanplus)</visible>
@@ -262,7 +262,7 @@
 						<!-- If video is unpaused - pause -->
 						<onclick condition="!Player.Paused">PlayerControl(Play)</onclick>
 						<!-- Rescrape and select source for next episode -->
-						<onclick>RunPlugin(plugin://plugin.video.twilight/?mode=playback.media&media_type=episode&tmdb_id=$INFO[VideoPlayer.UniqueID(tmdb)]&season=$INFO[VideoPlayer.UniqueID(season_number_for_next_episode_button)]&episode=$INFO[VideoPlayer.UniqueID(episode_number_for_next_episode_button)]&autoplay=false)</onclick>
+						<onclick>RunPlugin(plugin://plugin.video.pov/?mode=play_media&amp;media_type=episode&amp;tmdb_id=$INFO[VideoPlayer.UniqueID(tmdb)]&amp;season=$INFO[VideoPlayer.UniqueID(season_number_for_next_episode_button)]&amp;episode=$INFO[VideoPlayer.UniqueID(episode_number_for_next_episode_button)]&amp;autoplay=false)</onclick>
 					</control>
 					<control type="button" id="700454">
 						<description>Episodes Playlist Menu</description>
@@ -290,7 +290,7 @@
 						<visible>!VideoPlayer.Content(LiveTV)</visible>
 					</control>
 					<control type="radiobutton" id="700453">
-						<description>Twilight Switch Source Button</description>
+						<description>POV Switch Source Button</description>
 						<include content="OSDButtonAdvanced">
 							<param name="texture" value="kodirdil/twilight_icon/twilight.png"/>
 							<param name="label">$LOCALIZE[700055]</param>
@@ -310,9 +310,9 @@
 						<!-- If video is unpaused - pause -->
 						<onclick condition="!Player.Paused">PlayerControl(Play)</onclick>
 						<!-- Rescrape and select source for current playing movie -->
-						<onclick condition="VideoPlayer.Content(movies)">RunPlugin(plugin://plugin.video.twilight/?mode=playback.media&media_type=movie&tmdb_id=$INFO[VideoPlayer.UniqueID(tmdb)]&autoplay=false)</onclick>
+						<onclick condition="VideoPlayer.Content(movies)">RunPlugin(plugin://plugin.video.pov/?mode=play_media&amp;media_type=movie&amp;tmdb_id=$INFO[VideoPlayer.UniqueID(tmdb)]&amp;autoplay=false)</onclick>
 						<!-- Rescrape and select source for current playing episode -->
-						<onclick condition="VideoPlayer.Content(episodes)">RunPlugin(plugin://plugin.video.twilight/?mode=playback.media&media_type=episode&tmdb_id=$INFO[VideoPlayer.UniqueID(tmdb)]&season=$INFO[VideoPlayer.Season]&episode=$INFO[VideoPlayer.Episode]&autoplay=false)</onclick>
+						<onclick condition="VideoPlayer.Content(episodes)">RunPlugin(plugin://plugin.video.pov/?mode=play_media&amp;media_type=episode&amp;tmdb_id=$INFO[VideoPlayer.UniqueID(tmdb)]&amp;season=$INFO[VideoPlayer.Season]&amp;episode=$INFO[VideoPlayer.Episode]&amp;autoplay=false)</onclick>
 					</control>
 					<control type="button" id="700452">
 						<description>Switch to next Audio track</description>

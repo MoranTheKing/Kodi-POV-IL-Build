@@ -1178,10 +1178,10 @@ msgctxt "#700049"
 msgid "[B]Return to the home screen[/B]"
 msgstr ""
 
-# Twilight + DarkSubs Setting / CLear Cache In Power Menu - DialogButtonMenu.xml
+# POV + DarkSubs Setting / CLear Cache In Power Menu - DialogButtonMenu.xml
 
 msgctxt "#700050"
-msgid "Open Twilight Settings"
+msgid "Open POV Settings"
 msgstr ""
 
 msgctxt "#700051"
@@ -1189,7 +1189,7 @@ msgid "Open DarkSubs Settings"
 msgstr ""
 
 msgctxt "#700052"
-msgid "Clear Twilight Cache"
+msgid "Clear POV Cache"
 msgstr ""
 
 msgctxt "#700053"
@@ -1202,7 +1202,7 @@ msgctxt "#700054"
 msgid "Episodes List"
 msgstr ""
 
-# Twilight Switch Video Source Button - VideoOSD.xml
+# POV Switch Video Source Button - VideoOSD.xml
 
 msgctxt "#700055"
 msgid "Switch Source"
@@ -1226,7 +1226,7 @@ msgctxt "#700058"
 msgid "Switch Skin"
 msgstr ""
 
-# Twilight Next Episode Button - VideoOSD.xml
+# POV Next Episode Button - VideoOSD.xml
 
 msgctxt "#700059"
 msgid "Next Episode"

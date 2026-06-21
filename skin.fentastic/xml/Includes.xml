@@ -2322,8 +2322,8 @@
 		
 	<include name="SetPrompLevel">
 		<include content="ListPrompLevel">
-			<param name="content1">plugin://plugin.video.idanplus/?iconimage=C%253A%255CUsers%255Ctwilight%255CAppData%255CRoaming%255CKodi%255Caddons%255Cplugin.video.idanplus%255Cicon.png&amp;mode=1&amp;module&amp;moredata&amp;name=%5bB%5d%d7%98%d7%9c%d7%95%d7%99%d7%96%d7%99%d7%94%5b%2fB%5d&amp;url&quot</param>
-			<param name="content2">plugin://plugin.video.idanplus/?iconimage=C%253A%255CUsers%255Ctwilight%255CAppData%255CRoaming%255CKodi%255Caddons%255Cplugin.video.idanplus%255Cicon.png&amp;mode=3&amp;module&amp;moredata&amp;name=%5bB%5d%d7%a8%d7%93%d7%99%d7%95%5b%2fB%5d&amp;url&quot</param>
+			<param name="content1">plugin://plugin.video.idanplus/?iconimage=special%3A%2F%2Fhome%2Faddons%2Fplugin.video.idanplus%2Ficon.png&amp;mode=1&amp;module&amp;moredata&amp;name=%5bB%5d%d7%98%d7%9c%d7%95%d7%99%d7%96%d7%99%d7%94%5b%2fB%5d&amp;url=</param>
+			<param name="content2">plugin://plugin.video.idanplus/?iconimage=special%3A%2F%2Fhome%2Faddons%2Fplugin.video.idanplus%2Ficon.png&amp;mode=3&amp;module&amp;moredata&amp;name=%5bB%5d%d7%a8%d7%93%d7%99%d7%95%5b%2fB%5d&amp;url=</param>
 			<param name="id">$PARAM[id]</param>
 			<param name="label1">$PARAM[label1]</param>
 			<param name="label2">$PARAM[label2]</param>

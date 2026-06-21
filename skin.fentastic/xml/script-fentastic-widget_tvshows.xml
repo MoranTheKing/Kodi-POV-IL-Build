@@ -2,25 +2,25 @@
 <includes>
     <include name="TVShowWidgets">
         <include content="WidgetListCategory">
-            <param name="content_path" value="plugin://plugin.video.twilight/?mode=navigator.build_shortcut_folder_list&amp;name=FENtastic+-+%D7%A1%D7%93%D7%A8%D7%95%D7%AA+-+%D7%90%D7%99%D7%96%D7%95%D7%A8+%D7%90%D7%99%D7%A9%D7%99&amp;iconImage=folder&amp;shortcut_folder=True&amp;external_list_item=True"/>
+            <param name="content_path" value="plugin://plugin.video.pov/?mode=navigator.build_shortcut_folder_list&amp;name=FENtastic+-+%D7%A1%D7%93%D7%A8%D7%95%D7%AA+-+%D7%90%D7%99%D7%96%D7%95%D7%A8+%D7%90%D7%99%D7%A9%D7%99&amp;iconImage=folder&amp;shortcut_folder=True&amp;external_list_item=True"/>
             <param name="widget_header" value="[B][COLOR yellow]איזור אישי (חובה להתחבר לTrakt)[/COLOR][/B]"/>
             <param name="widget_target" value="videos"/>
             <param name="list_id" value="22011"/>
         </include>
         <include content="WidgetListBigPoster">
-            <param name="content_path" value="plugin://plugin.video.twilight/?name=32458&amp;action=trakt_tv_trending&amp;iconImage=trending&amp;mode=build_tvshow_list"/>
+            <param name="content_path" value="plugin://plugin.video.pov/?name=32458&amp;action=trakt_tv_trending&amp;iconImage=trending&amp;mode=build_tvshow_list"/>
             <param name="widget_header" value="[B][COLOR yellow]סדרות פופולריות[/COLOR][/B]"/>
             <param name="widget_target" value="videos"/>
             <param name="list_id" value="22012"/>
         </include>
         <include content="WidgetListBigEpisodes">
-            <param name="content_path" value="plugin://plugin.video.twilight/?mode=navigator.build_shortcut_folder_list&amp;name=%D7%A1%D7%93%D7%A8%D7%95%D7%AA+-+%D7%9C%D7%A4%D7%99+%D7%A8%D7%A9%D7%AA%D7%95%D7%AA&amp;iconImage=networks&amp;shortcut_folder=True&amp;external_list_item=True"/>
+            <param name="content_path" value="plugin://plugin.video.pov/?mode=navigator.build_shortcut_folder_list&amp;name=%D7%A1%D7%93%D7%A8%D7%95%D7%AA+-+%D7%9C%D7%A4%D7%99+%D7%A8%D7%A9%D7%AA%D7%95%D7%AA&amp;iconImage=networks&amp;shortcut_folder=True&amp;external_list_item=True"/>
             <param name="widget_header" value="[B][COLOR yellow]רשתות סטרימינג[/COLOR][/B]"/>
             <param name="widget_target" value="videos"/>
             <param name="list_id" value="22013"/>
         </include>
         <include content="WidgetListBigEpisodes">
-            <param name="content_path" value="plugin://plugin.video.twilight/?name=32470&amp;iconImage=genres&amp;mode=navigator.genres&amp;menu_type=tvshow"/>
+            <param name="content_path" value="plugin://plugin.video.pov/?name=32470&amp;iconImage=genres&amp;mode=navigator.genres&amp;menu_type=tvshow"/>
             <param name="widget_header" value="[B][COLOR yellow]ז'אנרים[/COLOR][/B]"/>
             <param name="widget_target" value="videos"/>
             <param name="list_id" value="22014"/>

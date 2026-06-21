@@ -996,19 +996,19 @@ msgctxt "#700049"
 msgid "[B]Return to the home screen[/B]"
 msgstr "[B]חזרה למסך הבית[/B]"
 
-# Twilight + DarkSubs Setting / CLear Cache In Power Menu - DialogButtonMenu.xml
+# POV + DarkSubs Setting / CLear Cache In Power Menu - DialogButtonMenu.xml
 
 msgctxt "#700050"
-msgid "Open Twilight Settings"
-msgstr "הגדרות Twilight"
+msgid "Open POV Settings"
+msgstr "הגדרות POV"
 
 msgctxt "#700051"
 msgid "Open DarkSubs Settings"
 msgstr "הגדרות DarkSubs"
 
 msgctxt "#700052"
-msgid "Clear Twilight Cache"
-msgstr "ניקוי קאש Twilight"
+msgid "Clear POV Cache"
+msgstr "ניקוי קאש POV"
 
 msgctxt "#700053"
 msgid "Clear DarkSubs Cache"
@@ -1020,7 +1020,7 @@ msgctxt "#700054"
 msgid "Episodes List"
 msgstr "רשימת פרקים"
 
-# Twilight Switch Video Source Button - VideoOSD.xml
+# POV Switch Video Source Button - VideoOSD.xml
 
 msgctxt "#700055"
 msgid "Switch Source"
@@ -1044,7 +1044,7 @@ msgctxt "#700058"
 msgid "Switch Skin"
 msgstr "החלף סקין"
 
-# Twilight Next Episode Button - VideoOSD.xml
+# POV Next Episode Button - VideoOSD.xml
 
 msgctxt "#700059"
 msgid "Next Episode"
