@@ -65,7 +65,7 @@
 						<onclick>Close</onclick>
 						<label>ניקוי קאש</label>
 						<icon>special://skin/extras/icons/battery.png</icon>
-						<onclick>RunPlugin(Skin.SetString(_povil_noop,1))</onclick>
+						<onclick>RunPlugin(plugin://plugin.video.pov/?mode=clear_all_cache&amp;isFolder=false)</onclick>
 					</item>
 					<item>
 						<onclick>Close</onclick>
