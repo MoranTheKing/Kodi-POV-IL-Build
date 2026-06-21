@@ -2839,4 +2839,90 @@
 <texturenofocus colordiffuse="25FFFFFF">masks/circle.png</texturenofocus>
 </include>
 
+
+<include name="SeekBarEnabled">
+<param name="animation">modalDialogInOutVerticalVisible</param>
+<param name="height">60</param>
+<param name="width">580</param>
+<param name="left">80%</param>
+<param name="top">20%</param>
+<!-- <param name="label">$VAR[SeekLabel] [COLOR button_focus]מעביר[/COLOR] [COLOR yellow]$INFO[Player.SeekStepSize][/COLOR] $VAR[CheckForwadingIfTrue]</param> -->
+<param name="label">מעביר $INFO[Player.SeekStepSize]</param>
+<param name="labelvisible">Player.Seeking</param>
+<param name="label2">$VAR[PlaybackStateLabel]</param>
+<param name="label2visible">Player.Forwarding | Player.Rewinding | Player.Caching</param>
+<param name="labelright">$INFO[Player.Time(hh:mm)]</param>
+<param name="labelleft">$INFO[Player.FinishTime(hh:mm)]</param>
+<definition>
+<control type="group">
+<include>$PARAM[animation]</include>
+<width>$PARAM[width]</width>
+<height>$PARAM[height]</height>
+<centertop>$PARAM[top]</centertop>
+<centerleft>$PARAM[left]</centerleft>
+<control type="image">
+	<left>Pad02</left>
+	<right>Pad02</right>
+	<top>Pad02</top>
+	<bottom>Pad02</bottom>
+	<texture border="16">icons/box.png</texture>
+	<colordiffuse>FF181818</colordiffuse>
+	<animation condition="true" effect="fade" start="100" end="75" time="0">Conditional</animation>
+</control>
+<control type="image">
+	<left>Padxy0</left>
+	<right>Padxy0</right>
+	<top>Padxy0</top>
+	<bottom>Padxy0</bottom>
+	<texture border="16">icons/box21.png</texture>
+	<colordiffuse>gray</colordiffuse>
+</control>
+<control type="label">
+	<right>5</right>
+	<align>right</align>
+	<aligny>center</aligny>
+	<font>font12</font>
+	<width>150</width>
+	<height>$PARAM[height]</height>
+	<label>$PARAM[labelright]</label>
+	<visible>true</visible>
+</control>
+<control type="label">
+	<align>center</align>
+	<aligny>center</aligny>
+	<centerleft>50%</centerleft>
+	<centertop>50%</centertop>
+	<font>font12</font>
+	<width>250</width>
+	<height>$PARAM[height]</height>
+	<label>$PARAM[label]</label>
+	<visible>$PARAM[labelvisible]</visible>
+</control>
+<control type="label">
+	<align>center</align>
+	<aligny>center</aligny>
+	<centerleft>50%</centerleft>
+	<centertop>50%</centertop>
+	<font>font12</font>
+	<width>250</width>
+	<height>$PARAM[height]</height>
+	<label>$PARAM[label2]</label>
+	<visible>$PARAM[label2visible]</visible>
+</control>
+<control type="label">
+	<left>5</left>
+	<align>left</align>
+	<aligny>center</aligny>
+	<font>font12</font>
+	<width>150</width>
+	<height>$PARAM[height]</height>
+	<label>$PARAM[labelleft]</label>
+	<visible>true</visible>
+</control>
+</control>
+</definition>
+</include>
+
+	
+
 </includes>

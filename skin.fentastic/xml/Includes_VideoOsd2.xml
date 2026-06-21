@@ -619,9 +619,10 @@
 	<visible>!Control.HasFocus(202)</visible>
 	<itemlayout width="145">
 	<control type="group">
-	<width>125</width>
+	<width>175</width>
 		<control type="label">
 			<font>font20_title</font>
+			<align>left</align>
 			<label>$INFO[ListItem.Label]</label>
 			<textcolor>95FFFFFF</textcolor>
 		</control>
@@ -629,50 +630,23 @@
 	</itemlayout>
 	<focusedlayout width="145">
 	<control type="group">
-	<width>125</width>
+	<width>175</width>
 		<control type="label">
 			<label>$INFO[ListItem.Label]</label>
 			<font>font20_title</font>
+			<align>left</align>
 			<visible>Control.HasFocus(40021)</visible>
 		</control>
 		<control type="label">
 			<label>$INFO[ListItem.Label]</label>
+			<align>left</align>
 			<font>font20_title</font>
 			<textcolor>95FFFFFF</textcolor>
 			<visible>!Control.HasFocus(40021)</visible>
 		</control>
 	</control>
 	</focusedlayout>
-	<content>
-	<item>
-		<label>1 דקה</label>
-		<onclick>seek(120)</onclick>
-	</item>
-	<item>
-		<label>5 דקות</label>
-		<onclick>seek(300)</onclick>
-	</item>
-	<item>
-		<label>10 דקות</label>
-		<onclick>seek(600)</onclick>
-	</item>
-	<item>
-		<label>20 דקות</label>
-		<onclick>seek(1200)</onclick>
-	</item>
-	<item>
-		<label>40 דקות</label>
-		<onclick>seek(2400)</onclick>
-	</item>
-	<item>
-		<label>60 דקות</label>
-		<onclick>seek(4800)</onclick>
-	</item>
-		<item>
-		<label>80 דקות</label>
-		<onclick>sseek(6000)</onclick>
-	</item>
-	</content>
+	<include>seek_forward_osd_item</include>
 	</control>
 	<!-- ####### end seek forward-->
 	
@@ -721,36 +695,7 @@
 		</control>
 	</control>
 	</focusedlayout>
-	<content>
-	<item>
-		<label>1 דקה</label>
-		<onclick>seek(-120)</onclick>
-	</item>
-	<item>
-		<label>5 דקות</label>
-		<onclick>seek(-300)</onclick>
-	</item>
-	<item>
-		<label>10 דקות</label>
-		<onclick>seek(-600)</onclick>
-	</item>
-	<item>
-		<label>20 דקות</label>
-		<onclick>seek(-1200)</onclick>
-	</item>
-		<item>
-		<label>40 דקות</label>
-		<onclick>seek(-2400)</onclick>
-	</item>
-	<item>
-		<label>60 דקות</label>
-		<onclick>seek(-4800)</onclick>
-	</item>
-	<item>
-		<label>80 דקות</label>
-		<onclick>sseek(-6000)</onclick>
-	</item>
-	</content>
+	<include>seek_rewind_osd_item</include>
 	</control>
 <!-- ####### end seek rewind-->		
 </control>

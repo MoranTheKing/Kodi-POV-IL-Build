@@ -26,7 +26,7 @@
             <param name="list_id" value="22013"/>
         </include>
         <include content="WidgetListBigEpisodes">
-            <param name="content_path" value="plugin://plugin.video.pov/?mode=navigator.build_shortcut_folder_list&amp;name=FENtastic+-+%D7%A1%D7%93%D7%A8%D7%95%D7%AA+-+%D7%96%D7%90%D7%A0%D7%A8%D7%99%D7%9D&amp;iconImage=genres&amp;shortcut_folder=True&amp;external_list_item=True"/>
+            <param name="content_path" value="plugin://plugin.video.pov/?iconImage=genres.png&amp;menu_type=tvshow&amp;mode=navigator.genres&amp;name=32470"/>
             <param name="widget_header" value="[B][COLOR yellow]ז'אנרים[/COLOR][/B]"/>
             <param name="widget_target" value="videos"/>
             <param name="list_id" value="22014"/>

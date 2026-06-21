@@ -490,6 +490,20 @@
 		<!-- <value>$INFO[ListItem.Year]</value>
 		 -->
 	</variable>
+	
+	<variable name="PlaybackStateLabel">
+		<value condition="Player.Rewinding2x">מריץ אחורה x2</value>
+		<value condition="Player.Rewinding4x">מריץ אחורה x4</value>
+		<value condition="Player.Rewinding8x">מריץ אחורה x8</value>
+		<value condition="Player.Rewinding16x">מריץ אחורה x16</value>
+		<value condition="Player.Rewinding32x">מריץ אחורה x22</value>
+		<value condition="Player.Forwarding2x">מריץ קדימה x2</value>
+		<value condition="Player.Forwarding4x">מריץ קדימה x4</value>
+		<value condition="Player.Forwarding8x">מריץ קדימה x8</value>
+		<value condition="Player.Forwarding16x">מריץ קדימה x16</value>
+		<value condition="Player.Forwarding32x">מריץ קדימה x32</value>
+	</variable>
+	
 	<variable name="VideoPlayerForwardRewindVar">
 		<value condition="Player.Forwarding2x | Player.Rewinding2x">2x</value>
 		<value condition="Player.Forwarding4x | Player.Rewinding4x">4x</value>

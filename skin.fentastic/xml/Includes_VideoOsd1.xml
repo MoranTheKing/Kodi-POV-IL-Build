@@ -662,6 +662,7 @@
 	<colordiffuse>$INFO[Skin.String(osdbuttonfocuscolor)]</colordiffuse>
 	<visible>$PARAM[nofocus]</visible>
 </control>
+<nested />
 </include>
 
 <include name="basedframeimage">

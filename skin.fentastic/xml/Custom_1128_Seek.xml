@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<window type="dialog" id="1128">
+	<zorder>4</zorder>
+	<visible>Player.Seeking | Player.Forwarding | Player.Rewinding | Player.Caching</visible>
+	<controls>
+	
+	<include>SeekBarEnabled</include>
+		
+	</controls>
+</window>
