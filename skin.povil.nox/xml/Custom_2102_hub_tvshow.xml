@@ -200,19 +200,6 @@
 						<onclick>ActivateWindow(Videos,"plugin://plugin.video.pov/?name=32470&amp;iconImage=genres.png&amp;mode=navigator.genres&amp;menu_type=tvshow",return)</onclick>
 					</item>
 					<item>
-						<label>סדרות טורקיות</label>
-						<icon>special://skin/extras/icons/turkytv.png</icon>
-						<onclick>ActivateWindow(10025,"plugin://plugin.video.pov/?action=tmdb_movies_popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;name=32459",return)</onclick>
-						<visible>Skin.HasSetting(HomeMenuNoCustom4Button)</visible>
-					</item>
-					<item>
-						<label>סדרות טורקיות</label>
-						<icon>special://skin/extras/icons/turkytv.png</icon>
-						<onclick>ActivateWindow(10025,&quot;plugin://plugin.video.idanplus/?name=VOD&amp;url=&amp;mode=2&amp;iconimage=special%3A%2F%2Fhome%2Faddons%2Fplugin.video.idanplus%2Ficon.png&amp;module=&amp;moredata=)</onclick>
-						<!-- <visible>Skin.HasSetting(HomeMenuNoCustom4Button)</visible> -->
-						<visible>false</visible>
-					</item>
-					<item>
 						<label>סדרות ברוסית</label>
 						<icon>special://skin/extras/icons/russian.png</icon>
 						<onclick>ActivateWindow(Videos,"plugin://plugin.video.pov/?name=32028&amp;iconImage=movies&amp;mode=navigator.main&amp;action=MovieList",return)</onclick>

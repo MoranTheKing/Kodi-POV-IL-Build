@@ -143,16 +143,6 @@
 						<onclick>PlayMedia("plugin://plugin.video.pov/?action=tmdb_movies_popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;name=32459")</onclick>
 					</item> -->
 					<item>
-						<label>מדובבים DRAX</label>
-						<icon>special://skin/extras/icons/moviekids.png</icon>
-						<onclick>ActivateWindow(10025,"plugin://plugin.video.pov/?action=tmdb_movies_popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;name=32459",return)</onclick>
-					</item>
-					<item>
-						<label>סדרות מדובבות DRAX</label>
-						<icon>special://skin/extras/icons/kisddisney.png</icon>
-						<onclick>ActivateWindow(10025,"plugin://plugin.video.pov/?action=tmdb_movies_popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;name=32459",return)</onclick>
-					</item>
-					<item>
 						<label>סדרות אנימה DRAX</label>
 						<icon>special://skin/extras/icons/oscar.png</icon>
 						<onclick>ActivateWindow(10025,"plugin://plugin.video.pov/?action=tmdb_movies_popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;name=32459",return)</onclick>
