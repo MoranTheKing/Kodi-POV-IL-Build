@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <includes>
 
+
 <include name="BasedMenuOsdItems">
 	<content>
 	<item>
@@ -69,11 +70,120 @@
 	</item>
 	        <item>
             <!-- KODI-POV-IL - OSD player mode -->
-            <label>בחר נגן</label>
-            <label2>$VAR[osdchangeplayervar]</label2>
-            <onclick>RunPlugin(plugin://plugin.program.kodipovilwizard/?mode=install&amp;action=fentastic_select_player)</onclick>
+            <label>שנה נגן</label>
+            <label2>$VAR[OSDPlayerModeVar]</label2>
+            <onclick>Skin.ToggleSetting(chooseosdplayer)</onclick>
+            <onclick>ReloadSkin()</onclick>
         </item>
 </content>
 </include>
-	
+
+<include name="left_netflix_menu">
+	<content>
+	<item>
+		<icon>osd/fullscreen/buttons/play.png</icon>
+		<onclick>PlayerControl(play)</onclick>
+		<visible>Player.Paused</visible>
+		<property name="id">$NUMBER[52000]</property>
+	</item>
+	<item>
+		<icon>osd/fullscreen/buttons/pause.png</icon>
+		<onclick>PlayerControl(play)</onclick>
+		<visible>!Player.Paused</visible>
+		<property name="id">$NUMBER[52000]</property>
+	</item>
+	<item>
+		<icon>osd/fullscreen/buttons/stop.png</icon>
+		<onclick>PlayerControl(stop)</onclick>
+		<property name="id">$NUMBER[52000]</property>
+	</item>
+	<item>
+	<icon>osd/fullscreen/buttons/subs3.png</icon>
+	<onclick>ActivateWindow(subtitlesearch)</onclick>
+	</item>
+	<item>
+		<icon>osd/fullscreen/buttons/previous.png</icon>
+		<onclick></onclick>
+		<property name="id">$NUMBER[52000]</property>
+		</item>
+	</content>
+</include>
+
+<include name="changeplayer_osd">
+<item>
+	<label>[B][COLOR blue]שנה נגן[/COLOR][/B]</label>
+	<label2>$VAR[__PlayerChoose]</label2>
+	<onclick condition="String.IsEmpty(Skin.String(__chooseplayer))">Skin.SetString(__chooseplayer,__simpleplayer)</onclick>
+	<onclick condition="Skin.String(__chooseplayer,__simpleplayer)">Skin.SetString(__chooseplayer,__advancedplayer)</onclick>
+	<onclick condition="Skin.String(__chooseplayer,__advancedplayer)">Skin.SetString(__chooseplayer,__netflixplayer)</onclick>
+	<onclick condition="Skin.String(__chooseplayer,__netflixplayer)">Skin.SetString(__chooseplayer,__simpleplayer)</onclick>
+</item>
+</include>
+
+<include name="seek_forward_osd_item">
+<content>
+<item>
+	<label>1 דקה</label>
+	<onclick>seek(120)</onclick>
+</item>
+<item>
+	<label>5 דקות</label>
+	<onclick>seek(300)</onclick>
+</item>
+<item>
+	<label>10 דקות</label>
+	<onclick>seek(600)</onclick>
+</item>
+<item>
+	<label>20 דקות</label>
+	<onclick>seek(1200)</onclick>
+</item>
+<item>
+	<label>40 דקות</label>
+	<onclick>seek(2400)</onclick>
+</item>
+<item>
+	<label>60 דקות</label>
+	<onclick>seek(4800)</onclick>
+</item>
+	<item>
+	<label>80 דקות</label>
+	<onclick>sseek(6000)</onclick>
+</item>
+</content>
+</include>
+
+
+<include name="seek_rewind_osd_item">
+<content>
+<item>
+	<label>1 דקה</label>
+	<onclick>seek(-120)</onclick>
+</item>
+<item>
+	<label>5 דקות</label>
+	<onclick>seek(-300)</onclick>
+</item>
+<item>
+	<label>10 דקות</label>
+	<onclick>seek(-600)</onclick>
+</item>
+<item>
+	<label>20 דקות</label>
+	<onclick>seek(-1200)</onclick>
+</item>
+	<item>
+	<label>40 דקות</label>
+	<onclick>seek(-2400)</onclick>
+</item>
+<item>
+	<label>60 דקות</label>
+	<onclick>seek(-4800)</onclick>
+</item>
+<item>
+	<label>80 דקות</label>
+	<onclick>sseek(-6000)</onclick>
+</item>
+</content>
+</include>
 </includes>

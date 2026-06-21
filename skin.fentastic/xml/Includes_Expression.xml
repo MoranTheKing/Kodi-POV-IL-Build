@@ -17,7 +17,6 @@
 	<expression name="osdmoviestvshowvisible">VideoPlayer.Content(movies) | VideoPlayer.Content(episodes)</expression>
 	<expression name="OsdFlagsVisible">Container(201).HasFocus(101) | Container(201).HasFocus(102) | Container(201).HasFocus(103) | Container(201).HasFocus(104) | Container(201).HasFocus(105) | Container(201).HasFocus(106) | Container(201).HasFocus(107) | Container(201).HasFocus(108) | Container(201).HasFocus(110) | Container(201).HasFocus(111) | $EXP[PreviousNextItemCheck]</expression>
 	<expression name="PauseTendOsd">Container(201).HasFocus(100) | Container(201).HasFocus(101) | Container(201).HasFocus(102) | Container(201).HasFocus(103) | Container(201).HasFocus(104) | Container(201).HasFocus(105) | Container(201).HasFocus(106) | Container(201).HasFocus(107) | Container(201).HasFocus(108) | Container(201).HasFocus(109) | Container(201).HasFocus(110) | Container(201).HasFocus(111) | Container(201).HasFocus(250) | Container(201).HasFocus(251)</expression>
-
 	<expression name="MoviesTvShowsExpression_OSD">VideoPlayer.Content(movies) | VideoPlayer.Content(episodes)</expression>
 	<expression name="LivetvExpressionEPG_OSD">VideoPlayer.Content(LiveTv) + VideoPlayer.HasEpg</expression>
 	<expression name="Visibilty_Plot_OSd">String.IsEmpty(VideoPlayer.Plot)</expression>
