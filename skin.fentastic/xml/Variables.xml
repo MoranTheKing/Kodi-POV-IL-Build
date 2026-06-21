@@ -75,6 +75,12 @@
 	<variable name="FanartThumbVar">
 		<value condition="!String.IsEmpty(Listitem.Art(poster))">$INFO[Listitem.Art(thumb)]</value>
 	</variable>
+	
+	<variable name="_FixIdanPlusPVR">
+		<value condition="VideoPlayer.Content(LiveTv)">pvr://channels/tv/*</value>
+		<value condition="!VideoPlayer.Content(LiveTv)osdbottom">plugin://plugin.video.idanplus/?iconimage=C%253A%255CUsers%255CNetag%255CAppData%255CRoaming%255CKodi%255Caddons%255Cplugin.video.idanplus%255Cicon.png&amp;mode=1&amp;module&amp;moredata&amp;name=%5bB%5d%d7%98%d7%9c%d7%95%d7%99%d7%96%d7%99%d7%94%5b%2fB%5d&amp;url</value>
+	</variable>
+	
 	<variable name="PosterThumbVar">
 		<value condition="!String.IsEmpty(Listitem.Art(poster))">$INFO[Listitem.Art(poster)]</value>
 		<value condition="!String.IsEmpty(Listitem.Art(thumb))">$INFO[Listitem.Art(poster)]</value>
@@ -545,7 +551,7 @@
 	</variable>
 
 	<variable name="_FixOsdIcon">
-	<value condition="VideoPlayer.Content(movies) | VideoPlayer.Content(episodes) + !String.IsEmpty(VideoPlayer.Art(poster)">$INFO[VideoPlayer.Art(poster)]</value>
+	<value condition="VideoPlayer.Content(movies) | VideoPlayer.Content(episodes) + !String.IsEmpty(Player.Art(poster)">$INFO[Player.Art(poster)]</value>
 	<value condition="VideoPlayer.Content(movies) | VideoPlayer.Content(episodes) + !String.IsEmpty(VideoPlayer.Cover)">$INFO[VideoPlayer.Cover]</value>
 	<value condition="VideoPlayer.Content(movies) | VideoPlayer.Content(episodes) + !String.IsEmpty(Player.Icon)">$INFO[Player.Icon]</value>
 	<value>$INFO[Player.Icon]</value>
@@ -867,6 +873,11 @@
     <value condition="String.IsEqual(Skin.String(current_search_provider),1)">plugin://plugin.video.fenlight/?mode=build_trakt_list.search_trakt_lists&amp;query=$INFO[Skin.String(SearchInputTraktEncoded)]</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),3)">plugin://plugin.video.pov/?mode=build_trakt_list.search_trakt_lists&amp;search_title=$INFO[Skin.String(SearchInputTraktEncoded)]</value>
     <value>plugin://plugin.video.pov/?mode=build_trakt_list.search_trakt_lists&amp;query=$INFO[Skin.String(SearchInputTraktEncoded)]</value>
+	</variable>
+	
+	<variable name="_ReplaceSubtitle">
+	<value condition="String.IsEqual(Skin.String(subtitlesearch),darksubs)">חיפוש כתובית דרך דארקסאבס</value>
+	<value condition="String.IsEqual(Skin.String(subtitlesearch),kodisubtitle)">חיפוש כתובית דרך קודי</value>
 	</variable>
 
 	<!-- RATINGS INFOPANEL VARIABLES -->
