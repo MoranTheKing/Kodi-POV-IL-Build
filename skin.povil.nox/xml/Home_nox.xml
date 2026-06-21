@@ -66,14 +66,14 @@
 
 				<!-- MOVIES -->
 				<control type="group" id="19000">
-					<top>-50</top>
+					<top>270</top>
 					<visible>String.IsEqual(Container(9000).ListItem.Property(id),movies)</visible>
 					<include content="MovieWidgetsNox" condition="!Skin.HasSetting(HomeMenuNoMoviesButton)" />
 				</control>
 				
 				<!-- TV SHOWS -->
 				<control type="group" id="22000">
-					<top>-50</top>
+					<top>270</top>
 					<visible>String.IsEqual(Container(9000).ListItem.Property(id),tvshows)</visible>
 					<include content="TVShowWidgetsNox" condition="!Skin.HasSetting(HomeMenuNoTVShowsButton)" />
 				</control>
@@ -88,7 +88,6 @@
 					<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom1)</visible>
 					<include content="Custom1WidgetsNoxVOD12" condition="!Skin.HasSetting(HomeMenuNoCustom1Button)" />
 					<include content="Custom1WidgetsNoxVOD13" condition="!Skin.HasSetting(HomeMenuNoCustom1Button)" />
-					<include content="Custom1WidgetsNoxVOD11" condition="!Skin.HasSetting(HomeMenuNoCustom1Button)" />
 				</control>
 
 				<!-- TV AND RADIO -->
@@ -99,7 +98,7 @@
 				</control>
 				<!-- KIDS -->
 				<control type="group" id="25000">
-					<top>-50</top>
+					<top>270</top>
 					<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom3)</visible>
 					<include content="Custom3WidgetsNox" condition="!Skin.HasSetting(HomeMenuNoCustom3Button)" />
 				</control>

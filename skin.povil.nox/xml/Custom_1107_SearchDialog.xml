@@ -29,11 +29,6 @@
 						<onclick>ActivateWindow(Videos,"plugin://plugin.video.pov/?mode=search_history&amp;action=tvshow&amp;iconImage=https%3A%2F%2Fi.imgur.com%2FxYTdX3O.png",return)</onclick>
 					</item>
 					<item>
-						<label>אוספי סרטים</label>
-						<onclick>Dialog.Close(all)</onclick>
-						<onclick>ActivateWindow(Videos,"plugin://plugin.video.pov/?mode=search_history&amp;action=tmdb_movie_sets&amp;iconImage=https%3A%2F%2Fi.imgur.com%2Fr0ITv0C.png",return)</onclick>
-					</item>
-					<item>
 						<label>שחקנים</label>
 						<onclick>Dialog.Close(all)</onclick>
 						<onclick>ActivateWindow(Videos,"plugin://plugin.video.pov/?mode=search_history&amp;action=people&amp;iconImage=https%3A%2F%2Fi.imgur.com%2FF1EZyWz.png",return)</onclick>
