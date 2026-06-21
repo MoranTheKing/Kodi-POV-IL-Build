@@ -105,7 +105,6 @@
 
 <include name="changeplayer_osd">
 <item>
-	<icon>
 	<label>[B][COLOR blue]שנה נגן[/COLOR][/B]</label>
 	<label2>$VAR[__PlayerChoose]</label2>
 	<onclick condition="String.IsEmpty(Skin.String(__chooseplayer,__simpleplayer)">Skin.SetString(__chooseplayer,__simpleplayer)</onclick>
