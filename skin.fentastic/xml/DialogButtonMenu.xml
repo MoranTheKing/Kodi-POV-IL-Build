@@ -38,6 +38,17 @@
 				<textcolor>unfocused_text</textcolor>
 				<label>$INFO[ListItem.Label]</label>
 			</control>
+			<control type="label">
+				<right>0</right>
+				<textoffsetx>20</textoffsetx>
+				<top>25</top>
+				<width>300</width>
+				<height>70</height>
+				<align>center</align>
+				<aligny>center</aligny>
+				<textcolor>unfocused_text</textcolor>
+				<label>$INFO[ListItem.Label2]</label>
+			</control>
 		</itemlayout>
 		<focusedlayout height="70" width="600">
 			<control type="image">
@@ -58,6 +69,17 @@
 				<!-- KODI-RD-IL CHANGES -->
 				<label>$INFO[ListItem.Label]</label>
 				<textcolor>focused_text</textcolor>
+			</control>
+			<control type="label">
+				<right>0</right>
+				<textoffsetx>20</textoffsetx>
+				<top>25</top>
+				<width>300</width>
+				<height>70</height>
+				<align>center</align>
+				<aligny>center</aligny>
+				<textcolor>unfocused_text</textcolor>
+				<label>$INFO[ListItem.Label2]</label>
 			</control>
 		</focusedlayout>
 				<content>
@@ -122,12 +144,7 @@
 						<onclick>Dialog.Close(all)</onclick>
 						<onclick>ReloadSkin()</onclick>
 					</item>
-                        <item>
-                            <!-- KODI-POV-IL - Open FENtastic player selector -->
-                            <label>[B][COLOR blue]בחר נגן[/COLOR][/B]</label>
-                            <label2>$VAR[osdchangeplayervar]</label2>
-                            <onclick>RunPlugin(plugin://plugin.program.kodipovilwizard/?mode=install&amp;action=fentastic_select_player)</onclick>
-                        </item>
+					<include>changeplayer_osd</include>
 					<!-- ##################### -->
 				</content>
 			</control>

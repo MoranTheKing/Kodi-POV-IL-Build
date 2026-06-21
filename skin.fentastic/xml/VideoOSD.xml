@@ -6,8 +6,12 @@
 	<include>OsdBackWindowInfo</include>
 	<controls>
 	
-	<include condition="Skin.HasSetting(chooseosdplayer)">videosd2</include>
-	<include condition="!Skin.HasSetting(chooseosdplayer)">videosd1</include>
-		
+	<control type="group">
+	<include condition="String.IsEqual(Skin.String(__chooseplayer),__advancedplayer)">videosd1</include>
+	<include condition="String.IsEqual(Skin.String(__chooseplayer),__netflixplayer)">videosd2</include>
+	<include condition="String.IsEmpty(Skin.String(__chooseplayer))">videosd3</include>
+	<include condition="String.IsEqual(Skin.String(__chooseplayer),__simpleplayer)">videosd3</include>
+	</control>
+	
 	</controls>
 </window>
