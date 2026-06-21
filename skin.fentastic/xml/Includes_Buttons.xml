@@ -430,4 +430,13 @@
 	</include>	
 	<!-- ##################### -->
 	
+	<include name="FakedButton">
+		<control type="button" id="$PARAM[id]">
+		<height>1</height>
+		<width>1</width>
+		<label />
+		<onfocus>$PARAM[onfocus]</onfocus>
+		</control>
+	</include>
+	
 </includes>

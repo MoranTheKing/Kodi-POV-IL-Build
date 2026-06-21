@@ -189,4 +189,133 @@
 	</include>
 	<!-- ##################### -->
 	
+	
+	<include name="osdbackwindowopecityanim">
+	<animation condition="String.IsEqual(Skin.String(backwindowopecitychange),10)" effect="fade" start="100" end="10" time="0">Conditional</animation>
+	<animation condition="String.IsEqual(Skin.String(backwindowopecitychange),20)" effect="fade" start="100" end="20" time="0">Conditional</animation>
+	<animation condition="String.IsEqual(Skin.String(backwindowopecitychange),40)" effect="fade" start="100" end="40" time="0">Conditional</animation>
+	<animation condition="String.IsEqual(Skin.String(backwindowopecitychange),60)" effect="fade" start="100" end="60" time="0">Conditional</animation>
+	<animation condition="String.IsEqual(Skin.String(backwindowopecitychange),80)" effect="fade" start="100" end="80" time="0">Conditional</animation>
+	<animation condition="String.IsEqual(Skin.String(backwindowopecitychange),95)" effect="fade" start="95" end="80" time="0">Conditional</animation>
+	<animation condition="String.IsEqual(Skin.String(backwindowopecitychange),100)" effect="fade" start="100" end="100" time="0">Conditional</animation>
+	</include>
+	
+	
+	<!-- START OF GLOBAL SLIDE ANIMATION -->
+	<!-- TOP 2 BOTTOM ANIMATION -->
+	<include name="top2bottomslideanimation">
+		<animation type="WindowOpen">
+			<effect type="slide" start="0,-20" end="0,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
+		</animation>
+		<animation type="WindowClose">
+			<effect type="slide" start="0,0" end="0,-20" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
+		</animation>
+		<animation type="Visible">
+			<effect type="slide" start="0,-20" end="0,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
+		</animation>
+		<animation type="Hidden">
+			<effect type="slide" start="0,0" end="0,-20" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
+		</animation>
+	</include>
+	<!-- END TOP 2 BOTTOM ANIMATION -->
+	
+	<!-- BOTTOM 2 TOP ANIMATION -->
+	<include name="bottom2topslideanimation">
+		<animation type="WindowOpen">
+			<effect type="slide" start="0,20" end="0,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
+		</animation>
+		<animation type="WindowClose">
+			<effect type="slide" start="0,0" end="0,20" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
+		</animation>
+		<animation type="Visible">
+			<effect type="slide" start="0,20" end="0,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
+		</animation>
+		<animation type="Hidden">
+			<effect type="slide" start="0,0" end="0,20" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
+		</animation>
+	</include>
+	<!-- END TOP 2 BOTTOM ANIMATION -->
+	
+	<!-- LEFT 2 RIGHT ANIMATION -->
+	<include name="left2rightslideanimation">
+		<animation type="WindowOpen">
+			<effect type="slide" start="-20,0" end="0,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
+		</animation>
+		<animation type="WindowClose">
+			<effect type="slide" start="0,0" end="0,-20" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
+		</animation>
+		<animation type="Visible">
+			<effect type="slide" start="-20,0" end="0,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
+		</animation>
+		<animation type="Hidden">
+			<effect type="slide" start="0,0" end="0,-20" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
+		</animation>
+	</include>
+	<!-- END LEFT 2 RIGHT ANIMATION -->
+	
+	<!-- RIGHT 2 LEFT ANIMATION -->
+	<include name="right2leftslideanimation">
+		<animation type="WindowOpen">
+			<effect type="slide" start="20,0" end="0,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
+		</animation>
+		<animation type="WindowClose">
+			<effect type="slide" start="0,0" end="0,20" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
+		</animation>
+		<animation type="Visible">
+			<effect type="slide" start="20,0" end="0,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
+		</animation>
+		<animation type="Hidden">
+			<effect type="slide" start="0,0" end="0,20" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
+		</animation>
+	</include>
+	<!-- END RIGHT 2 LEFT ANIMATION -->
+	<!-- END OF GLOBAL SLIDE ANIMATION -->
+	<!-- ################################### -->
+	
+	
+	<include name="BasedMenuAnimationOsdSettings">
+		<animation type="WindowOpen">
+		<effect type="slide" start="-550,0" end="0,0" time="650" tween="back" easing="inout"/>
+		</animation>
+		<animation type="WindowClose">
+		<effect type="slide" start="0,0" end="-550,0" time="650" tween="back" easing="inout"/>
+		</animation>
+	</include>
+	
+	<include name="SecondBasedMenuAnimationOsdSettings">
+		<animation type="Visible">
+		<effect type="slide" start="-20" end="0" time="150" tween="sine" easing="inout"/>
+		<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
+		</animation>
+		<animation type="Hidden">
+		<effect type="slide" start="0" end="-20" time="150" tween="sine" easing="inout"/>
+		<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
+		</animation>
+	</include>
+	
+	<include name="OpenCloseWindowFadeAnimation">
+	<animation type="WindowOpen">
+		<effect type="fade" start="0" end="100" time="350" delay="450"/>
+	</animation>		
+	<animation type="WindowClose">
+		<effect type="fade" start="100" end="0" time="250" delay="150"/>
+	</animation>
+	</include>
+	
 </includes>

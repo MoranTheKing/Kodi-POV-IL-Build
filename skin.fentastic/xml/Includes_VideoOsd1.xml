@@ -857,12 +857,11 @@
 	<control type="group">
 	<top>25</top>
 	<left>10</left>
-	<width>780</width>
-	<height>120</height>
+	<width>720</width>
+	<height>140</height>
 	<include>top2bottomslideanimation</include>
 	<control type="group">
 		<width>240</width>
-		<height>120</height>
 		<include content="basedframeimage">
 			<param name="texture">$INFO[Player.Art(fanart)]</param>
 		</include>
@@ -871,30 +870,13 @@
 	<left>260</left>
 	<align>center</align>
 	<orientation>vertical</orientation>
-		<control type="label">
-			<height max="40">auto</height>
-			<visible>!String.IsEmpty(VideoPlayer.Title)</visible>
-			<label>[B]$INFO[VideoPlayer.Title][/B]</label>
+		<control type="textbox">
+			<height max="auto">auto</height>
+			<label>$VAR[LeftCornerFixTitle_osd]</label>
 		</control>
-		<control type="label">
-			<height max="40">auto</height>
-			<visible>!String.IsEmpty(VideoPlayer.Year)</visible>
-			<label>$INFO[VideoPlayer.Year]</label>
-		</control>
-		<control type="label">
-			<height max="40">auto</height>
-			<visible>VideoPlayer.Content(episodes)</visible>
-			<label>עונה:$INFO[VideoPlayer.Season,[COLOR button_focus](,)[/COLOR]] פרק:$INFO[VideoPlayer.Episode,[COLOR button_focus](,)[/COLOR]]</label>
-		</control>
-		<control type="label">
-			<height max="40">auto</height>
-			<visible>VideoPlayer.Content(LiveTv)</visible>
-			<label>$INFO[VideoPlayar.ChannelName]</label>
-		</control>
-		<control type="label">
-			<height max="40">auto</height>
-			<visible>VideoPlayer.Content(movies) + !String.IsEmpty(VideoPlayar.Rating)</visible>
-			<label>[COLOR button_focus]דירוג:[/COLOR] $INFO[VideoPlayar.Rating]</label>
+		<control type="textbox">
+			<height max="auto">auto</height>
+			<label>$VAR[LeftCornerFixMiddle_osd]</label>
 		</control>
 	</control>
 	</control>
@@ -1032,7 +1014,7 @@
 	</include>
 	<include content="_FixOsdFlags">
 		<param name="left">Padxy10</param>
-		<param name="label2">$VAR[_FixaudiolangugeOsd] </param>
+		<param name="label2">$VAR[_FixaudiolangugeOsd]</param>
 		<param name="texture">https://www.iconsdb.com/icons/preview/white/speaker-xxl.png</param>
 		<param name="visible">true</param>
 	</include>

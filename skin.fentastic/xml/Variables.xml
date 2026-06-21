@@ -13,6 +13,155 @@
 	<variable name="AutoCompletionContentVar">
 		<value condition="System.AddonIsEnabled(plugin.program.autocompletion) + !System.HasHiddenInput">plugin://plugin.program.autocompletion?info=autocomplete&amp;&amp;id=$INFO[Control.GetLabel(312).index(1)]&amp;&amp;limit=9</value>
 	</variable>
+	
+	<variable name="GlobalBasedImage">
+	<value>colors/white.png</value>
+	</variable>
+	
+	<variable name="NetFlixMenuLeftLabel">
+	<value condition="ControlGroup(201).HasFocus(43300)">הקודם</value>
+	<value condition="ControlGroup(201).HasFocus(43301)">העבר אחורה</value>
+	<value condition="ControlGroup(201).HasFocus(43302)">נגן</value>
+	<value condition="ControlGroup(201).HasFocus(43304)">השהה</value>
+	<value condition="ControlGroup(201).HasFocus(43305)">עצור</value>
+	<value condition="ControlGroup(201).HasFocus(43306)">חפש כתובית</value>
+	<value condition="ControlGroup(201).HasFocus(43307)">הפעל כתובית</value>
+	<value condition="ControlGroup(201).HasFocus(43308)">כתובית מופעלת</value>
+	<value condition="ControlGroup(201).HasFocus(43309)">סנכרן כתובית</value>
+	<value condition="ControlGroup(201).HasFocus(43310)">סנכרן כתובית</value>
+	<value condition="ControlGroup(201).HasFocus(43311)">העבר קדימה</value>
+	<value condition="ControlGroup(201).HasFocus(43312)">הבא</value>
+	</variable>
+
+	<variable name="NetFlixMenuRightLabel">
+	<value condition="ControlGroup(202).HasFocus(43313)">הגדרות וידאו</value>
+	<value condition="ControlGroup(202).HasFocus(43314)">הגדרות אודיו</value>
+	<value condition="ControlGroup(202).HasFocus(43315) + $EXP[__Movies_OSD]">החלף מקור לסרט</value>
+	<value condition="ControlGroup(202).HasFocus(43315) + $EXP[__episode_OSD]">החלף מקור לפרק</value>
+	</variable>
+	
+	
+	<variable name="StartTime_Osd_VAR">
+	<value condition="!VideoPlayer.Content(LiveTv)">$INFO[Player.Time(hh:mm:ss)]</value>
+	<value condition="VideoPlayer.Content(LiveTv) + VideoPlayer.HasEpg">$INFO[PVR.TimeShiftStart(hh:mm:ss)]</value>
+	<value condition="VideoPlayer.Content(LiveTv) + !VideoPlayer.HasEpg">$INFO[Player.Time(hh:mm:ss)]</value>
+	<value>$INFO[VideoPlayer.Duration(hh:mm:ss)]</value>
+	</variable>
+
+	<variable name="EndTime_Osd_VAR">
+	<value condition="$EXP[IDANPlusCheck_OSd]">$INFO[Player.FinishTime(hh:mm:ss)]</value>
+	<value condition="!$EXP[IDANPlusCheck_OSd]">$INFO[Player.TimeRemaining(hh:mm:ss)]</value>
+	<!-- <value></value> -->
+	</variable>
+	
+	<variable name="osd_middle_info_var">
+	<value condition="$EXP[__Movies_OSD] | $EXP[__episode_OSD]">$INFO[VideoPlayer.Genre]</value>
+	<value condition="VideoPlayer.Content(LiveTv) + VideoPlayer.HasEpg">$INFO[VideoPlayer.StartTime,מתחיל (,)] •  $INFO[VideoPlayer.EndTime,מסתיים (,)]</value>
+	<value>אין מידע</value>
+	</variable>
+
+	<variable name="osd_top_info_var">
+	<value condition="$EXP[__Movies_OSD]">$INFO[VideoPlayer.Title] $INFO[VideoPlayer.Year,(,)]</value>
+	<value condition="$EXP[__episode_OSD]">$INFO[VideoPlayer.TvShowTitle] $INFO[VideoPlayer.Year,(,)]</value>
+	<value condition="$EXP[__livetv_OSD] + VideoPlayer.HasEpg">$INFO[VideoPlayer.StartTime,מתחיל(,)] $INFO[VideoPlayer.EndTime,מסתיים(,)]</value>
+	<value>$INFO[VideoPlayer.Title]</value>
+	</variable>
+	
+	<variable name="netflix_playerpaused_label">
+	<value condition="Player.Paused">[B]מושהה[/B]</value>
+	<value condition="!Player.Paused">[B]מנגן עכשיו[/B]</value>
+	</variable>
+	
+	<variable name="netflix_playerpaused_Icon">
+	<value condition="Player.Paused">osd/fullscreen/buttons/pause.png</value>
+	<value condition="!Player.Paused">osd/fullscreen/buttons/play.png</value>
+	</variable>
+	
+	<variable name="middlelabelInfo_OSD_Var">
+	<value condition="$EXP[MoviesTvShowsExpression_OSD]">$INFO[VideoPlayer.Genre]</value>
+	<value condition="$EXP[LivetvExpressionEPG_OSD]">מתחיל [COLOR button_focus]$INFO[VideoPlayer.StartTime][/COLOR] מסתיים [COLOR button_focus]$INFO[VideoPlayer.EndTime][/COLOR]</value>
+	<value>No Information</value>
+	</variable>
+	
+	<variable name="middlelabelInfo_Next_OSD_Var">
+	<value condition="!String.IsEmpty(VideoPlayer.offset(1).Genre)">$INFO[VideoPlayer.offset(1).Genre]</value>
+	<value condition="VideoPlayer.Content(LiveTv) + VideoPlayer.HasEpg">מתחיל [COLOR button_focus]$INFO[VideoPlayer.NextStartTime][/COLOR] מסתיים [COLOR button_focus]$INFO[VideoPlayer.NextEndTime][/COLOR]</value>
+	<value>No Information</value>
+	</variable>
+	
+	<variable name="NextTitleInfo_Next_OSD">
+	<value condition="!String.IsEmpty(VideoPlayer.offset(1).Title)">$INFO[VideoPlayer.offset(1).Title]</value>
+	<value condition="!String.IsEmpty(Player.offset(1).Title)">$INFO[Player.offset(1).Title]</value>
+	<value>No Title</value>
+	</variable>
+	
+	<variable name="PreviousTitleInfo_Next_OSD">
+	<value condition="!String.IsEmpty(VideoPlayer.offset(-1).Title)">$INFO[VideoPlayer.offset(-1).Title]</value>
+	<value condition="!String.IsEmpty(Player.offset(-1).Title)">$INFO[Player.offset(-1).Title]</value>
+	<value>No Title</value>
+	</variable>
+	
+	<variable name="NextTitleInfoYear_Next_OSD">
+	<value condition="!String.IsEmpty(VideoPlayer.offset(1).Year)">$INFO[VideoPlayer.offset(1).Year]</value>
+	<value condition="!String.IsEmpty(Player.offset(1).Year)">$INFO[Player.offset(1).Year]</value>
+	</variable>
+	
+	<variable name="PreviousTitleInfoYear_Next_OSD">
+	<value condition="!String.IsEmpty(VideoPlayer.offset(-1).Year)">$INFO[VideoPlayer.offset(-1).Year]</value>
+	<value condition="!String.IsEmpty(Player.offset(-1).Year)">$INFO[Player.offset(-1).Year]</value>
+	</variable>
+
+	<variable name="middlelabelInfo_Previous_OSD_Var">
+	<value condition="!String.IsEmpty(VideoPlayer.offset(-1).Genre)">$INFO[VideoPlayer.offset(-1).Genre]</value>
+	<value>No Information</value>
+	</variable>
+	
+	<variable name="bottomlabelinfo_Previous_OSD_Var">
+	<value>$INFO[VideoPlayer.offset(-1).Plot]</value>
+	</variable>
+
+	<variable name="bottomlabelinfo_Next_OSD_Var">
+	<value>$INFO[VideoPlayer.offset(1).Plot]</value>
+	</variable>
+	
+	<variable name="_FixaudiolangugeOsd">
+		<value condition="String.IsEqual(VideoPlayer.AudioLanguage,eng)">אנגלית</value>
+		<value condition="String.IsEqual(VideoPlayer.AudioLanguage,heb)">עברית</value>
+		<value condition="String.IsEqual(VideoPlayer.AudioLanguage,ita)">איטלקית</value>
+		<value>$INFO[VideoPlayer.AudioLanguage]</value>
+	</variable>
+	
+	<variable name="NextShowIcon_OSD_Var">
+	<value condition="!String.IsEmpty(VideoPlayer.offset(1).Cover)">$INFO[VideoPlayer.offset(1).Cover]</value>
+	<value condition="!String.IsEmpty(VideoPlayer.offset(1).Icon)">$INFO[VideoPlayer.offset(1).Icon]</value>	
+	</variable>
+	
+	<variable name="PreviousShowIcon_OSD_Var">
+	<value condition="!String.IsEmpty(VideoPlayer.offset(-1).Cover)">$INFO[VideoPlayer.offset(-1).Cover]</value>
+	<value condition="!String.IsEmpty(VideoPlayer.offset(-1).Icon)">$INFO[VideoPlayer.offset(-1).Icon]</value>
+	<value condition="!String.IsEmpty(VideoPlayer.offset(-1).Icon)">$INFO[VideoPlayer.offset(-1).Icon]</value>
+	
+	</variable>
+
+	<variable name="_FixsublanguageOsd">
+		<value condition="String.IsEqual(VideoPlayer.SubtitlesLanguage,eng)">אנגלית</value>
+		<value condition="String.IsEqual(VideoPlayer.SubtitlesLanguage,heb)">עברית</value>
+		<value condition="String.IsEqual(VideoPlayer.SubtitlesLanguage,ita)">איטלקית</value>
+		<value>$INFO[VideoPlayer.AudioLanguage]</value>
+	</variable>
+	
+	<variable name="LeftCornerFixTitle_osd">
+	<value condition="$EXP[__Movies_OSD] | $EXP[__livetv_OSD]">$INFO[VideoPlayer.Title][CR][B][COLOR button_focus]שנה[/COLOR][/B] $INFO[VideoPlayer.Year,(,)]</value>
+	<value condition="$EXP[__episode_OSD]">$INFO[VideoPlayer.Title] [COLOR button_focus]$INFO[VideoPlayer.Year,(,)][/COLOR][CR]עונה:$INFO[VideoPlayer.Season,[COLOR button_focus](,)[/COLOR]] פרק:$INFO[VideoPlayer.Episode,[COLOR button_focus](,)[/COLOR]]</value>
+	<value>$INFO[VideoPlayer.Title]</value>
+	</variable>
+	
+	<variable name="LeftCornerFixMiddle_osd">
+	<value condition="$EXP[__Movies_OSD] | $EXP[__episode_OSD]">$INFO[Player.Time(hh:mm:ss)] [COLOR yellow]/[/COLOR] $INFO[Player.TimeRemaining(hh:mm:ss)]</value>
+	<value condition="$EXP[__livetv_OSD] + VideoPlayer.HasEpg">[COLOR yellow]מתחיל[/COLOR] $INFO[VideoPlayer.StartTime,[,]) [COLOR yellow]מסתיים[/COLOR] [VideoPlayer.EndTime,[,])</value>
+	<value>$INFO[Player.Time(hh:mm:ss)]</value>
+	</variable>	
+		
 	<variable name="InfoListPathVar">
 		<value condition="String.IsEmpty(Container.PluginName)">$INFO[ListItem.FolderPath]</value>
 		<value></value>
@@ -21,6 +170,20 @@
 		<value condition="Integer.IsGreater(System.AddonUpdateCount,0)">$INFO[System.AddonUpdateCount]</value>
 		<value>$INFO[System.AddonUpdateCount,[COLOR grey],[/COLOR]]</value>
 	</variable>
+	<variable name="idanplusdisablebutton_OSD">
+		<value condition="Skin.HasSetting(disableidan)">התווסף לרשימת הכפתורים</value>
+		<value condition="!Skin.HasSetting(disableidan)">הוסר מרשימת הכפתורים</value>
+	</variable>
+
+	<variable name="OsdPlayerClose">
+		<value condition="Skin.HasSetting(playerclosedelay)">התווסף לרשימת הכפתורים</value>
+		<value condition="!Skin.HasSetting(playerclosedelay)">הוסר מרשימת הכפתורים</value>
+	</variable>
+	<variable name="OsdPlayerPlaylist">
+		<value condition="Skin.HasSetting(playerplaylist_osd)">התווסף לרשימת הכפתורים</value>
+		<value condition="!Skin.HasSetting(playerplaylist_osd)">הוסר מרשימת הכפתורים</value>
+	</variable>
+	
 	<variable name="MusicInfoTextboxVar">
 		<value condition="String.IsEqual(ListItem.DbType,song)">$INFO[ListItem.Comment,[B]$LOCALIZE[569][/B][CR][COLOR=white],[/COLOR]]</value>
 		<value condition="String.IsEqual(ListItem.DbType,album)">$INFO[ListItem.Property(Album_Description),[COLOR=white],[/COLOR]]</value>
@@ -75,6 +238,12 @@
 	<variable name="FanartThumbVar">
 		<value condition="!String.IsEmpty(Listitem.Art(poster))">$INFO[Listitem.Art(thumb)]</value>
 	</variable>
+	
+	<variable name="_FixIdanPlusPVR">
+		<value condition="VideoPlayer.Content(LiveTv)">pvr://channels/tv/*</value>
+		<value condition="!VideoPlayer.Content(LiveTv)osdbottom">plugin://plugin.video.idanplus/?iconimage=C%253A%255CUsers%255CNetag%255CAppData%255CRoaming%255CKodi%255Caddons%255Cplugin.video.idanplus%255Cicon.png&amp;mode=1&amp;module&amp;moredata&amp;name=%5bB%5d%d7%98%d7%9c%d7%95%d7%99%d7%96%d7%99%d7%94%5b%2fB%5d&amp;url</value>
+	</variable>
+	
 	<variable name="PosterThumbVar">
 		<value condition="!String.IsEmpty(Listitem.Art(poster))">$INFO[Listitem.Art(poster)]</value>
 		<value condition="!String.IsEmpty(Listitem.Art(thumb))">$INFO[Listitem.Art(poster)]</value>
@@ -310,9 +479,9 @@
 		<value condition="Player.Forwarding32x | Player.Rewinding32x">32x</value>
 	</variable>
 	<variable name="SeekLabel">
+		<value condition="!String.IsEmpty(VideoPlayer.Title)">$INFO[VideoPlayer.Title]</value>
 		<value condition="!String.IsEmpty(Player.SeekStepSize)">[COLOR button_focus]$LOCALIZE[773][/COLOR] $INFO[Player.SeekStepSize]</value>
 		<value condition="!String.IsEmpty(Player.SeekOffset) + Player.HasPerformedSeek(3)">[COLOR button_focus]$LOCALIZE[773][/COLOR] $INFO[Player.SeekOffset]</value>
-		<value condition="Player.Paused">$LOCALIZE[112]</value>
 		<value condition="Player.Forwarding">$LOCALIZE[31039] $VAR[VideoPlayerForwardRewindVar]</value>
 		<value condition="Player.Rewinding">$LOCALIZE[31038] $VAR[VideoPlayerForwardRewindVar]</value>
 		<value condition="Player.IsTempo">$LOCALIZE[31142]: $INFO[Player.PlaySpeed]</value>
@@ -515,6 +684,41 @@
 		<value condition="ListItem.HasReminder">icons/pvr/timers/bell.png</value>
 		<value>icons/pvr/timers/recording.png</value>
   </variable>
+  
+	<variable name="SeekRewindForwardTime">
+		<value condition="Player.Forwarding2x | Player.Rewinding2x">x2</value>
+		<value condition="Player.Forwarding4x | Player.Rewinding4x">x4</value>
+		<value condition="Player.Forwarding8x | Player.Rewinding8x">x8</value>
+		<value condition="Player.Forwarding16x | Player.Rewinding16x">x16</value>
+		<value condition="Player.Forwarding32x | Player.Rewinding32x">x32</value>
+	</variable>
+
+	<variable name="OsdTitleLabelVar">
+		<value condition="VideoPlayer.Content(movies) | VideoPlayer.Content(LiveTv)">$INFO[VideoPlayer.Title]</value>
+		<value condition="VideoPlayer.Content(episodes)">$INFO[VideoPlayer.TvShowTitle] $INFO[VideoPlayer.Year,(,)]</value>
+		<value>No Information</value>
+	</variable>
+	
+	<variable name="PlayerTitleDBTYPE">
+		<value condition="VideoPlayer.Content(movies)">[COLOR button_focus]שם הסרט:[/COLOR]</value>
+		<value condition="VideoPlayer.Content(episodes)">[COLOR button_focus]שם הפרק:[/COLOR]</value>
+		<value condition="VideoPlayer.Content(LiveTv)">[COLOR button_focus]שם התוכנית:[/COLOR]</value>
+	</variable>
+
+	<variable name="OsdInfoLabelVar">
+		<value condition="Player.Chapter + player.chaptercount">פרק[COLOR button_focus] $INFO[Player.Chapter,(,)][/COLOR] / כמות[COLOR button_focus] $INFO[Player.ChapterCount,(,)][/COLOR]</value>
+		<value condition="![Player.Chapter + player.chaptercount)] + VideoPlayer.Content(episodes)">עונה $INFO[VideoPlayer.Season,[COLOR button_focus](,)[/COLOR]] / פרק $INFO[VideoPlayer.Episode,[COLOR button_focus](,)[/COLOR]]</value>
+		<value condition="![Player.Chapter + player.chaptercount)] + VideoPlayer.Content(movies) + !String.IsEmpty(VideoPlayer.TagLine)">$INFO[VideoPlayer.TagLine]</value>
+		<value condition="![Player.Chapter + player.chaptercount)] + VideoPlayer.Content(LiveTv)">מתחיל $INFO[VideoPlayer.StartTime,[COLOR button_focus](,)[/COLOR]] / מסתיים $INFO[VideoPlayer.EndTime,[COLOR button_focus](,)[/COLOR]]</value>
+		<value>No Information</value>
+	</variable>
+
+	<variable name="_FixOsdIcon">
+	<value condition="VideoPlayer.Content(movies) | VideoPlayer.Content(episodes) + !String.IsEmpty(Player.Art(poster)">$INFO[Player.Art(poster)]</value>
+	<value condition="VideoPlayer.Content(movies) | VideoPlayer.Content(episodes) + !String.IsEmpty(VideoPlayer.Cover)">$INFO[VideoPlayer.Cover]</value>
+	<value condition="VideoPlayer.Content(movies) | VideoPlayer.Content(episodes) + !String.IsEmpty(Player.Icon)">$INFO[Player.Icon]</value>
+	<value>$INFO[Player.Icon]</value>
+	</variable>
 	<!-- Breadcrumbs -->
 	<variable name="BreadcrumbsVideoVar">
 		<value condition="Container.Content(movies) | String.StartsWith(container.folderpath,library://video/movies/) | String.StartsWith(container.folderpath,videodb://movies)">$LOCALIZE[20342]</value>
@@ -833,6 +1037,11 @@
     <value condition="String.IsEqual(Skin.String(current_search_provider),3)">plugin://plugin.video.pov/?mode=build_trakt_list.search_trakt_lists&amp;search_title=$INFO[Skin.String(SearchInputTraktEncoded)]</value>
     <value>plugin://plugin.video.pov/?mode=build_trakt_list.search_trakt_lists&amp;query=$INFO[Skin.String(SearchInputTraktEncoded)]</value>
 	</variable>
+	
+	<variable name="_ReplaceSubtitle">
+	<value condition="String.IsEqual(Skin.String(subtitlesearch),darksubs)">חיפוש כתובית דרך דארקסאבס</value>
+	<value condition="String.IsEqual(Skin.String(subtitlesearch),kodisubtitle)">חיפוש כתובית דרך קודי</value>
+	</variable>
 
 	<!-- RATINGS INFOPANEL VARIABLES -->
 	<!-- Released -->
@@ -1021,9 +1230,22 @@
 		<value condition="!ListItem.IsCollection + String.IsEqual(ListItem.DBtype,season)">$VAR[_Mpaa_Season]$VAR[_Network]$VAR[_Genre]$VAR[_RuntimeEpisodes]$VAR[_Endsat][CR]$VAR[_Plot][CR]</value>
 	</variable>
 
+	<variable name="_Fix_TMDB_ID">
+		<value condition="!String.IsEmpty(VideoPlayer.UniqueID(tmdb)">$INFO[VideoPlayer.UniqueID(tmdb)]</value>
+		<value condition="!String.IsEmpty(VideoPlayer.IMDBNumber)">$INFO[VideoPlayer.IMDBNumber]</value>
+	</variable>
+
 	<!-- EPISODES -->
 	<variable name="InfoPanelEpisode">
 		<value condition="!ListItem.IsCollection + String.IsEqual(ListItem.DBtype,episode)">$VAR[_Aired]$VAR[_Mpaa]$VAR[_Network]$VAR[_RuntimeEpisodes]$VAR[_Endsat][CR]$VAR[_Plot][CR]</value>
+	</variable>
+	
+	<variable name="OsdReplaceSourceStartPoint">
+		<value>plugin://plugin.video.pov/?mode=play_media</value>
+	</variable>
+	
+	<variable name="AutoPlaySetToTrue">
+		<value>&autoplay=true</value>
 	</variable>
 	
 	<!-- KODI-RD-IL ADDITION -->
@@ -1064,6 +1286,11 @@
 		<value condition="!String.IsEmpty(ListItem.Art(clearlogo)">$INFO[ListItem.Art(clearlogo)]</value>
 		<value condition="String.IsEmpty(ListItem.Art(clearlogo)">$INFO[ListItem.Art(clearart)]</value>
 	</variable>
+
+		
+	<variable name="AutoPlaySetToFalse">
+		<value>&autoplay=false</value>
+	</variable>
 	
 	<!-- Seasons Label -->	
 	<variable name="SeasonCorrectLabel">
@@ -1086,4 +1313,10 @@
 	</variable>
 	<!-- ##################### -->
 	
+
+	<variable name="__PlayerChoose">
+	<value condition="String.IsEqual(Skin.String(__chooseplayer),__simpleplayer)">נגן פשוט</value>
+	<value condition="String.IsEqual(Skin.String(__chooseplayer),__advancedplayer)">נגן מתקדם</value>
+	<value condition="String.IsEqual(Skin.String(__chooseplayer),__netflixplayer)">נגן נטפליקס</value>
+	</variable>
 </includes>

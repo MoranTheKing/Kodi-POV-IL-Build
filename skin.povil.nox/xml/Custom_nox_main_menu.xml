@@ -149,7 +149,7 @@
 						<width>300</width>
 						<height>41</height>
 						<font>font13_title</font>
-						<textcolor>white</textcolor>
+						<textcolor>yellow</textcolor>
 						<shadowcolor>shadow</shadowcolor>
 						<align>center</align>
 						<label>$INFO[ListItem.Label]</label>
@@ -816,13 +816,13 @@
 					<item>
 						<label>הסרטים שלי</label>
 						<icon>special://skin/extras/icons/kidseng.png</icon>
-						<onclick>ActivateWindow(10025,&quot;plugin://plugin.video.pov/?action=favorites_movies&amp;mode=build_movie_list&amp;name=%D7%94%D7%A1%D7%A8%D7%98%D7%99%D7%9D+%D7%A9%D7%9C%D7%99&quot;,return)</onclick>
+						<onclick>ActivateWindow(10025,&quot;plugin://plugin.video.pov/?iconImage=lists&amp;mode=navigator.my_content&amp;name=32454&quot;,return)</onclick>
 						<visible>String.IsEqual(Container(9000).ListItem.Property(id),favorites)</visible>
 					</item>
 					<item>
 						<label>הסדרות שלי</label>
 						<icon>special://skin/extras/icons/kidseng.png</icon>
-						<onclick>ActivateWindow(10025,&quot;plugin://plugin.video.pov/?action=favorites_tvshows&amp;mode=build_tvshow_list&amp;name=%D7%94%D7%A1%D7%93%D7%A8%D7%95%D7%AA+%D7%A9%D7%9C%D7%99&quot;,return)</onclick>
+						<onclick>ActivateWindow(10025,&quot;plugin://plugin.video.pov/?iconImage=lists&amp;mode=navigator.my_content&amp;name=32454&quot;,return)</onclick>
 						<visible>String.IsEqual(Container(9000).ListItem.Property(id),favorites)</visible>
 					</item>
 
