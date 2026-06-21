@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<includes>
+
+	
+	<expression name="infodialog_active">Window.IsActive(musicinformation) | Window.IsActive(songinformation) | Window.IsActive(movieinformation) | Window.IsActive(addoninformation) | Window.IsActive(pvrguideinfo) | Window.IsActive(pvrrecordinginfo) | Window.IsActive(pictureinfo) | Window.IsVisible(script-embuary-video.xml) | Window.IsVisible(script-embuary-person.xml) | Window.IsVisible(script-embuary-image.xml)</expression>
+	<expression name="sidebar_visible">ControlGroup(9000).HasFocus | Control.HasFocus(6130) | Control.HasFocus(6131)</expression>
+	<expression name="ProgessBarMovie">String.IsEqual(ListItem.DBtype,movie) + !String.IsEmpty(Container($PARAM[id]).ListItem.Property(WatchedProgress)) + !Integer.IsEqual(Container($PARAM[id]).ListItem.Property(WatchedProgress),0)</expression>
+	
+	<!-- KODI-RD-IL ADDITION -->
+	<expression name="HomeScreenOff">![Window.IsActive(home) | Control.IsVisible(50) | Control.IsVisible(54) | Control.IsVisible(56) | Control.IsVisible(500) | Control.IsVisible(501) | Control.IsVisible(504)]</expression>
+	<expression name="SkinZoomToggle">Skin.HasSetting(ZoomToggle)</expression>
+	<expression name="LiveTvCondition">!VideoPlayer.Content(livetv)</expression>
+	<expression name="PausedTended_Prefix">Skin.HasSetting(ShowPlayerPauseWindow) + Player.Paused + !String.IsEmpty(VideoPlayer.Plot) + !Window.IsActive(1123)</expression>
+	<expression name="Label_Visible_Prefix">VideoPlayer.Content(movies) | VideoPlayer.Content(tvshows) | VideoPlayer.Content(seasons) | VideoPlayer.Content(episodes) + ![String.IsEmpty(VideoPlayer.Genre) | String.IsEmpty(VideoPlayer.Year)]</expression>
+	<expression name="fakebuttonsync">Control.HasFocus(700450)</expression>
+	<!-- ##################### -->
+	<expression name="osdmoviestvshowvisible">VideoPlayer.Content(movies) | VideoPlayer.Content(episodes)</expression>
+	<expression name="OsdFlagsVisible">Container(201).HasFocus(100) | Container(201).HasFocus(101) | Container(201).HasFocus(102) | Container(201).HasFocus(103) | Container(201).HasFocus(104) | Container(201).HasFocus(105) | Container(201).HasFocus(106) | Container(201).HasFocus(107) | Container(201).HasFocus(108) | Container(201).HasFocus(109) | Container(201).HasFocus(110) | Container(201).HasFocus(111)</expression>
+	<expression name="PauseTendOsd">Container(201).HasFocus(100) | Container(201).HasFocus(101) | Container(201).HasFocus(102) | Container(201).HasFocus(103) | Container(201).HasFocus(104) | Container(201).HasFocus(105) | Container(201).HasFocus(106) | Container(201).HasFocus(107) | Container(201).HasFocus(108) | Container(201).HasFocus(109) | Container(201).HasFocus(110) | Container(201).HasFocus(111) | Container(201).HasFocus(250) | Container(201).HasFocus(251)</expression>
+</includes>

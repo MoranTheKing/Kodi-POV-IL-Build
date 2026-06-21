@@ -131,7 +131,7 @@
 			<onclick>SkipPrevious</onclick>
 			<visible>Player.Chapter | !String.IsEmpty(VideoPlayer.offset(-1).Title)</visible>
 		</item>
-		<item>
+		<item id="250">
 			<label>הרץ קדימה</label>
 			<icon>osd/fullscreen/buttons/rewind.png</icon>
 			<visible>Player.SeekEnabled</visible>
@@ -169,6 +169,14 @@
 			<property name="timer">icons\infodialogs\timer.png</property>
 			<label>הנגן יסגר בעוד $INFO[Skin.String(OSDAutoCloseTime)] שניות</label>
 			<onclick>Skin.SetNumeric(OSDAutoCloseTime,20)</onclick>
+			<visible>Skin.HasSetting(playerclosedelay)</visible>
+		</item>
+		<item>
+			<label>קיים פלייליסט</label>
+			<icon>osd/fullscreen/buttons/playlist.png</icon>
+			<onclick>ActivateWindow(videoplaylist)</onclick>
+			<visible>Integer.IsGreater(Playlist.Length(video),0)</visible>
+			<visible>Skin.HasSetting(playerplaylist_osd)</visible>
 		</item>
 		<item id="105">
 			<label>כתובית מופעלת</label>
@@ -195,16 +203,17 @@
 			<property name="plyersource">plyersource</property>
 			<property name="onup">$NUMBER[49994]</property>
 			<onclick>Control.SetFocus(49994)</onclick>
-			<visible>!Player.Paused</visible>
 			<visible>!VideoPlayer.Content(LiveTv) + !String.Contains(Player.FolderPath,idanplus)</visible>
+			<visible>!Player.Paused</visible>
 		</item>
 		<item>
 			<label>ערוצי עידן פלוס</label>
 			<property name="timer">icons\submenu\channels.png</property>
 			<property name="onup">$NUMBER[60015]</property>
 			<property name="idanchannels">idanchannels</property>
-			<visible>!Player.Paused</visible>
 			<onclick>Control.SetFocus(60015)</onclick>
+			<visible>Skin.HasSetting(disableidan)</visible>
+			<visible>!Player.Paused</visible>
 		</item>
 		<item id="108">
 		<label>הגדרות ויאודו / אודיו / נגן</label>
@@ -223,7 +232,7 @@
 			<onclick>SubtitleDelayMinus</onclick>
 			<visible>$EXP[osdmoviestvshowvisible]</visible>
 		</item>
-		<item>
+		<item id="251">
 			<label>הרץ קדימה</label>
 			<icon>osd/fullscreen/buttons/forward.png</icon>
 			<visible>Player.SeekEnabled</visible>
@@ -263,6 +272,8 @@
 
 <include>LeftOsdTopBar</include>
 
+<include>PauseTendViewType</include>
+
 <include content="__OsdFixedFlags">
 <param name="visible">$EXP[OsdFlagsVisible]</param>
 <param name="animation">bottom2topslideanimation</param>
@@ -287,10 +298,11 @@
 <visible>String.IsEqual(Container(201).ListItem.Property(forward),forward)</visible>
 <orientation>horizontal</orientation>
 <height>120</height>
-<bottom>120</bottom>
+<bottom>110</bottom>
 <itemgap>7</itemgap>
 <onback>201</onback>
 <ondown>201</ondown>
+<visible>!Player.Paused</visible>
 	<include content="_PoweredSeekTime">
 		<param name="id">500</param>
 		<param name="actiononclick">PlayerControl(forward)</param>
@@ -381,10 +393,11 @@
 <orientation>horizontal</orientation>
 <include>bottom2topslideanimation</include>
 <height>120</height>
-<bottom>120</bottom>
+<bottom>110</bottom>
 <itemgap>7</itemgap>
 <onback>201</onback>
 <ondown>201</ondown>
+<visible>!Player.Paused</visible>
 	<include content="_PoweredSeekTime">
 		<param name="id">500</param>
 		<param name="actiononclick">PlayerControl(rewind)</param>
@@ -956,6 +969,7 @@
 	<include name="__OsdFixedFlags">
 	<control type="grouplist">
 	<align>center</align>
+	<visible>!Player.Paused</visible>
 	<visible>$PARAM[visible]</visible>
 	<include>$PARAM[animation]</include>
 	<orientation>horizontal</orientation>
@@ -964,21 +978,30 @@
 	<bottom>120</bottom>
 	<itemgap>10</itemgap>
 	<include content="_FixOsdFlags">
+		<param name="left">Padxy5</param>
 		<param name="flaglabel">VideoResolution</param>
 	</include>
 	<include content="_FixOsdFlags">
+		<param name="left">Padxy5</param>
 		<param name="flaglabel">VideoCodec</param>
 	</include>	
 	<include content="_FixOsdFlags">
+		<param name="left">Padxy5</param>
 		<param name="flaglabel">VideoAspect</param>
 	</include>
 	<include content="_FixOsdFlags">
-		<param name="flaglabel">AudioLanguage</param>
+		<param name="left">Padxy5</param>
+		<param name="flaglabel">AudioChannels, ערוצי שמע </param>
+	</include>
+	<include content="_FixOsdFlags">
+		<param name="left">Padxy10</param>
+		<param name="label2">$VAR[_FixaudiolangugeOsd] </param>
 		<param name="texture">https://www.iconsdb.com/icons/preview/white/speaker-xxl.png</param>
 		<param name="visible">true</param>
 	</include>
 	<include content="_FixOsdFlags">
-		<param name="flaglabel">SubtitlesLanguage</param>
+		<param name="left">Padxy10</param>
+		<param name="label2">$VAR[_FixsublanguageOsd]</param>
 		<param name="texture">osd/fullscreen/buttons/subs3.png</param>
 		<param name="visible">true</param>
 	</include>

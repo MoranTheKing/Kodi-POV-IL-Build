@@ -6,8 +6,7 @@
 	<include>OsdBackWindowInfo</include>
 	<controls>
 	
-	<include condition="!Skin.HasSetting(chooseosdplayer)">videosd1</include>
-	<include condition="Skin.HasSetting(chooseosdplayer)">videosd2</include>
+	<include>videosd1</include>
 		
 	</controls>
 </window>

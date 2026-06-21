@@ -288,4 +288,25 @@
 	<!-- END OF GLOBAL SLIDE ANIMATION -->
 	<!-- ################################### -->
 	
+	
+	<include name="BasedMenuAnimationOsdSettings">
+		<animation type="WindowOpen">
+		<effect type="slide" start="-550,0" end="0,0" time="650" tween="back" easing="inout"/>
+		</animation>
+		<animation type="WindowClose">
+		<effect type="slide" start="0,0" end="-550,0" time="650" tween="back" easing="inout"/>
+		</animation>
+	</include>
+	
+	<include name="SecondBasedMenuAnimationOsdSettings">
+		<animation type="Visible">
+		<effect type="slide" start="-20" end="0" time="150" tween="sine" easing="inout"/>
+		<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
+		</animation>
+		<animation type="Hidden">
+		<effect type="slide" start="0" end="-20" time="150" tween="sine" easing="inout"/>
+		<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
+		</animation>
+	</include>
+	
 </includes>
