@@ -109,10 +109,10 @@
 			<param name="bottom">Pad41</param>
 			<param name="centerleft">89%</param>
 		</include>
-		<param name="label">$VAR[NetFlixMenuLeftLabel]</param>
+		<param name="label">$INFO[Control.GetLabel(201)]</param>
 		<param name="font">font12</param>
 		<param name="align">right</param>
-		<param name="visible">ControlGroup(201).HasFocus()</param>
+		<param name="visible">Control.HasFocus(201)</param>
 	</include>
 	<!-- ####### -->
 	
@@ -195,99 +195,244 @@
 	<!-- ####### -->
 
 	<!-- ####### -->
-	<control type="grouplist" id="201">
+	<control type="list" id="201">
 	<orientation>horizontal</orientation>
 	<left>10</left>
-	<itemgap>10</itemgap>
-	<height>80</height>
-	<top>320</top>
+	<height>55</height>
+	<bottom>-95</bottom>
 	<onup>52000</onup>
-	<onright>Control.SetFocus(202)</onright>
 	<ondown>ActivateWindow(1126)</ondown>
-	<include content="Netflix_Base_Menu_Items">
-		<param name="button_id">43300</param>
-		<param name="radioicon">osd/fullscreen/buttons/previous.png</param>
-		<param name="visible">!String.IsEmpty(VideoPlayer.offset(-1).Title) | Player.Chapter</param>
-	</include>
-	<include content="Netflix_Base_Menu_Items">
-		<param name="button_id">43301</param>
-		<param name="radioicon">osd/fullscreen/buttons/rewind.png</param>
-		<param name="onclick">Control.SetFocus(40022,0,absolute)</param>
-		<param name="visible">Player.SeekEnabled</param>
-	</include>
-	<include content="Netflix_Base_Menu_Items">
-		<param name="button_id">43302</param>
-		<param name="radioicon"></param>
-		<param name="visible">Player.PauseEnabled</param>
-		<param name="onclick">PlayerControl(play)</param>
-	</include>
-	<!-- <include content="Netflix_Base_Menu_Items"> -->
-		<!-- <param name="button_id">43304</param> -->
-		<!-- <param name="radioicon">osd/fullscreen/buttons/pause.png</param> -->
-		<!-- <param name="visible">Player.PauseEnabled + !Player.Paused</param> -->
-		<!-- <param name="onclick">PlayerControl(play)</param> -->
-	<!-- </include>	 -->
-	<include content="Netflix_Base_Menu_Items">
-		<param name="button_id">43305</param>
-		<param name="radioicon">osd/fullscreen/buttons/stop.png</param>
-		<param name="onclick">Stop</param>
-	</include>
-	<include content="Netflix_Base_Menu_Items">
-		<param name="button_id">43306</param>
-		<param name="radiowidth">30</param>
-		<param name="radioheight">30</param>
-		<param name="radioposx">12.5</param>
-		<param name="radioposy">12.5</param>
-		<param name="radioicon">osd/fullscreen/buttons/subs3.png</param>
-		<param name="onclick">ActivateWindow(subtitlesearch)</param>
-	</include>
-	<include content="Netflix_Base_Menu_Items">
-		<param name="button_id">43307</param>
-		<param name="radiowidth">30</param>
-		<param name="radioheight">30</param>
-		<param name="radioposx">12.5</param>
-		<param name="radioposy">12.5</param>
-		<param name="radioicon">osd/fullscreen/buttons/subs.png</param>
-		<param name="visible">VideoPlayer.HasSubtitles + !VideoPlayer.SubtitlesEnabled</param>
-		<param name="onclick">ShowSubtitles</param>
-	</include>
-	<include content="Netflix_Base_Menu_Items">
-		<param name="button_id">43308</param>
-		<param name="radiowidth">30</param>
-		<param name="radioheight">30</param>
-		<param name="radioposx">12.5</param>
-		<param name="radioposy">12.5</param>
-		<param name="radioicon">osd/fullscreen/buttons/subs.png</param>
-		<param name="visible">$EXP[__SubtitleCheckTrueOrFalse]</param>
-		<param name="onclick">ShowSubtitles</param>
-		<param name="nofocuscolor">orange</param>
-		<param name="radiooffnofocus">orange</param>
-	</include>
-	<include content="Netflix_Base_Menu_Items">
-		<param name="button_id">43309</param>
-		<param name="radioicon">masks/arrowdown.png</param>
-		<param name="onclick">SubtitleDelayPlus</param>
-		<param name="visible">$EXP[__SubtitleCheckTrueOrFalse]</param>
-	</include>
-	<include content="Netflix_Base_Menu_Items">
-		<param name="button_id">43310</param>
-		<param name="radioicon">masks/arrowup.png</param>
-		<param name="onclick">SubtitleDelayMinus</param>
-		<param name="visible">$EXP[__SubtitleCheckTrueOrFalse]</param>
-	</include>
-	<include content="Netflix_Base_Menu_Items">
-		<param name="button_id">43311</param>
-		<param name="radioicon">osd/fullscreen/buttons/forward.png</param>
-		<param name="onclick">Control.SetFocus(40021,0,absolute)</param>
-		<param name="visible">Player.SeekEnabled</param>
-	</include>
-	<include content="Netflix_Base_Menu_Items">
-		<param name="button_id">43312</param>
-		<param name="radioicon">osd/fullscreen/buttons/next.png</param>
-		<param name="visible">!String.IsEmpty(VideoPlayer.offset(1).Title) | Player.Chapter</param>
-	</include>
+	<onright>202</onright>
+	<itemlayout width="55" height="55">
+	<control type="group">
+	<width>55</width>
+	<height>55</height>
+	<control type="image">
+		<top>10</top>
+		<left>10</left>
+		<width>35</width>
+		<height>35</height>
+		<texture>$INFO[ListItem.Icon]</texture>
 	</control>
-	<!-- ####### -->
+	<control type="image">
+		<top>12</top>
+		<left>15</left>
+		<width>25</width>
+		<height>32</height>
+		<texture>$INFO[ListItem.Property(resizedicon)]</texture>
+	</control>
+	<control type="image">
+		<top>12</top>
+		<left>15</left>
+		<width>25</width>
+		<height>32</height>
+		<texture colordiffuse="orange">$INFO[ListItem.Property(subson)]</texture>
+		<visible>VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</visible>
+	</control>
+	<control type="image">
+		<top>12</top>
+		<left>15</left>
+		<width>25</width>
+		<height>32</height>
+		<texture>$INFO[ListItem.Property(subsoff)]</texture>
+		<visible>VideoPlayer.HasSubtitles + !VideoPlayer.SubtitlesEnabled</visible>
+	</control>
+	<control type="image">
+		<top>8</top>
+		<left>8</left>
+		<width>40</width>
+		<height>35</height>
+		<texture>$INFO[ListItem.Property(arrowup)]</texture>
+	</control>	
+	<control type="image">
+		<top>10</top>
+		<left>8</left>
+		<width>40</width>
+		<height>35</height>
+		<texture>$INFO[ListItem.Property(arrowdown)]</texture>
+	</control>		
+	</control>
+	</itemlayout>
+	<focusedlayout width="55" height="55">
+	<control type="group">
+	<width>55</width>
+	<height>55</height>
+	<control type="image">
+	<texture>masks/circle.png</texture>
+	<visible>control.hasfocus(201)</visible>
+	</control>
+	<control type="image">
+		<top>10</top>
+		<left>10</left>
+		<width>35</width>
+		<height>35</height>
+		<texture>$INFO[ListItem.Icon]</texture>
+	</control>
+	<control type="image">
+		<top>10</top>
+		<left>10</left>
+		<width>35</width>
+		<height>35</height>
+		<texture colordiffuse="98000000">$INFO[ListItem.Icon]</texture>
+		<visible>Control.HasFocus(201)</visible>
+	</control>	
+	<control type="image">
+		<top>12</top>
+		<left>15</left>
+		<width>25</width>
+		<height>32</height>
+		<texture>$INFO[ListItem.Property(resizedicon)]</texture>
+	</control>
+	<control type="image">
+		<top>12</top>
+		<left>15</left>
+		<width>25</width>
+		<height>32</height>
+		<texture colordiffuse="98000000">$INFO[ListItem.Property(resizedicon)]</texture>
+		<visible>Control.HasFocus(201)</visible>
+	</control>
+	<control type="image">
+		<top>12</top>
+		<left>15</left>
+		<width>25</width>
+		<height>32</height>>
+		<texture colordiffuse="orange">$INFO[ListItem.Property(subson)]</texture>
+		<visible>VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</visible>
+	</control>
+	<control type="image">
+		<top>12</top>
+		<left>15</left>
+		<width>25</width>
+		<height>32</height>
+		<texture colordiffuse="98000000">$INFO[ListItem.Property(subson)]</texture>
+		<visible>Control.HasFocus(201)</visible>
+		<visible>VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</visible>
+	</control>
+	<control type="image">
+		<top>12</top>
+		<left>15</left>
+		<width>25</width>
+		<height>32</height>
+		<texture>$INFO[ListItem.Property(subsoff)]</texture>
+		<visible>VideoPlayer.HasSubtitles + !VideoPlayer.SubtitlesEnabled</visible>
+	</control>
+	<control type="image">
+		<top>12</top>
+		<left>15</left>
+		<width>25</width>
+		<height>32</height>
+		<texture colordiffuse="98000000">$INFO[ListItem.Property(subsoff)]</texture>
+		<visible>VideoPlayer.HasSubtitles + !VideoPlayer.SubtitlesEnabled</visible>
+		<visible>Control.HasFocus(201)</visible>
+	</control>
+	<control type="image">
+		<top>8</top>
+		<left>8</left>
+		<width>40</width>
+		<height>35</height>
+	<texture>$INFO[ListItem.Property(arrowup)]</texture>
+	</control>	
+	<control type="image">
+		<top>8</top>
+		<left>8</left>
+		<width>40</width>
+		<height>35</height>
+		<texture colordiffuse="98000000">$INFO[ListItem.Property(arrowup)]</texture>
+		<visible>Control.HasFocus(201)</visible>
+	</control>	
+	<control type="image">
+		<top>10</top>
+		<left>8</left>
+		<width>40</width>
+		<height>35</height>
+	<texture>$INFO[ListItem.Property(arrowdown)]</texture>
+	</control>	
+	<control type="image">
+		<top>10</top>
+		<left>8</left>
+		<width>40</width>
+		<height>35</height>
+		<texture colordiffuse="98000000">$INFO[ListItem.Property(arrowdown)]</texture>
+		<visible>Control.HasFocus(201)</visible>
+	</control>	
+	</control>
+	</focusedlayout>
+	<content>
+	<item>
+		<label>הקודם</label>
+		<icon>osd/fullscreen/buttons/previous.png</icon>
+		<visible>!String.IsEmpty(VideoPlayer.offset(-1).Title) | Player.Chapter</visible>
+		<onclick>SkipPrevious</onclick>
+	</item>	
+	<item>
+		<label>העבר אחורה</label>
+		<property name="id">rewind</property>
+		<icon>osd/fullscreen/buttons/rewind.png</icon>
+		<visible>Player.SeekEnabled</visible>
+		<onclick>Control.SetFocus(40022)</onclick>
+	</item>
+	<item>
+		<label>נגן</label>
+		<icon>osd/fullscreen/buttons/play.png</icon>
+		<visible>Player.PauseEnabled + Player.Paused</visible>
+		<onclick>PlayerControl(play)</onclick>
+	</item>
+	<item>
+		<label>השהה</label>
+		<icon>osd/fullscreen/buttons/pause.png</icon>
+		<visible>Player.PauseEnabled + !Player.Paused</visible>
+		<onclick>PlayerControl(play)</onclick>
+	</item>
+	<item>
+		<label>עצור</label>
+		<icon>osd/fullscreen/buttons/stop.png</icon>
+		<onclick>PlayerControl(stop)</onclick>
+	</item>
+	<item>
+		<label>חפש כתובית</label>
+		<property name="resizedicon">osd/fullscreen/buttons/subs3.png</property>
+		<onclick>ActivateWindow(subtitlesearch)</onclick>
+		<visible>!$EXP[__livetv_OSD]</visible>
+	</item>	
+	<item>
+		<label>כתובית כבויה</label>
+		<property name="subsoff">osd/fullscreen/buttons/subs.png</property>
+		<onclick>ShowSubtitles</onclick>
+		<visible>VideoPlayer.HasSubtitles + !VideoPlayer.SubtitlesEnabled</visible>
+	</item>
+	<item>
+		<label>כתובית מופעלת</label>
+		<property name="subson">osd/fullscreen/buttons/subs.png</property>
+		<onclick>ShowSubtitles</onclick>
+		<visible>VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</visible>
+	</item>
+	<item>
+		<label>סנכרן כתוביות</label>
+		<property name="arrowup">masks/arrowup.png</property>
+		<onclick>SubtitleDelayPlus</onclick>
+		<visible>VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</visible>
+	</item>	
+	<item>
+		<label>סנכרן כתוביות</label>
+		<property name="arrowdown">masks/arrowdown.png</property>
+		<onclick>SubtitleDelayMinus</onclick>
+		<visible>VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</visible>
+	</item>
+	<item>
+		<label>העבר קדימה</label>
+		<property name="id">forward</property>
+		<icon>osd/fullscreen/buttons/forward.png</icon>
+		<onclick>Control.SetFocus(40021)</onclick>
+		<visible>Player.SeekEnabled</visible>
+	</item>	
+	<item>
+		<label>הבא</label>
+		<icon>osd/fullscreen/buttons/next.png</icon>
+		<onclick>SkipNext</onclick>
+		<visible>!String.IsEmpty(VideoPlayer.offset(1).Title) | Player.Chapter</visible>
+	</item>
+	</content>
+	</control>
 
 	<!-- ####### -->
 	<control type="grouplist" id="202">
@@ -336,7 +481,7 @@
 	<left>200</left>
 	<right>100</right>
 	<height>125</height>
-	<bottom>-62</bottom>
+	<bottom>-65</bottom>
 	<onback>201</onback>
 	<ondown>201</ondown>
 	<onleft>false</onleft>
@@ -347,7 +492,7 @@
 	<animation type="Hidden">
 		<effect type="fade" start="100" end="0" time="250" tween="sine" easing="inout"/>
 	</animation>
-	<visible>ControlGroup(201).HasFocus(43311)</visible>
+	<visible>String.IsEqual(Container(201).ListItem.Property(id),forward)</visible>
 	<itemlayout width="145">
 	<control type="group">
 	<width>125</width>
@@ -374,7 +519,36 @@
 		</control>
 	</control>
 	</focusedlayout>
-	<include>seek_forward_osd_item</include>
+	<content>
+	<item>
+		<label>1 דקה</label>
+		<onclick>seek(120)</onclick>
+	</item>
+	<item>
+		<label>5 דקות</label>
+		<onclick>seek(300)</onclick>
+	</item>
+	<item>
+		<label>10 דקות</label>
+		<onclick>seek(600)</onclick>
+	</item>
+	<item>
+		<label>20 דקות</label>
+		<onclick>seek(1200)</onclick>
+	</item>
+	<item>
+		<label>40 דקות</label>
+		<onclick>seek(2400)</onclick>
+	</item>
+	<item>
+		<label>60 דקות</label>
+		<onclick>seek(4800)</onclick>
+	</item>
+		<item>
+		<label>80 דקות</label>
+		<onclick>sseek(6000)</onclick>
+	</item>
+	</content>
 	</control>
 	<!-- ####### end seek forward-->
 	
@@ -395,7 +569,7 @@
 	<animation type="Hidden">
 		<effect type="fade" start="100" end="0" time="250" tween="sine" easing="inout"/>
 	</animation>
-	<visible>ControlGroup(201).HasFocus(43301)</visible>
+	<visible>String.IsEqual(Container(201).ListItem.Property(id),rewind)</visible>
 	<itemlayout width="145">
 	<control type="group">
 	<width>125</width>
@@ -422,10 +596,38 @@
 		</control>
 	</control>
 	</focusedlayout>
-	<include>seek_rewind_osd_item</include>
+	<content>
+	<item>
+		<label>1 דקה</label>
+		<onclick>seek(-120)</onclick>
+	</item>
+	<item>
+		<label>5 דקות</label>
+		<onclick>seek(-300)</onclick>
+	</item>
+	<item>
+		<label>10 דקות</label>
+		<onclick>seek(-600)</onclick>
+	</item>
+	<item>
+		<label>20 דקות</label>
+		<onclick>seek(-1200)</onclick>
+	</item>
+		<item>
+		<label>40 דקות</label>
+		<onclick>seek(-2400)</onclick>
+	</item>
+	<item>
+		<label>60 דקות</label>
+		<onclick>seek(-4800)</onclick>
+	</item>
+	<item>
+		<label>80 דקות</label>
+		<onclick>sseek(-6000)</onclick>
+	</item>
+	</content>
 	</control>
 <!-- ####### end seek rewind-->		
-<include>FixPlayPauseOnNetFlixPlayer</include>	
 </control>
 </include>
 </includes>
