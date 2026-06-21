@@ -44,6 +44,11 @@ APKFILE = 'http://'
 BUILD_SKIN_SWITCH_IMAGE_URL = 'https://github.com/MoranTheKing/Kodi-POV-IL/raw/main/wizard/assets/build_menu_screenshots/pov_il_splash.jpg'
 # KODI-RD-IL - AUTO QUICK UPDATES
 QUICK_UPDATE_NOTIFICATION_URL = 'https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL/main/wizard/assets/notification_files/quick_update.txt'
+# KODI-POV-IL - MODULAR UPDATER (Phase 2/3, manifest-based; replaces the
+# legacy text-file quick_update). Raw manifest.json produced by the new
+# Monorepo CI pipeline. The wizard polls this on startup and updates only
+# the addons whose version moved.
+MANIFEST_URL = 'https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL-Build/main/manifest.json'
 # KODI-RD-IL - AUTO ANDROID/WINDOWS UPDATE
 # WINDOWS SOFTWARE
 LATEST_WINDOWS_VERSION_TEXT_FILE = 'https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL/main/wizard/assets/kodi_version_auto_update/windows/latest_windows_version.txt'

@@ -333,6 +333,11 @@ class Router:
             from resources.libs import update
             update.wizard_update()
 
+        # KODI-POV-IL - Manual modular (manifest-based) update trigger
+        elif mode == 'modular_update':
+            from resources.libs.modular_updater import ModularUpdater
+            ModularUpdater(background=False).run_update_check()
+
         # LOGGING
         elif mode == 'uploadlog':  # Upload Log File
             logging.upload_log()

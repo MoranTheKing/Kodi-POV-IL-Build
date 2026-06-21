@@ -649,10 +649,20 @@ except Exception as _autoset_err:
 ######################################
 
 ######################################
-# KODI-RD-IL - AUTO QUICK UPDATE
+# KODI-POV-IL - MODULAR UPDATE (Phase 2/3) -- replaces the legacy text-file
+# auto_quick_update() loop. Polls the Monorepo manifest.json and updates only
+# the addons whose version moved, silently in the background; only a Wizard or
+# active-skin update forces a restart. sync_quickfix_build_version() is kept on
+# purpose: it pins buildversion so the legacy build_update_check() below can
+# never fire the destructive full-build-install dialog.
 if CONFIG.get_setting('buildname'):
     sync_quickfix_build_version()
-    auto_quick_update()
+    try:
+        from resources.libs.modular_updater import ModularUpdater
+        ModularUpdater(background=True).run_update_check()
+    except Exception as _modular_err:
+        logging.log("[ModularUpdater] Startup check failed: {0}".format(_modular_err),
+                    level=xbmc.LOGERROR)
 ######################################
     
 # KOD-RD-IL - New Kodi ANDROID/WINDOWS version check on startup

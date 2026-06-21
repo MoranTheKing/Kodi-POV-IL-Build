@@ -121,6 +121,9 @@ class Config:
         self.BUILD_SKIN_SWITCH_IMAGE_URL = uservar.BUILD_SKIN_SWITCH_IMAGE_URL
         # KODI-RD-IL - AUTO QUICK UPDATES
         self.QUICK_UPDATE_NOTIFICATION_URL = uservar.QUICK_UPDATE_NOTIFICATION_URL
+        # KODI-POV-IL - MODULAR UPDATER (manifest-based). getattr keeps an old
+        # uservar.py (without MANIFEST_URL) from crashing config init.
+        self.MANIFEST_URL = getattr(uservar, 'MANIFEST_URL', 'http://')
         #########################################################################################################
         
         self.HEADERTYPE = uservar.HEADERTYPE
