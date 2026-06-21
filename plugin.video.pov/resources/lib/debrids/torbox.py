@@ -14,6 +14,71 @@ default_icon = kodi_utils.media_path(Debrid.icon)
 default_art = {'icon': default_icon, 'poster': default_icon, 'thumb': default_icon, 'fanart': fanart, 'banner': default_icon}
 extensions = supported_video_extensions()
 
+_USAGE_30_KEYS = {
+	'30dayusage', '30daysusage', '30daydownloaded',
+	'30daysdownloaded', 'thirtydayusage', 'thirtydaysusage',
+	'thirtydaydownloaded', 'thirtydaysdownloaded',
+	'downloaded30days', 'downloadedlast30days',
+	'totaldownloaded30days', 'usage30days', 'monthlyusage',
+	'monthlydownloaded', 'bandwidth30days', 'last30days',
+}
+
+def _normalise_key(key):
+	return ''.join(c for c in str(key).lower() if c.isalnum())
+
+def _usage_candidate(value):
+	if value in (None, '', [], {}):
+		return None
+	if isinstance(value, dict):
+		for key in ('value', 'total', 'amount', 'size', 'bytes', 'gb', 'used'):
+			if key in value:
+				candidate = _usage_candidate(value.get(key))
+				if candidate not in (None, ''):
+					return candidate
+		return None
+	if isinstance(value, (list, tuple)):
+		total = 0.0
+		found = False
+		for item in value:
+			candidate = _usage_candidate(item)
+			if isinstance(candidate, (int, float)):
+				total += float(candidate)
+				found = True
+		return total if found else None
+	return value
+
+def _find_usage_30(data):
+	if not isinstance(data, dict):
+		return None
+	for key, value in data.items():
+		if _normalise_key(key) in _USAGE_30_KEYS:
+			candidate = _usage_candidate(value)
+			if candidate not in (None, ''):
+				return candidate
+	for value in data.values():
+		if isinstance(value, dict):
+			candidate = _find_usage_30(value)
+			if candidate not in (None, ''):
+				return candidate
+	return None
+
+def _format_usage(value):
+	if value in (None, ''):
+		return ''
+	if isinstance(value, str):
+		return value
+	try:
+		value = float(value)
+	except Exception:
+		return str(value)
+	if value > 1024 ** 3:
+		return '%.1f GB' % (value / float(1024 ** 3))
+	if value > 1024 ** 2:
+		return '%.1f MB' % (value / float(1024 ** 2))
+	if value.is_integer():
+		return '%d GB' % int(value)
+	return '%.2f GB' % value
+
 class Indexer(Debrid):
 	def run(self, params):
 		if   '_delete' in params['mode']:
@@ -139,6 +204,13 @@ class Indexer(Debrid):
 			append(ls(32750) % expires.strftime('%Y-%m-%d'))
 			append(ls(32751) % days_remaining)
 			append('[B]Downloaded[/B]: %s' % account_info['total_downloaded'])
+			usage_30 = _find_usage_30(account_info)
+			if usage_30 in (None, ''):
+				try: usage_30 = _find_usage_30(self.user_stats())
+				except Exception: usage_30 = None
+			usage_30 = _format_usage(usage_30)
+			if usage_30:
+				append('[B]שימוש 30 יום[/B]: %s' % usage_30)
 			kodi_utils.hide_busy_dialog()
 			return kodi_utils.show_text('TorBox'.upper(), '\n\n'.join(body), font_size='large')
 		except: kodi_utils.hide_busy_dialog()
@@ -183,4 +255,3 @@ def resolve_tb(params):
 	else: resolved_link = Debrid().unrestrict_link(file_id)
 	if params.get('play', 'false') != 'true': return resolved_link
 	kodi_utils.player.play(resolved_link)
-
