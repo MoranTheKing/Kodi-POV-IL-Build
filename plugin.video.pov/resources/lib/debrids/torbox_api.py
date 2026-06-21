@@ -58,7 +58,7 @@ class TorBoxAPI:
 
 	def user_stats(self):
 		url = 'user/stats'
-		return self._get(url, params={'bandwidth': 'true'})
+		return self._get(url, params={'general': 'true', 'bandwidth': 'true', 'bandwidth_grouping': 'day'})
 
 	def torrent_info(self, request_id):
 		url = 'torrents/mylist?id=%s' % request_id

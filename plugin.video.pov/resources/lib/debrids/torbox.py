@@ -20,7 +20,8 @@ _USAGE_30_KEYS = {
 	'thirtydaydownloaded', 'thirtydaysdownloaded',
 	'downloaded30days', 'downloadedlast30days',
 	'totaldownloaded30days', 'usage30days', 'monthlyusage',
-	'monthlydownloaded', 'bandwidth30days', 'last30days',
+	'monthlydownloaded', 'bandwidth30days', 'bandwidth',
+	'bandwidths', 'last30days',
 }
 
 def _normalise_key(key):
@@ -30,7 +31,8 @@ def _usage_candidate(value):
 	if value in (None, '', [], {}):
 		return None
 	if isinstance(value, dict):
-		for key in ('value', 'total', 'amount', 'size', 'bytes', 'gb', 'used'):
+		for key in ('value', 'total', 'amount', 'size', 'bytes',
+					'bytes_downloaded', 'gb', 'used'):
 			if key in value:
 				candidate = _usage_candidate(value.get(key))
 				if candidate not in (None, ''):
