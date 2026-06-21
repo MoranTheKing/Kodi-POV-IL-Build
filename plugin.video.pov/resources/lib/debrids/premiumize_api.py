@@ -5,11 +5,10 @@ from modules import kodi_utils
 
 ls, get_setting = kodi_utils.local_string, kodi_utils.get_setting
 user_agent = 'POV/%s' % kodi_utils.get_addoninfo('version')
-client_id = '384733001'
+client_id = '663882072'
 base_url = 'https://www.premiumize.me/api/'
 timeout = 10.0
 session = requests.Session()
-session.custom_errors = requests.exceptions.ConnectionError, requests.exceptions.Timeout
 session.mount('https://www.premiumize.me', requests.adapters.HTTPAdapter(max_retries=1))
 
 class PremiumizeAPI:
@@ -22,8 +21,9 @@ class PremiumizeAPI:
 	def _request(self, method, path, data=None):
 		url = base_url + path
 		try: response = session.request(method, url, data=data, timeout=timeout)
-		except session.custom_errors: return kodi_utils.notification('%s timeout' % __name__)
-		if not response.ok: kodi_utils.logger(__name__, f"{response.reason}\n{response.url}")
+		except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+			return kodi_utils.notification('%s timeout' % self.__class__.__name__)
+		if not response.ok: kodi_utils.logger(self.__class__.__name__, f"{response.reason}\n{response.url}")
 		return response.json() if 'json' in response.headers.get('Content-Type', '') else response
 
 	def _get(self, path):
@@ -33,7 +33,7 @@ class PremiumizeAPI:
 		return self._request('post', path, data=data)
 
 	def add_headers_to_url(self, url):
-		return '|'.join((str(url), kodi_utils.urlencode(self.headers())))
+		return url + '|' + kodi_utils.urlencode(self.headers())
 
 	def headers(self):
 		return {'User-Agent': user_agent, 'Authorization': 'Bearer %s' % self.token}
@@ -49,67 +49,71 @@ class PremiumizeAPI:
 
 	def account_info(self):
 		url = 'account/info'
-		result = self._get(url)
-		return result
+		response = self._get(url)
+		return response
 
 	def item_listall(self):
 		url = 'item/listall'
-		result = self._get(url)
-		return result
+		return self._get(url)
 
 	def delete_torrent(self, transfer_id):
-		result = self.delete_object('transfer', transfer_id)
-		return result
+		return self.delete_object('transfer', transfer_id)
 
 	def unrestrict_link(self, link):
-		url = 'transfer/directdl'
 		data = {'src': link}
-		result = self._post(url, data)
-		try: return self.add_headers_to_url(result['content'][0]['link'])
+		url = 'transfer/directdl'
+		response = self._post(url, data)
+		try: return self.add_headers_to_url(response['content'][0]['link'])
 		except: return None
 
+	def check_single_magnet(self, hash_string):
+		cache_info = self.check_cache([hash_string])
+		return hash_string in cache_info
+
 	def check_cache(self, hashes):
-		url = 'cache/check'
 		data = {'items[]': hashes}
-		result = self._post(url, data)
-		return [h for h, cached in zip(hashes, result['response']) if cached]
+		url = 'cache/check'
+		response = self._post(url, data)
+		return [h for h, cached in zip(hashes, response['response']) if cached]
 
 	def instant_transfer(self, magnet):
-		url = 'transfer/directdl'
 		data = {'src': magnet}
-		result = self._post(url, data)
-		return result
+		url = 'transfer/directdl'
+		return self._post(url, data)
 
 	def create_transfer(self, magnet):
-		url = 'transfer/create'
 		data = {'src': magnet, 'folder_id': 0}
-		result = self._post(url, data)
-		return result.get('id', '')
+		url = 'transfer/create'
+		response = self._post(url, data)
+		return response.get('id', '')
 
 	def parse_magnet_pack(self, magnet_url, info_hash):
 		from modules.source_utils import supported_video_extensions
 		try:
 			extensions = supported_video_extensions()
-			torrent_files = self.instant_transfer(magnet_url)
-			return [
+			torrent = self.instant_transfer(magnet_url)
+			torrent_files = torrent['content']
+			torrent_files = [
 				{'link': item['link'],
 				 'size': item['size'],
 				 'filename': item['path'].split('/')[-1]}
-				for item in torrent_files['content']
+				for item in torrent_files
 				if item['path'].lower().endswith(tuple(extensions))
 			]
-		except: pass
+			return torrent_files
+		except Exception:
+			return None
 
 	def zip_folder(self, folder_id):
 		url = 'zip/generate'
 		data = {'folders[]': folder_id}
-		result = self._post(url, data)
-		return result
+		response = self._post(url, data)
+		return response
 
 	def download_link_magnet_zip(self, magnet_url, info_hash):
 		try:
 #			result = self.create_transfer(magnet_url)
-#			if 'status' not in result or result['status'] != 'success': return None
+#			if not 'status' in result or result['status'] != 'success': return None
 #			transfer_id = result['id']
 			transfer_id = self.create_transfer(magnet_url)
 			if not transfer_id: return None
@@ -126,35 +130,49 @@ class PremiumizeAPI:
 		if file_type == 'folder': url = 'folder/rename'
 		else: url = 'item/rename'
 		data = {'id': file_id , 'name': new_name}
-		result = self._post(url, data)
-		return True if result is not None and result['status'] == 'success' else False
+		response = self._post(url, data)
+		return True if not response is None and response['status'] == 'success' else False
 
 	def delete_object(self, object_type, object_id):
-		url = '%s/delete' % object_type
 		data = {'id': object_id}
-		result = self._post(url, data)
-		return True if result is not None and result['status'] == 'success' else False
+		url = '%s/delete' % object_type
+		response = self._post(url, data)
+		return True if not response is None and response['status'] == 'success' else False
 
 	def get_item_details(self, item_id):
 		string = 'pov_pm_item_details_%s' % item_id
 		url = 'item/details'
 		data = {'id': item_id}
 		args = [url, data]
-		return cache_object(self._post, string, args, 24)
+		return cache_object(self._post, string, args, False, 24)
+
+	def get_hosts(self):
+		string = 'pov_pm_valid_hosts'
+		url = 'services/list'
+		hosts_dict = {'Premiumize.me': []}
+		hosts = []
+		append = hosts.append
+		try:
+			result = cache_object(self._get, string, url, False, 168)
+			for x in result['directdl']:
+				for alias in result['aliases'][x]: append(alias)
+			hosts_dict['Premiumize.me'] = list(set(hosts))
+		except: pass
+		return hosts_dict
 
 	def downloads(self):
-		url = 'transfer/list'
 		string = 'pov_pm_downloads'
-		return cache_object(self._get, string, url, 0.5)
+		url = 'transfer/list'
+		return cache_object(self._get, string, url, False, 0.5)
 
 	def user_cloud(self, folder_id=None):
 		if folder_id:
-			url = 'folder/list?id=%s' % folder_id
 			string = 'pov_pm_user_cloud_%s' % folder_id
+			url = 'folder/list?id=%s' % folder_id
 		else:
-			url = 'folder/list'
 			string = 'pov_pm_user_cloud_root'
-		return cache_object(self._get, string, url, 0.5)
+			url = 'folder/list'
+		return cache_object(self._get, string, url, False, 0.5)
 
 	def clear_cache(*args):
 		from modules.kodi_utils import clear_property, path_exists, database_connect, maincache_db
@@ -185,9 +203,9 @@ class PremiumizeAPI:
 				dbcur.execute("""DELETE FROM maincache WHERE id = ?""", ('pov_pm_valid_hosts',))
 				clear_property('pov_pm_valid_hosts')
 				dbcon.commit()
+				dbcon.close()
 				hoster_links_success = True
 			except: hoster_links_success = False
-			dbcon.close()
 			# HASH CACHED STATUS
 			try:
 				DebridCache().clear_debrid_results('pm')

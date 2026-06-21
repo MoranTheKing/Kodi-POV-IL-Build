@@ -1,8 +1,8 @@
 import requests
-from concurrent.futures import ThreadPoolExecutor as TPE, as_completed
+from concurrent.futures import ThreadPoolExecutor as Pool, as_completed
 from time import monotonic
 import xbmc, xbmcaddon, xbmcgui
-from magneto import sources as magneto_sources
+from fenom import sources as fs_sources
 
 log = xbmc.log
 Addon = xbmcaddon.Addon
@@ -27,7 +27,7 @@ def get_movie_source(module):
 			raise Exception('%s: %s fatal error' % (heading.upper(), module.name.upper()))
 		for result in module.results:
 			quality = result.get('quality')
-			if quality not in module.metrics: module.metrics['SD'] += 1
+			if not quality in module.metrics: module.metrics['SD'] += 1
 			else: module.metrics[quality] = module.metrics.get(quality, 0) + 1
 	except Exception as e: log(str(e), 1)
 	return module
@@ -36,6 +36,7 @@ def module_factory(modules, data=None):
 	items = []
 	for provider, module in modules:
 		if not module.hasMovies: continue
+		if provider.lower() in ('tidebrid', 'cmdebrid', 'mfdebrid'): continue
 		m = module()
 		m.results, m.elapsed = None, 0
 		m.name, m.data = provider, data or {}
@@ -77,11 +78,11 @@ def magneto():
 	data['rootname'] = '%s (%s)' % (data['title'], data['year'])
 	data['year'] = str(data['year'])
 
-	modules = module_factory(magneto_sources(ret_all=True), data)
+	modules = module_factory(fs_sources(ret_all=True), data)
 	len_modules = len(modules)
 	line0 = 'Title: %s' % data['rootname']
-	with TPE(len_modules or 1) as tpe:
-		futures = [tpe.submit(get_movie_source, i) for i in modules]
+	with Pool(len_modules or 1) as pool:
+		futures = [pool.submit(get_movie_source, i) for i in modules]
 		for i, future in enumerate(as_completed(futures), 1):
 			module = future.result()
 			line1 = 'Source: %s' % module.name.upper()
@@ -91,8 +92,8 @@ def magneto():
 	dialog.update(100, 'Processing Results...')
 	modules.sort(key=lambda k: k.elapsed)
 	results = [i for i in modules if i.results]
-	results.extend(i for i in modules if i not in results)
-	items = list(_make_items(results))
+	modules = results + [i for i in modules if not i in results]
+	items = list(_make_items(modules))
 	dialog.close()
 	select(f"{heading} - {data['rootname']}", items, useDetails=True)
 

@@ -5,7 +5,7 @@ from modules.utils import chunks
 timeout = 20
 SELECT = 'SELECT id FROM mdbl_data'
 DELETE = 'DELETE FROM mdbl_data WHERE id = ?'
-DELETE_LIKE = 'DELETE FROM mdbl_data WHERE id LIKE ?'
+DELETE_LIKE = 'DELETE FROM mdbl_data WHERE id LIKE "%s"'
 WATCHED_INSERT = 'INSERT OR IGNORE INTO watched_status VALUES (?, ?, ?, ?, ?, ?)'
 WATCHED_DELETE = 'DELETE FROM watched_status WHERE db_type = ?'
 PROGRESS_INSERT = 'INSERT OR IGNORE INTO progress VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
@@ -88,7 +88,7 @@ def clear_mdbl_list_contents_data(list_type):
 	string = 'mdbl_list_contents_' + list_type + '_%'
 	try:
 		dbcur = MDBLCache().dbcur
-		dbcur.execute(DELETE_LIKE, (string,))
+		dbcur.execute(DELETE_LIKE % string)
 	except: pass
 
 def clear_mdbl_list_data(list_type):
@@ -118,9 +118,6 @@ def default_activities():
 			'episode_watched_at': '2022-05-24T02:09:00Z',
 			'rated_at': '2022-05-24T02:09:00Z',
 			'collected_at': '2022-05-24T02:09:00Z',
-			'dropped_at': '2022-05-24T02:09:00Z',
-			'paused_at': '2022-05-24T02:09:00Z',
-			'episode_paused_at': '2022-05-24T02:09:00Z',
-			'list_updated_at': '2022-05-24T02:09:00Z'
+			'paused_at': '2022-05-24T02:09:00Z'
 			}
 

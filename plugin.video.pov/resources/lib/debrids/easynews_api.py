@@ -29,7 +29,7 @@ class EasyNewsAPI:
 	def search(self, query, expiration=48):
 		url, self.params = self._translate_search(query)
 		string = 'pov_EASYNEWS_SEARCH_' + urlencode(self.params)
-		return cache_object(self._process_search, string, url, expiration)
+		return cache_object(self._process_search, string, url, json=False, expiration=expiration)
 
 	def account(self):
 		from modules.dom_parser import parseDOM
@@ -89,9 +89,10 @@ class EasyNewsAPI:
 		try: return json.loads(response)
 		except: return response
 
-	def unrestrict_link(self, url_dl):
+	def unrestrict_link(self, url_dl, spool=False):
 		response = session.get(url_dl, auth=(self.username, self.password), stream=True, timeout=timeout*3)
 		if not response.ok: return None
+		if spool: return response
 		chunk = next(response.iter_content(chunk_size=1048576), b'')
 		if len(chunk): resolved_link = response.url # direct/unrestricted link
 		else: resolved_link = None

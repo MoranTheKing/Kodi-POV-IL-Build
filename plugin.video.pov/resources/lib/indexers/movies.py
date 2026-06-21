@@ -162,7 +162,7 @@ class Indexer(Movies):
 		'trakt_moviesanime_trending', 'trakt_moviesanime_most_watched'
 	)
 	tmdb_special_key_dict = {
-		'tmdb_movies_languages': 'language', 'tmdb_movies_networks': 'network_id', 'tmdb_movies_year': 'year',
+		'tmdb_movies_languages': 'language', 'tmdb_movies_networks': 'company', 'tmdb_movies_year': 'year',
 		'tmdb_moviesanime_year': 'year', 'tmdb_movies_certifications': 'certification'
 	}
 	tmdb_personal = ('tmdb_watchlist', 'tmdb_favorite', 'tmdb_recommendations')
