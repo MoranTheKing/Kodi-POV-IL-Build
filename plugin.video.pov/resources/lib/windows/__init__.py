@@ -27,6 +27,20 @@ def create_window(import_info, skin_xml, **kwargs):
 		kodi_utils.logger('error in open_window', str(e))
 		return kodi_utils.notification(32574)
 
+def videoplayer(url, close_action=None, callback=None):
+	def onAVStarted(self):
+		self.playback_event = True
+	Player = type('Player', (kodi_utils.xbmc_player,), {'onAVStarted': onAVStarted})
+	player = Player()
+	player.playback_event = False
+	player.play(url)
+	for i in range(50):
+		kodi_utils.sleep(200)
+		if player.playback_event: break
+	if callable(close_action): close_action()
+	while player.isPlayingVideo(): kodi_utils.sleep(200)
+	if player.playback_event and callable(callback): callback()
+
 class BaseDialog(kodi_utils.window_xml_dialog):
 	fanart = kodi_utils.get_addoninfo('fanart')
 	icon = kodi_utils.get_addoninfo('icon')
@@ -72,10 +86,4 @@ class BaseDialog(kodi_utils.window_xml_dialog):
 
 	def sleep(self, time):
 		kodi_utils.sleep(time)
-
-	def set_home_property(self, prop, value):
-		kodi_utils.set_property('pov_home_window.%s' % prop, value)
-
-	def get_home_property(self, prop):
-		return kodi_utils.get_property('pov_home_window.%s' % prop)
 

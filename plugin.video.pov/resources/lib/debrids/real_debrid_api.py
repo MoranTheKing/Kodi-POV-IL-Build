@@ -8,6 +8,7 @@ auth_url = 'https://app.real-debrid.com/oauth/v2/'
 base_url = 'https://app.real-debrid.com/rest/1.0/'
 timeout = 10.0
 session = requests.Session()
+session.custom_errors = requests.exceptions.ConnectionError, requests.exceptions.Timeout
 session.mount('https://app.real-debrid.com', requests.adapters.HTTPAdapter(max_retries=1))
 
 class RealDebridAPI:
@@ -15,17 +16,16 @@ class RealDebridAPI:
 
 	def __init__(self):
 		self.token = get_setting('rd.token')
-		session.headers['Authorization'] = 'Bearer %s' % self.token
+		session.headers.update(self.headers())
 
 	def _request(self, method, path, data=None):
 		url = base_url + path
 		try: response = session.request(method, url, data=data, timeout=timeout)
-		except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
-			return kodi_utils.notification('%s timeout' % self.__class__.__name__)
+		except session.custom_errors: return kodi_utils.notification('%s timeout' % __name__)
 		if response.status_code in (401,) and self.refresh_token() is True:
 			response.request.headers['Authorization'] = 'Bearer %s' % self.token
 			response = session.send(response.request, timeout=timeout)
-		if not response.ok: kodi_utils.logger(self.__class__.__name__, f"{response.reason}\n{response.url}")
+		if not response.ok: kodi_utils.logger(__name__, f"{response.reason}\n{response.url}")
 		return response.json() if len(response.content) else response
 
 	def _get(self, path):
@@ -34,6 +34,9 @@ class RealDebridAPI:
 	def _post(self, path, data=None):
 		return self._request('post', path, data=data)
 
+	def headers(self):
+		return {'Authorization': 'Bearer %s' % self.token}
+
 	def refresh_token(self):
 		try:
 			client_id, secret, refresh = get_setting('rd.client_id'), get_setting('rd.secret'), get_setting('rd.refresh')
@@ -41,6 +44,7 @@ class RealDebridAPI:
 			url = auth_url + 'token'
 			response = requests.post(url, data=data).json()
 			self.token, refresh = response['access_token'], response['refresh_token']
+			session.headers.update(self.headers())
 			set_setting('rd.token', self.token)
 			set_setting('rd.refresh', refresh)
 		except Exception as e: kodi_utils.logger('refresh_token error', str(e))
@@ -48,135 +52,107 @@ class RealDebridAPI:
 		return False
 
 	def days_remaining(self):
-#		import datetime, time
+		import datetime, time
 		try:
 			account_info = self.account_info()
-#			FormatDateTime = "%Y-%m-%dT%H:%M:%S.%fZ"
-#			try: expires = datetime.datetime.strptime(account_info['expiration'], FormatDateTime)
-#			except: expires = datetime.datetime(*(time.strptime(account_info['expiration'], FormatDateTime)[0:6]))
-#			days = (expires - datetime.datetime.today()).days
-			days = int(account_info['premium']/86400)
+			FormatDateTime = '%Y-%m-%dT%H:%M:%S.%fZ'
+			try: expires = datetime.datetime.strptime(account_info['expiration'], FormatDateTime)
+			except: expires = datetime.datetime(*(time.strptime(account_info['expiration'], FormatDateTime)[0:6]))
+			days = (expires - datetime.datetime.today()).days
 		except: days = None
 		return days
 
 	def account_info(self):
 		url = 'user'
-		return self._get(url)
+		result = self._get(url)
+		return result
 
-	def torrent_info(self, file_id):
-		url = 'torrents/info/%s' % file_id
-		return self._get(url)
+	def torrent_info(self, folder_id):
+		url = 'torrents/info/%s' % folder_id
+		result = self._get(url)
+		return result
 
 	def delete_torrent(self, folder_id):
 		url = 'torrents/delete/%s' % folder_id
 		result = self._request('delete', url)
-		return True if not result is None and result.ok else False
+		return True if result is not None and result.ok else False
 
 	def delete_download(self, download_id):
 		url = 'downloads/delete/%s' % download_id
 		result = self._request('delete', url)
-		return True if not result is None and result.ok else False
+		return True if result is not None and result.ok else False
 
 	def unrestrict_link(self, link):
 		url = 'unrestrict/link'
 		post_data = {'link': link}
-		response = self._post(url, post_data)
-		try: return response['download']
+		result = self._post(url, post_data)
+		if result['download'].lower().endswith(('.rar','.zip')):
+			raise Exception('link error\n%s' % result['download'])
+		try: return result['download']
 		except: return None
-
-	def check_single_magnet(self, hash_string):
-		cache_info = self.check_hash(hash_string)
-		if not hash_string in cache_info: return False
-		info = cache_info[hash_string]
-		return True if isinstance(info, dict) and len(info.get('rd')) > 0 else False
-
-	def check_hash(self, hash_string):
-		url = 'torrents/instantAvailability/%s' % hash_string
-		return self._get(url)
 
 	def check_cache(self, hashes):
 		hash_string = '/'.join(hashes)
 		url = 'torrents/instantAvailability/%s' % hash_string
-		return self._get(url)
+		result = self._get(url)
+		return result
 
 	def add_torrent_select(self, torrent_id, file_ids):
 		self.clear_cache()
 		url = 'torrents/selectFiles/%s' % torrent_id
 		post_data = {'files': file_ids}
-		return self._post(url, post_data)
+		result = self._post(url, post_data)
+		return result
 
 	def add_magnet(self, magnet):
-		post_data = {'magnet': magnet}
 		url = 'torrents/addMagnet'
-		return self._post(url, post_data)
+		post_data = {'magnet': magnet}
+		result = self._post(url, post_data)
+		return result
 
 	def create_transfer(self, magnet):
-		from modules.source_utils import supported_video_extensions
-		try:
-			extensions = supported_video_extensions()
-			torrent = self.add_magnet(magnet)
-			torrent_id = torrent['id']
-#			info = self.torrent_info(torrent_id)
-#			files = info['files']
-#			torrent_keys = [str(item['id']) for item in files if item['path'].lower().endswith(tuple(extensions))]
-#			torrent_keys = ','.join(torrent_keys)
-#			self.add_torrent_select(torrent_id, torrent_keys)
+		result = self.add_magnet(magnet)
+		if result and 'id' in result:
+			torrent_id = result['id']
 			self.add_torrent_select(torrent_id, 'all')
-			return torrent_id
-		except:
-			self.delete_torrent(torrent_id)
-			return ''
+		else: torrent_id = ''
+		return torrent_id
 
 	def parse_magnet_pack(self, magnet_url, info_hash, errors=False):
 		from modules.source_utils import supported_video_extensions
 		try:
 			extensions = supported_video_extensions()
 			torrent_id = self.create_transfer(magnet_url)
+			if not torrent_id: raise Exception('real debrid null magnet')
 			for key in ['ended'] * 3:
 				kodi_utils.sleep(500)
 				torrent_info = self.torrent_info(torrent_id)
 				if key in torrent_info: break
 			else: raise Exception('real debrid uncached magnet')
-			torrent_files = (i for i in torrent_info['files'] if i['selected'])
-			torrent_files = [
+			selected = (i for i in torrent_info['files'] if i['selected'])
+			return [
 				{'link': link,
 				 'size': item['bytes'],
 				 'torrent_id': torrent_id,
 				 'filename': item['path'].replace('/', '')}
-				for item, link in zip(torrent_files, torrent_info['links'])
+				for item, link in zip(selected, torrent_info['links'])
 				if item['path'].lower().endswith(tuple(extensions))
 			]
-			return torrent_files
 		except Exception as e:
 			if torrent_id: self.delete_torrent(torrent_id)
 			if errors: raise
 
-	def get_hosts(self):
-		string = 'pov_rd_valid_hosts'
-		url = 'hosts/domains'
-		hosts_dict = {'Real-Debrid': []}
-		try:
-			result = cache_object(self._get, string, url, False, 48)
-			hosts_dict['Real-Debrid'] = result
-		except: pass
-		return hosts_dict
-
 	def downloads(self):
 		string = 'pov_rd_downloads'
 		url = 'downloads?limit=500'
-		return cache_object(self._get, string, url, False, 0.5)
+		return cache_object(self._get, string, url, 0.5)
 
 	def user_cloud(self, completed=True):
 		string = 'pov_rd_user_cloud'
 		url = 'torrents?limit=500'
-		result = cache_object(self._get, string, url, False, 0.5)
+		result = cache_object(self._get, string, url, 0.5)
 		if completed: result = [i for i in result if i.get('ended')]
 		return result
-
-	def user_cloud_info(self, file_id):
-		string = 'pov_rd_user_cloud_info_%s' % file_id
-		url = 'torrents/info/%s' % file_id
-		return cache_object(self._get, string, url, False, 2)
 
 	def clear_cache(*args):
 		from modules.kodi_utils import clear_property, path_exists, database_connect, maincache_db
@@ -187,12 +163,9 @@ class RealDebridAPI:
 			dbcur = dbcon.cursor()
 			# USER CLOUD
 			try:
-				dbcur.execute("""SELECT id FROM maincache WHERE id LIKE ?""", ('pov_rd_user_cloud%',))
-				user_cloud_cache = [str(i[0]) for i in dbcur.fetchall()]
-				if user_cloud_cache:
-					dbcur.execute("""DELETE FROM maincache WHERE id LIKE ?""", ('pov_rd_user_cloud%',))
-					for i in user_cloud_cache: clear_property(i)
-					dbcon.commit()
+				dbcur.execute("""DELETE FROM maincache WHERE id = ?""", ('pov_rd_user_cloud',))
+				clear_property('pov_rd_user_cloud')
+				dbcon.commit()
 				user_cloud_success = True
 			except: user_cloud_success = False
 			# DOWNLOAD LINKS
@@ -207,9 +180,9 @@ class RealDebridAPI:
 				dbcur.execute("""DELETE FROM maincache WHERE id = ?""", ('pov_rd_valid_hosts',))
 				clear_property('pov_rd_valid_hosts')
 				dbcon.commit()
-				dbcon.close()
 				hoster_links_success = True
 			except: hoster_links_success = False
+			dbcon.close()
 			# HASH CACHED STATUS
 			try:
 				DebridCache().clear_debrid_results('rd')

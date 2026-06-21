@@ -2,13 +2,10 @@ from datetime import datetime, timedelta
 from caches import BaseCache, maincache_db, get_property, set_property, clear_property
 # from modules.kodi_utils import logger
 
-BASE_GET = 'SELECT expires, data FROM maincache WHERE id = ?'
+BASE_GET = 'SELECT data, expires FROM maincache WHERE id = ? AND expires > ?'
 BASE_SET = 'INSERT OR REPLACE INTO maincache (id, data, expires) VALUES (?, ?, ?)'
 BASE_DELETE = 'DELETE FROM maincache WHERE id = ?'
-LIKE_SELECT = 'SELECT id from maincache where id LIKE %s'
-LIKE_DELETE = 'DELETE FROM maincache WHERE id LIKE %s'
-DELETE = 'DELETE FROM maincache WHERE id = ?'
-ALL_LIST_ADD = ' OR id LIKE '
+LIKE_SELECT, LIKE_SELECT_ADD = 'SELECT id FROM maincache WHERE %s', 'id LIKE ?'
 
 class MainCache(BaseCache):
 	db_file = maincache_db
@@ -18,19 +15,16 @@ class MainCache(BaseCache):
 		try:
 			current_time = self._get_timestamp(datetime.now())
 			result = self.get_memory_cache(string, current_time)
-			if result is None:
-				self.dbcur.execute(BASE_GET, (string,))
-				cache_data = self.dbcur.fetchone()
-				if cache_data:
-					if cache_data[0] > current_time:
-						result = eval(cache_data[1])
-						self.set_memory_cache(result, string, cache_data[1])
-					else:
-						self.delete(string, dbcon=None)
+			if result: raise Exception('memory cache true')
+			self.dbcur.execute(BASE_GET, (string, current_time))
+			cache_data = self.dbcur.fetchone()
+			if not cache_data: raise Exception('disk cache false')
+			result, expiry = eval(cache_data[0]), cache_data[1]
+			self.set_memory_cache(result, string, expiry)
 		except: pass
 		return result
 
-	def set(self, string, data, expiration=timedelta(days=30)):
+	def set(self, string, data, expiration):
 		try:
 			expires = self._get_timestamp(datetime.now() + expiration)
 			self.dbcur.execute(BASE_SET, (string, repr(data), int(expires)))
@@ -65,37 +59,26 @@ class MainCache(BaseCache):
 
 	def delete_all_lists(self):
 		from modules.meta_lists import media_lists
-		command = LIKE_SELECT % ALL_LIST_ADD.join(media_lists)
-		self.dbcur.execute(command)
+		items = ' OR '.join(LIKE_SELECT_ADD for i in media_lists)
+		self.dbcur.execute(LIKE_SELECT % items, media_lists)
 		results = self.dbcur.fetchall()
 		try:
 			for item in results:
 				try:
-					self.dbcur.execute(DELETE, (str(item[0]),))
+					self.dbcur.execute(BASE_DELETE, (str(item[0]),))
 					self.delete_memory_cache(str(item[0]))
 				except: pass
-			self.dbcon.execute("""VACUUM""")
+			self.dbcur.execute("""VACUUM""")
 		except: pass
 
-	def delete_all_folderscrapers(self):
-		self.dbcur.execute(LIKE_SELECT % "'pov_FOLDERSCRAPER_%'")
-		remove_list = [str(i[0]) for i in self.dbcur.fetchall()]
-		if not remove_list: return 'success'
-		try:
-			self.dbcur.execute(LIKE_DELETE % "'pov_FOLDERSCRAPER_%'")
-			self.dbcon.execute("""VACUUM""")
-			for item in remove_list: self.delete_memory_cache(str(item))
-		except: pass
-
-main_cache = MainCache()
-
-def cache_object(function, string, url, json=False, expiration=24):
-	cache = main_cache.get(string)
+def cache_object(function, string, url, expiration=24, json=False):
+	maincache = MainCache()
+	cache = maincache.get(string)
 	if cache: return cache
-	if isinstance(url, list): args = tuple(url)
-	else: args = (url,)
-	if json: result = function(*args).json()
-	else: result = function(*args)
-	main_cache.set(string, result, expiration=timedelta(hours=expiration))
+	if not isinstance(url, list): url = (url,)
+	if json: result = function(*url).json()
+	else: result = function(*url)
+	if isinstance(expiration, int): expiration = timedelta(hours=expiration)
+	maincache.set(string, result, expiration)
 	return result
 

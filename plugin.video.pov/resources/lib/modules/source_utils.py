@@ -3,7 +3,7 @@ import json
 import unicodedata
 from string import printable
 from urllib.parse import unquote, unquote_plus
-from fenom.control import getSettingDefault as fenom_default_settings, setting as fenom_getSetting, setSetting as fenom_setSetting
+from fenom.control import setting as fenom_getSetting, setSetting as fenom_setSetting
 from indexers.metadata import season_episodes_meta
 from modules import kodi_utils
 from modules.settings import check_prescrape_sources, date_offset, metadata_user_info
@@ -50,41 +50,23 @@ MULTI_LANG = ('hindi.eng', 'ara.eng', 'ces.eng', 'chi.eng', 'cze.eng', 'dan.eng'
 			'uae.eng', 'ukr.eng', 'vie.eng', 'zho.eng', 'dual.audio', 'multi')
 SUBS = ('subita', 'subfrench', 'subspanish', 'subtitula', 'swesub', 'nl.subs')
 ADS = ('1xbet', 'betwin')
-UNWANTED_TAGS = ('tamilrockers.com', 'www.tamilrockers.com', 'www.tamilrockers.ws', 'www.tamilrockers.pl', 'www-tamilrockers-cl', 'www.tamilrockers.cl', 'www.tamilrockers.li',
-				'www.tamilrockerrs.pl', 'www.tamilmv.bid', 'www.tamilmv.biz', 'www.1tamilmv.org', 'gktorrent-bz', 'gktorrent-com', 'www.torrenting.com', 'www.torrenting.org',
-				'www-torrenting-com', 'www-torrenting-org', 'katmoviehd.pw', 'katmoviehd-pw', 'www.torrent9.nz', 'www-torrent9-uno', 'torrent9-cz', 'torrent9.cz',
-				'agusiq-torrents-pl', 'oxtorrent-bz', 'oxtorrent-com', 'oxtorrent.com', 'oxtorrent-sh', 'oxtorrent-vc', 'www.movcr.tv', 'movcr-com', 'www.movcr.to', '(imax)',
-				'imax', 'xtorrenty.org', 'nastoletni.wilkoak', 'www.scenetime.com', 'kst-vn', 'www.movierulz.vc', 'www-movierulz-ht', 'www.2movierulz.ac', 'www.2movierulz.ms',
-				'www.3movierulz.com', 'www.3movierulz.tv', 'www.3movierulz.ws', 'www.3movierulz.ms', 'www.7movierulz.pw', 'www.8movierulz.ws', 'mkvcinemas.live', 'www.bludv.tv',
-				'ramin.djawadi', 'extramovies.casa', 'extramovies.wiki', '13+', '18+', 'taht.oyunlar', 'crazy4tv.com', 'karibu', '989pa.com', 'best-torrents-net', '1-3-3-8.com',
-				'ssrmovies.club', 'va:', 'zgxybbs-fdns-uk', 'www.tamilblasters.mx', 'www.1tamilmv.work', 'www.xbay.me', 'crazy4tv-com', '(es)')
+try: UNWANTED_TAGS = json.loads(kodi_utils.get_property('pov_unwanted'))['unwanted']
+except: UNWANTED_TAGS = []
 
-def internal_sources(active_sources, prescrape=False):
-	def import_info():
-		files = kodi_utils.list_dirs('special://home/addons/plugin.video.pov/resources/lib/scrapers')[1]
-		for item in files:
-			try:
-				module_name = item.split('.')[0]
-				if module_name in ('__init__', 'external', 'folders'): continue
-				if module_name not in active_sources: continue
-				if prescrape and not check_prescrape_sources(module_name): continue
-				module = manual_function_import('scrapers.%s' % module_name, 'source')
-				yield ('internal', module, module_name)
-			except: pass
-	try: sourceDict = list(import_info())
-	except: sourceDict = []
-	return sourceDict
-
-def internal_folders_import(folders):
-	def import_info():
-		for item in folders:
-			scraper_name = item[0]
-			module = manual_function_import('scrapers.folders', 'source')
-			yield ('folders', (module, (item[1], scraper_name)), scraper_name)
-	sourceDict = list(import_info())
-	try: sourceDict = list(import_info())
-	except: sourceDict = []
-	return sourceDict
+def internal_sources(active_sources, mediatype, prescrape=False):
+	source_list = []
+	append = source_list.append
+	files = kodi_utils.list_dirs('special://home/addons/plugin.video.pov/resources/lib/scrapers')[1]
+	for item in files:
+		try:
+			module_name = item.split('.')[0]
+			if module_name in ('__init__',): continue
+			if module_name not in active_sources: continue
+			if prescrape and not check_prescrape_sources(module_name, mediatype): continue
+			module = manual_function_import('scrapers.%s' % module_name, 'source')
+			append(('internal', module, module_name))
+		except: pass
+	return source_list
 
 def get_aliases_titles(aliases):
 	try: result = [i['title'] for i in aliases]
@@ -92,7 +74,19 @@ def get_aliases_titles(aliases):
 	return result
 
 def internal_results(provider, sources):
-	kodi_utils.set_property('%s.internal_results' % provider, json.dumps(sources))
+	quality_count = sources_quality_count(sources)
+	kodi_utils.set_property('%s.internal_results' % provider, json.dumps(quality_count))
+
+def sources_quality_count(sources):
+	sourcesTotal = sources4K = sources1080p = sources720p = sourcesSD = 0
+	for i in sources:
+		quality = i['quality']
+		if quality == '4K': sources4K += 1
+		elif quality in ('1440p', '1080p'): sources1080p += 1
+		elif quality in ('720p', 'HD'): sources720p += 1
+		else: sourcesSD += 1
+		sourcesTotal += 1
+	return {'4K': sources4K, '1080p': sources1080p, '720p': sources720p, 'SD': sourcesSD, 'total': sourcesTotal}
 
 def normalize(title):
 	try:
@@ -100,27 +94,14 @@ def normalize(title):
 		return string(title)
 	except: return title
 
-def toggle_all(folder, setting, silent=False):
-	try:
-		sourcelist = scraper_names(folder)
-		for i in sourcelist:
-			source_setting = 'provider.' + i
-			fenom_setSetting(source_setting, setting)
-		if silent: return
-		return kodi_utils.notification(32576, 1500)
-	except:
-		if silent: return
-		return kodi_utils.notification(32574, 1500)
-
 def enable_disable(folder):
 	try:
-#		icon = 'special://home/addons/script.module.fenomscrapers/icon.png'
-		icon = 'special://home/addons/plugin.video.pov/resources/lib/fenom/media/icon.png'
+		icon = 'special://home/addons/plugin.video.pov/resources/lib/fenom/fenom_icon.png'
 		enabled, disabled = scrapers_status(folder)
 		all_sources = sorted(enabled + disabled)
 		preselect = [all_sources.index(i) for i in enabled]
 		list_items = [{'line1': i.upper(), 'icon': icon} for i in all_sources]
-		kwargs = {'items': json.dumps(list_items), 'heading': 'POV', 'enumerate': 'false', 'multi_choice': 'true', 'multi_line': 'false', 'preselect': preselect}
+		kwargs = {'items': json.dumps(list_items), 'heading': 'POV', 'multi_choice': 'true', 'preselect': preselect}
 		chosen = kodi_utils.select_dialog(all_sources, **kwargs)
 		if chosen is None: return
 		for i in all_sources:
@@ -128,13 +109,6 @@ def enable_disable(folder):
 			else: fenom_setSetting('provider.' + i, 'false')
 		return kodi_utils.notification(32576, 1500)
 	except: return kodi_utils.notification(32574, 1500)
-
-def set_default_scrapers():
-	all_scrapers = scraper_names('all')
-	for i in all_scrapers:
-		scraper = 'provider.' + i
-		default_setting = fenom_default_settings(scraper)
-		fenom_setSetting(scraper, default_setting)
 
 def scrapers_status(folder='all'):
 	providers = scraper_names(folder)
@@ -145,14 +119,14 @@ def scrapers_status(folder='all'):
 def scraper_names(folder):
 	providerList = []
 	append = providerList.append
-#	source_folder_location = 'special://home/addons/script.module.fenomscrapers/lib/fenomscrapers/sources_fenomscrapers/%s'
-	source_folder_location = 'special://home/addons/plugin.video.pov/resources/lib/fenom/providers/%s'
-	sourceSubFolders = ('hosters', 'torrents')
-	if folder != 'all': sourceSubFolders = [i for i in sourceSubFolders if i == folder]
+	source_folder_location = 'special://home/addons/plugin.video.pov/resources/lib/magneto/%s'
+	sourceSubFolders = {'hosters': '', 'torrents': ''}
+	if folder == 'all': sourceSubFolders = ['']
+	else: sourceSubFolders = [v for k, v in sourceSubFolders.items() if k == folder]
 	for item in sourceSubFolders:
 		files = kodi_utils.list_dirs(source_folder_location % item)[1]
-		for m in files:
-			module_name = m.split('.')[0]
+		for item in files:
+			module_name = item.split('.')[0]
 			if module_name == '__init__': continue
 			append(module_name)
 	return providerList
@@ -193,7 +167,7 @@ def get_filename_match(title, url, name=None):
 
 def supported_video_extensions():
 	supported_video_extensions = kodi_utils.supported_media().split('|')
-	return [i for i in supported_video_extensions if not i in ('','.iso','.zip')]
+	return [i for i in supported_video_extensions if i not in ('','.iso','.zip')]
 
 def seas_ep_query_list(season, episode):
 	season = int(season)
@@ -397,10 +371,10 @@ def get_file_info(name_info=None, url=None):
 	info = ' | '.join(filter(None, info))
 	return quality, info
 
-def get_cache_expiry(media_type, meta, season):
+def get_cache_expiry(mediatype, meta, season):
 	try:
 		current_date = get_datetime()
-		if media_type == 'movie':
+		if mediatype == 'movie':
 			premiered = jsondate_to_datetime(meta['premiered'], '%Y-%m-%d', remove_time=True)
 			difference = subtract_dates(current_date, premiered)
 			if difference == 0: single_expiry = int(24*0.125)

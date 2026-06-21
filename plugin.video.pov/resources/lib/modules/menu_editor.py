@@ -30,11 +30,10 @@ class MenuEditor:
 		if not shortcut_folder:
 			listing.append((ls(32718) % menu_name_translated_display, self.add_original_external))
 			listing.append((ls(32719) % menu_name_translated_display, self.shortcut_folder_add_item))
-		listing.append((ls(32721) % list_name, self.add_original))
 		listing.append((ls(32725) % list_name, self.shortcut_folder_add_to_main_menu))
-		listing.append((ls(32720) % list_name, self.add_trakt))
-		listing.append((ls(32722) % list_name, self.restore))
+		listing.append((ls(32721) % list_name, self.add_original))
 		listing.append((ls(32723) % list_name, self.check_update_list))
+		listing.append((ls(32722) % list_name, self.restore))
 		if not external_list_item: listing.append((ls(32724) % menu_name_translated_display, self.reload_menu_item))
 		list_items = [{'line1': i[0]} for i in listing]
 		kwargs = {'items': json.dumps(list_items), 'heading': 'POV', 'enumerate': 'false', 'multi_choice': 'false', 'multi_line': 'false'}
@@ -110,20 +109,6 @@ class MenuEditor:
 		list_items.insert(position, self._add_external_info_to_item(self.menu_item, menu_name, False))
 		self._db_execute('set', choice_name, list_items, refresh=False)
 
-	def add_trakt(self):
-		from indexers.trakt_api import get_trakt_list_selection
-		trakt_selection = get_trakt_list_selection(list_choice='nav_edit')
-		if trakt_selection is None: return kodi_utils.notification(32736, 1500)
-		active_list = self.params_get('active_list')
-		list_items = navigator_cache.currently_used_list(active_list)
-		menu_name = trakt_selection['name']
-		position = self._menu_select(list_items, menu_name, multi_line='true', position_list=True)
-		if position is None: return kodi_utils.notification(32736, 1500)
-		menu_name = self._get_external_name_input(menu_name)
-		trakt_selection.update({'mode': 'build_trakt_list', 'iconImage': 'trakt.png'})
-		list_items.insert(position, self._add_external_info_to_item(trakt_selection, menu_name, False))
-		self._db_execute('set', active_list, list_items)
-
 	def restore(self):
 		if not kodi_utils.confirm_dialog(): return kodi_utils.notification(32736, 1500)
 		active_list = self.params_get('active_list')
@@ -149,7 +134,7 @@ class MenuEditor:
 		list_type = 'edited' if edited else'default'
 		current_list = edited or default
 		if default == new_contents: return kodi_utils.notification(32983, 1500)
-		new_entry = [i for i in new_contents if not i in default][0]
+		new_entry = [i for i in new_contents if i not in default][0]
 		new_entry_translated_name = ls(new_entry.get('name'))
 		if not kodi_utils.confirm_dialog(text='%s[CR]%s' % (ls(32727) % new_entry_translated_name, ls(32728))): return kodi_utils.notification(32736, 1500)
 		item_position = self._menu_select(current_list, new_entry_translated_name, position_list=True)
@@ -191,7 +176,7 @@ class MenuEditor:
 
 	def _get_removed_items(self, active_list):
 		default_list_items, list_items = navigator_cache.get_main_lists(active_list)
-		return [i for i in default_list_items if not i in list_items]
+		return [i for i in default_list_items if i not in list_items]
 
 	def _get_external_name_input(self, current_name):
 		new_name = kodi_utils.dialog.input('POV', defaultt=current_name)
@@ -211,9 +196,7 @@ class MenuEditor:
 		return [(i, default_menus.main_menu_items[i]) for i in choice_list]
 
 	def _make_menu_item(self):
-		if 'imdb_keywords' in self.params_get('mode'):
-			self.menu_item = {'mode': 'build_%s_list' % self.params_get('media_type'), 'action': 'imdb_keywords_list_contents',
-								'list_id': self.params_get('list_id'), 'iconImage': 'imdb.png'}
+		pass
 
 	def _remove_active_shortcut_folder(self, main_menu_items_list, folder_name):
 		for x in main_menu_items_list:
