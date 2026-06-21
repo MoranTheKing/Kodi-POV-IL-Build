@@ -143,7 +143,9 @@
 			<label>מידע / אפשר ללחוץ על הכפתור למידע מורחב יותר</label>
 			<icon>osd/fullscreen/buttons/information.png</icon>
 			<property name="info">info</property>
-			<onclick></onclick>
+			<visible>!String.IsEmpty(VideoPlayer.Plot)</visible>
+			<onclick>Dialog.Close(videoosd)</onclick>
+			<onclick>ActivateWindow(1125)</onclick>
 		</item>
 		<item id="101">
 			<label>עצור</label>
@@ -208,13 +210,13 @@
 		</item>
 		<item id="110">
 			<label>הקטן את משך ההשהיה של כתוביות (השתמש אם הכתוביות מוצגות מאוחר מדי)</label>
-			<property name="timer">https://www.iconsdb.com/icons/preview/white/arrow-204-xxl.png</property>
+			<property name="timer">https://www.iconsdb.com/icons/preview/white/arrow-142-xxl.png</property>
 			<onclick>SubtitleDelayMinus</onclick>
 			<visible>$EXP[osdmoviestvshowvisible]</visible>
 		</item>
 		<item id="111">
 			<label>הגדלת משך ההשהיה של הכתוביות (השתמשו אם הכתוביות מוצגות מוקדם מדי)</label>
-			<property name="timer">https://www.iconsdb.com/icons/preview/white/arrow-142-xxl.png</property>
+			<property name="timer">https://www.iconsdb.com/icons/preview/white/arrow-204-xxl.png</property>
 			<onclick>SubtitleDelayPlus</onclick>
 			<visible>$EXP[osdmoviestvshowvisible]</visible>
 		</item>
@@ -566,7 +568,7 @@
 	<top>0</top>
 	<bottom>0</bottom>
 	<texture border="16">icons/box.png</texture>
-	<colordiffuse>white</colordiffuse>
+	<colordiffuse>$INFO[Skin.String(osdframebuttoncolor)]</colordiffuse>
 	<visible>$PARAM[framefocus]</visible>
 	<animation condition="$PARAM[animnofocus]" effect="fade" start="100" end="50" time="150">Conditional</animation>
 </control>
@@ -780,7 +782,7 @@
 		<height>450</height>
 		<top>0</top>
 		<right>10</right>
-		<width>380</width>
+		<width>400</width>
 		<control type="label">
 			<align>right</align>
 			<height max="80">auto</height>

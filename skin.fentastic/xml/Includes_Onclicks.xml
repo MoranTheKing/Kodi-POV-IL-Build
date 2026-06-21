@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<includes>
+	
+	
+	
+<include name="InfoBackWindowOpecityChange">
+<onclick condition="String.IsEmpty(Skin.String(backwindowopecitychange,10)">Skin.SetString(backwindowopecitychange,10)</onclick>
+<onclick condition="Skin.String(backwindowopecitychange,10)">Skin.SetString(backwindowopecitychange,20)</onclick>
+<onclick condition="Skin.String(backwindowopecitychange,20)">Skin.SetString(backwindowopecitychange,40)</onclick>
+<onclick condition="Skin.String(backwindowopecitychange,40)">Skin.SetString(backwindowopecitychange,60)</onclick>
+<onclick condition="Skin.String(backwindowopecitychange,60)">Skin.SetString(backwindowopecitychange,80)</onclick>
+<onclick condition="Skin.String(backwindowopecitychange,80)">Skin.SetString(backwindowopecitychange,95)</onclick>
+<onclick condition="Skin.String(backwindowopecitychange,95)">Skin.SetString(backwindowopecitychange,100)</onclick>
+<onclick condition="Skin.String(backwindowopecitychange,100)">Skin.SetString(backwindowopecitychange,10)</onclick>
+</include>
+
+</includes>
