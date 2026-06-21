@@ -2763,4 +2763,49 @@
 	</control>
 	</include>
 	
+	
+<include name="FixPlayPauseOnNetFlixPlayer">
+<control type="group">
+	<visible>Player.PauseEnabled</visible>
+	<control type="image">
+		<left>87</left>
+		<bottom>-85</bottom>
+		<width>35</width>
+		<height>35</height>
+		<description>fix play pause</description>
+		<texture>osd/fullscreen/buttons/pause.png</texture>
+		<visible>!Player.Paused</visible>
+	</control>
+	<control type="image">
+		<left>85</left>
+		<bottom>-85</bottom>
+		<width>35</width>
+		<height>35</height>
+		<description>fix play pause</description>
+		<texture colordiffuse="98000000">osd/fullscreen/buttons/pause.png</texture>
+		<visible>!Player.Paused</visible>
+		<visible>ControlGroup(201).HasFocus(43302)</visible>
+	</control>
+	<control type="image">
+		<left>87</left>
+		<bottom>-85</bottom>
+		<width>35</width>
+		<height>35</height>
+		<description>fix play pause</description>
+		<texture>osd/fullscreen/buttons/play.png</texture>
+		<visible>Player.Paused</visible>
+	</control>
+	<control type="image">
+		<left>85</left>
+		<bottom>-85</bottom>
+		<width>35</width>
+		<height>35</height>
+		<description>fix play pause</description>
+		<texture colordiffuse="98000000">osd/fullscreen/buttons/play.png</texture>
+		<visible>Player.Paused</visible>
+		<visible>ControlGroup(201).HasFocus(43302)</visible>
+	</control>
+</control>
+</include>
+
 </includes>

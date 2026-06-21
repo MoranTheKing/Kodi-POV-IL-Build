@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <window>
 	<onload condition="!Player.PauseEnabled">SetFocus(603)</onload>
-	<defaultcontrol always="true">494343</defaultcontrol>
+	<defaultcontrol>201</defaultcontrol>
 	<depth>DepthOSD</depth>
 	<include>OsdBackWindowInfo</include>
 	<controls>
 	
-	<include content="FakedButton">
-	<param name="id">494343</param>
-	<param name="onfocus">SetFocus(201)</param>
-	</include>
+	<!-- <include content="FakedButton"> -->
+	<!-- <param name="id">494343</param> -->
+	<!-- <param name="onfocus">SetFocus(201)</param> -->
+	<!-- </include> -->
 	
 	<control type="group">
 	<include condition="String.IsEqual(Skin.String(__chooseplayer),__advancedplayer)">videosd1</include>
