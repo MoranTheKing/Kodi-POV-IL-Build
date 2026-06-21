@@ -844,7 +844,7 @@ msgstr "עבור למצב Boot"
 
 
 msgctxt "#70015"
-msgid "widgets novix mode"
-msgstr "ויגדטים מוגדרים להרחבה קוברה"
+msgid "widgets display mode"
+msgstr "מצב תצוגת ווידג'טים"
 
 
