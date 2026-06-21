@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<includes>
+
+
+<include name="BasedMenuLayout">
+	<itemlayout width="410" height="85">
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture colordiffuse="65FFFFFF">masks/categorywidget-unfocused.png</texture>
+	</control>
+	<control type="image">
+		<left>25</left>
+		<top>32</top>
+		<width>25</width>
+		<height>25</height>
+		<aspectratio>keep</aspectratio>
+		<texture>$INFO[ListItem.Icon]</texture>
+	</control>
+	<control type="label">
+		<left>100</left>
+		<top>20</top>
+		<label>$INFO[ListItem.Label]</label>
+	</control>
+	</itemlayout>
+	<focusedlayout width="410" height="85">
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture colordiffuse="65FFFFFF">masks/categorywidget-unfocused.png</texture>
+	</control>
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture colordiffuse="button_focus">masks/categorywidget.png</texture>
+	</control>
+	<control type="image">
+		<left>25</left>
+		<top>32</top>
+		<width>25</width>
+		<height>25</height>
+		<aspectratio>keep</aspectratio>
+		<texture>$INFO[ListItem.Icon]</texture>
+	</control>
+	<control type="label">
+		<left>100</left>
+		<top>20</top>
+		<label>$INFO[ListItem.Label]</label>
+	</control>
+	</focusedlayout>
+</include>
+
+
+<include name="SecondOsdSettingBasedMenu">
+	<itemlayout width="415" height="85">
+	<control type="group">
+	<height>85</height>
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture colordiffuse="65FFFFFF">masks/categorywidget-unfocused.png</texture>
+	</control>
+	<control type="label">
+		<left>20</left>
+		<right>10</right>
+		<top>5</top>
+		<align>left</align>
+		<font>font12</font>
+		<label>[B]$INFO[ListItem.Label][/B]</label>
+	</control>
+	<control type="label">
+		<left>20</left>
+		<top>45</top>
+		<align>left</align>
+		<font>font10</font>
+		<label>$INFO[ListItem.Label2]</label>
+	</control>
+	</control>
+	</itemlayout>
+	<focusedlayout width="415" height="85">
+	<control type="group">
+	<height>85</height>
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture colordiffuse="65FFFFFF">masks/categorywidget-unfocused.png</texture>
+	</control>
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture colordiffuse="button_focus">masks/categorywidget.png</texture>
+	</control>
+	<control type="label">
+		<left>20</left>
+		<top>5</top>
+		<right>10</right>
+		<align>left</align>
+		<font>font12</font>
+		<label>[B]$INFO[ListItem.Label][/B]</label>
+		<scroll>true</scroll>
+		<scrolltime>40</scrolltime>
+	</control>
+	<control type="label">
+		<left>20</left>
+		<top>45</top>
+		<align>left</align>
+		<font>font10</font>
+		<label>$INFO[ListItem.Label2]</label>
+	</control>
+	</control>
+	</focusedlayout>
+</include>
+	
+</includes>

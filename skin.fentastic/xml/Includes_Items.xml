@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<includes>
+
+<include name="BasedMenuOsdItems">
+	<content>
+	<item>
+		<label>הגדרות אודיו</label>
+		<icon>https://www.iconsdb.com/icons/preview/white/speaker-xxl.png</icon>
+		<onclick>ActivateWindow(osdaudiosettings)</onclick>
+	</item>
+	<item>
+		<label>הגדרות וידאו</label>
+		<icon>https://www.iconsdb.com/icons/preview/white/video-play-2-xxl.png</icon>
+		<onclick>ActivateWindow(osdvideosettings)</onclick>
+	</item>
+	<item>
+		<label>הגדרות כתוביות</label>
+		<icon>osd/fullscreen/buttons/subs3.png</icon>
+		<onclick>ActivateWindow(osdsubtitlesettings)</onclick>
+	</item>
+	<item>
+		<label>הגדרות נגן</label>
+		<icon>https://www.iconsdb.com/icons/preview/white/play-3-xxl.png</icon>
+		<onclick>Control.SetFocus(9001)</onclick>
+	</item>
+	</content>
+</include>
+
+<include name="BasedMenuOsdSecondMenu">
+	<content>
+	<item>
+		<label>הצג חלון כתובית דארקסאבס</label>
+		<label2>$VAR[_ReplaceSubtitle]</label2>
+		<onclick condition="String.IsEmpty(Skin.String(subtitlesearch,darksubs)">Skin.SetString(subtitlesearch,darksubs)</onclick>
+		<onclick condition="Skin.String(subtitlesearch,darksubs)">Skin.SetString(subtitlesearch,kodisubtitle)</onclick>
+		<onclick condition="Skin.String(subtitlesearch,kodisubtitle)">Skin.SetString(subtitlesearch,darksubs)</onclick>
+	</item>	
+	<item>
+		<label>שנה צבע פוקוס בכתפורי הנגן</label>
+		<label2>$INFO[Skin.String(osdbuttonfocuscolor)]</label2>
+		<colorbox>$INFO[Skin.String(osdbuttonfocuscolor)]</colorbox>
+		<onclick>Skin.SetColor(osdbuttonfocuscolor, player)</onclick>
+	</item>
+	<item>
+		<label>שנה צבע מסגרת פוקוס כפתורים</label>
+		<label2>$INFO[Skin.String(osdframebuttoncolor)]</label2>
+		<colorbox>$INFO[Skin.String(osdframebuttoncolor)]</colorbox>
+		<onclick>Skin.SetColor(osdframebuttoncolor, player)</onclick>
+	</item>
+	<item>
+		<label>הגדר עוצמת רקע ב INFO</label>
+		<label2>שקיפות הרקע שונתה ל $INFO[Skin.String(backwindowopecitychange)]</label2>
+		<include>InfoBackWindowOpecityChange</include>
+	</item>	
+	<item>
+		<label>הוסף או הסר כפתור וידג'ט עידן פלוס</label>
+		<label2>$VAR[idanplusdisablebutton_OSD]</label2>
+		<onclick>Skin.ToggleSetting(disableidan)</onclick>
+	</item>
+	<item>
+		<label>הוסף או הסר כפתור השהיית הנגן</label>
+		<label2>$VAR[OsdPlayerClose]</label2>
+		<onclick>Skin.ToggleSetting(playerclosedelay)</onclick>
+	</item>
+	<item>
+		<label>הצג כפתור פלייליסט</label>
+		<label2>$VAR[OsdPlayerPlaylist]</label2>
+		<onclick>Skin.ToggleSetting(playerplaylist_osd)</onclick>
+	</item>
+	</content>
+</include>
+	
+</includes>
