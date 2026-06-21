@@ -117,6 +117,103 @@
 	</focusedlayout>
 </include>
 
+<include name="OsdNetflixEpisodesInSeasonsLayout">
+<definition>
+<itemlayout width="640" height="350">
+<control type="group">
+<width>600</width>
+<include content="BasedResizedWidgetFrame">
+	<include content="BasedResizedWidgetImage">
+		<param name="resize">0</param>
+		<param name="bottom">0</param>
+	</include>
+</include>
+<include content="BasedResizedWidgetFrameBox">
+	<param name="boxcolordiffuse">98181818</param>
+	<include content="BasedResizedWidgetImage">
+		<param name="resize">2</param>
+		<param name="bottom">2</param>
+	</include>
+</include>
+<include content="BasedResizedWidgetTexture">
+	<param name="texture">$INFO[Player.Icon]</param>
+<include content="BasedResizedWidgetImage">
+	<param name="resize">5</param>
+	<param name="bottom">5</param>
+</include>
+</include>
+</control>
+</itemlayout>
+<focusedlayout width="640" height="350">
+<control type="group">
+<width>600</width>
+<include content="BasedResizedWidgetFrame">
+	<include content="BasedResizedWidgetImage">
+		<param name="resize">0</param>
+		<param name="bottom">0</param>
+	</include>
+</include>
+<include content="BasedResizedWidgetFrameBox">
+	<param name="boxcolordiffuse">98181818</param>
+	<include content="BasedResizedWidgetImage">
+		<param name="resize">2</param>
+		<param name="bottom">2</param>
+	</include>
+</include>
+<include content="BasedResizedWidgetTexture">
+	<param name="texture">$INFO[Player.Icon]</param>
+<include content="BasedResizedWidgetImage">
+	<param name="resize">5</param>
+	<param name="bottom">5</param>
+</include>
+</include>
+<control type="image">
+	<left>2</left>
+	<right>2</right>
+	<top>2</top>
+	<bottom>2</bottom>
+	<animation condition="true" effect="fade" start="100" end="88" time="0">Conditional</animation>
+	<texture border="16">icons/box.png</texture>
+	<colordiffuse>black</colordiffuse>
+	<visible>control.hasfocus(200323)</visible>
+</control>
+</control>
+<control type="group">
+<width>600</width>
+<centerleft>50%</centerleft>
+<control type="label">
+	<right>40</right>
+	<top>10</top>
+	<align>center</align>
+	<font>font45_title</font>
+	<label>$INFO[ListItem.TvShowTitle]</label>
+</control>
+<control type="label">
+	<right>40</right>
+	<top>70</top>
+	<align>center</align>
+	<textcolor>deeppink</textcolor>
+	<label>$INFO[ListItem.Genre]</label>
+</control>
+<control type="label">
+	<right>40</right>
+	<top>110</top>
+	<align>center</align>
+	<textcolor>yellow</textcolor>
+	<label>עונה [COLOR yellow]$INFO[ListItem.Season,(,)][/COLOR] פרק [COLOR yellow]$INFO[ListItem.Episode,(,)][/COLOR]</label>
+</control>
+<control type="textbox">
+	<right>40</right>
+	<bottom>20</bottom>
+	<top>155</top>
+	<align>center</align>
+	<label>$INFO[ListItem.Plot]</label>
+</control>
+</control>
+</focusedlayout>
+</definition>
+</include>
+
 <include name="__OsdEpisodeslayout">
 <itemlayout width="380" height="280">
 <control type="group">

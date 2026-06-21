@@ -218,11 +218,12 @@
 <icon>$VAR[stripoutosdbuttons]/previous.png</icon>
 <property name="id">previuos</property>
 <onclick>SkipPrevious</onclick>
-<!-- <visible>Player.Chapter | !String.IsEmpty(VideoPlayer.offset(-1).Title)</visible> -->
+<visible>Player.Chapter | !String.IsEmpty(VideoPlayer.offset(-1).Title)</visible>
 </item>
 <item id="500">
 <icon>$VAR[stripoutosdbuttons]/rewind.png</icon>
 <property name="id">rewind</property>
+<property name="onup">$NUMBER[40022]</property>
 <onclick>Control.SetFocus(40022)</onclick>
 </item>
 
@@ -230,13 +231,14 @@
 <item id="501">
 <icon>$VAR[stripoutosdbuttons]/forward.png</icon>
 <property name="id">forward</property>
+<property name="onup">$NUMBER[40023]</property>
 <onclick>Control.SetFocus(40023)</onclick>
 </item>
 <item>
 <icon>$VAR[stripoutosdbuttons]/next.png</icon>
 <property name="id">next</property>
 <onclick>SkipNext</onclick>
-<!-- <visible>Player.Chapter | !String.IsEmpty(VideoPlayer.offset(-1).Title)</visible> -->
+<visible>Player.Chapter | !String.IsEmpty(VideoPlayer.offset(-1).Title)</visible>
 </item>
 </content>
 </include>
