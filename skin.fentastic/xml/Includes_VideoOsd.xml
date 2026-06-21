@@ -211,13 +211,13 @@
 		<item id="110">
 			<label>הקטן את משך ההשהיה של כתוביות (השתמש אם הכתוביות מוצגות מאוחר מדי)</label>
 			<property name="timer">https://www.iconsdb.com/icons/preview/white/arrow-142-xxl.png</property>
-			<onclick>SubtitleDelayMinus</onclick>
+			<onclick>SubtitleDelayPlus</onclick>
 			<visible>$EXP[osdmoviestvshowvisible]</visible>
 		</item>
 		<item id="111">
 			<label>הגדלת משך ההשהיה של הכתוביות (השתמשו אם הכתוביות מוצגות מוקדם מדי)</label>
 			<property name="timer">https://www.iconsdb.com/icons/preview/white/arrow-204-xxl.png</property>
-			<onclick>SubtitleDelayPlus</onclick>
+			<onclick>SubtitleDelayMinus</onclick>
 			<visible>$EXP[osdmoviestvshowvisible]</visible>
 		</item>
 		<item>
