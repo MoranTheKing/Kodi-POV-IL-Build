@@ -72,7 +72,6 @@
             <label>בחר נגן</label>
             <label2>$VAR[osdchangeplayervar]</label2>
             <onclick>Skin.ToggleSetting(chooseosdplayer)</onclick>
-            <onclick>ReloadSkin()</onclick>
         </item>
 </content>
 </include>
