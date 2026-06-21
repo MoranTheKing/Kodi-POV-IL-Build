@@ -10,7 +10,7 @@ get_setting, set_setting, sleep = kodi_utils.get_setting, kodi_utils.set_setting
 notification, confirm_dialog = kodi_utils.notification, kodi_utils.confirm_dialog
 user_agent = 'POV/%s' % kodi_utils.get_addoninfo('version')
 qr_str = 'https://api.qrserver.com/v1/create-qr-code/?size=256x256&qzone=1%s'
-meta_keys = 'title year poster fanart clearlogo tmdblogo'
+meta_keys = 'title year poster fanart clearlogo'
 code_str, nav2_str, await_str = 'PIN CODE: [B]%s[/B]', 'LOCATION: [B]%s[/B]', 'REMAINING: [B]%02d:%02d[/B]'
 auth_str, noauth_str = 'Authorized: Select to Remove', 'Unauthorized: Select to Add'
 timeout = 10.05
@@ -25,7 +25,7 @@ def watch_indicators(function):
 	return wrapper
 
 def _make_progress_dialog(**kwargs):
-	progress_dialog = create_window(('windows.sources', 'ProgressMedia'), 'progress_media.xml', **kwargs)
+	progress_dialog = create_window(('windows.progress', 'ProgressMedia'), 'progress_media.xml', **kwargs)
 	Thread(target=progress_dialog.run).start()
 	return progress_dialog
 
@@ -38,9 +38,9 @@ def authorize():
 			item.setArt({'icon': '%s%s' % (icon_path, api.icon)})
 			yield(item)
 	icon_path, services = kodi_utils.media_path(), (
-		('trakt', Trakt), ('mdblist', MDBList), ('tmdblist', TMDbList),
+		('trakt', Trakt), ('mdblist', MDBList), ('tmdblist', TMDBList),
 		('real-debrid', RealDebrid), ('premiumize.me', Premiumize), ('alldebrid', AllDebrid),
-		('torbox', TorBox), ('offcloud', Offcloud), ('easydebrid', EasyDebrid), ('easynews', EasyNews)
+		('torbox', TorBox), ('offcloud', Offcloud), ('easynews', EasyNews)
 	)
 	service = kodi_utils.dialog.select('My Services', list(_builder()), useDetails=True)
 	if service < 0: return
@@ -125,7 +125,7 @@ class Premiumize:
 	icon = 'premiumize.png'
 	def __init__(self):
 		self.token = get_setting('pm.token')
-		self.client_id = '663882072'
+		self.client_id = '384733001'
 
 	def base_url(self, path):
 		return 'https://www.premiumize.me/%s' % path
@@ -289,7 +289,13 @@ class Offcloud:
 		self.token = get_setting('oc.token')
 
 	def base_url(self, path):
-		return 'https://offcloud.com/api/%s' % path
+		return 'https://offcloud.com/%s' % path
+
+	def poll_auth(self, data):
+		response = requests.post(self.base_url('oauth/token'), json=data, timeout=timeout)
+		if not response.ok: return
+		data.update(response.json())
+		self.token = data['access_token']
 
 	def set(self):
 		cls_name = self.__class__.__name__
@@ -300,46 +306,33 @@ class Offcloud:
 			clear_cache('oc_cloud', silent=True)
 			return notification('Removed %s Authorization' % cls_name)
 
-		username = kodi_utils.dialog.input('Offcloud Email:')
-		password = kodi_utils.dialog.input('Offcloud Password:', option=2)
-		if not all((username, password)): return
-		data = {'username': username, 'password': password}
-		response = requests.post(self.base_url('login'), json=data, timeout=timeout)
+		response = requests.post(self.base_url('oauth/device/code'), timeout=timeout)
 		result = response.json()
-		user_id = result.get('userId')
-		if not user_id: return notification(32574)
-		result = requests.post(self.base_url('key'), cookies=response.cookies, timeout=timeout).json()
-		api_key = result.get('apiKey')
-		if not api_key: return notification(32574)
-		set_setting('oc.account_id', str(user_id))
-		set_setting('oc.token', api_key)
-		notification('Set %s Authorization' % cls_name)
-		return True
-
-class EasyDebrid:
-	icon = 'easydebrid.png'
-	def __init__(self):
-		self.token = get_setting('ed.token')
-
-	def base_url(self, path):
-		return 'https://easydebrid.com/api/v1/%s' % path
-
-	def set(self):
-		cls_name = self.__class__.__name__
-		if self.token:
-			if not confirm_dialog(): return
-			set_setting('ed.token', '')
-			set_setting('ed.account_id', '')
-			return notification('Removed %s Authorization' % cls_name)
-
-		api_key = kodi_utils.dialog.input('EasyDebrid API Key:')
-		if not api_key: return
-		headers = {'Authorization': 'Bearer %s' % api_key}
-		response = requests.get(self.base_url('user/details'), headers=headers, timeout=timeout)
+		data = {'device_code': result['device_code'], 'grant_type': 'urn:ietf:params:oauth:grant-type:device_code'}
+		expires_in, expires_at = result['expires_in'], result['expires_in'] + time.monotonic()
+		try: qr_icon = qr_str % '&data=%s' % quote(result['verification_uri_complete'])
+		except: qr_icon = ''
+		meta = {**dict.fromkeys(meta_keys.split(), ''), 'poster': qr_icon}
+		detail = code_str % result['user_code'], nav2_str % result['verification_uri']
+		progress_dialog = _make_progress_dialog(meta=meta)
+		timer = RepeatTimer(result['interval'], self.poll_auth, args=(data,))
+		timer.start()
+		for i in range(1, expires_in + 1):
+			if self.token or progress_dialog.iscanceled(): break
+			lines = await_str % divmod(expires_at - time.monotonic(), 60), *detail
+			progress = 100 - int(100 * i / expires_in)
+			progress_dialog.update('[CR]'.join(lines), progress)
+			sleep(1000)
+		timer.cancel()
+		progress_dialog.close()
+		if progress_dialog.iscanceled(): return False
+		if not self.token: return notification(32574)
+		params = {'key': self.token}
+		response = requests.get(self.base_url('api/account/info'), params=params, timeout=timeout)
 		result = response.json()
-		customer = result['id']
-		set_setting('ed.account_id', str(customer))
-		set_setting('ed.token', api_key)
+		customer = result['user_id']
+		set_setting('oc.account_id', str(customer))
+		set_setting('oc.token', self.token)
 		notification('Set %s Authorization' % cls_name)
 		return True
 
@@ -361,13 +354,14 @@ class EasyNews:
 			clear_media_results_database()
 			return notification('Removed %s Authorization' % cls_name)
 
-		username = kodi_utils.dialog.input('EasyNews Username:')
-		password = kodi_utils.dialog.input('EasyNews Password:')
+		username = kodi_utils.dialog.input('EasyNews Username:').strip()
+		password = kodi_utils.dialog.input('EasyNews Password:').strip()
 		if not all((username, password)): return
-		api = EasyNewsAPI()
-		api.username, api.password = username, password
-		account_info, usage_info = api.account()
-		if not account_info or not usage_info: return notification(32574)
+#		Account web page strangely blocked for some users, will work with vpn
+#		api = EasyNewsAPI()
+#		api.username, api.password = username, password
+#		account_info, usage_info = api.account()
+#		if not account_info or not usage_info: return notification(32574)
 		set_setting('easynews_user', username)
 		set_setting('easynews_password', password)
 		set_setting('provider.easynews', 'true')
@@ -468,7 +462,7 @@ class MDBList:
 			clear_cache('mdblist', silent=True)
 			return notification('Removed %s Authorization' % cls_name)
 
-		api_key = kodi_utils.dialog.input('MDBList API Key:')
+		api_key = kodi_utils.dialog.input('MDBList API Key:').strip()
 		if not api_key: return
 		params = {'apikey': api_key}
 		response = requests.get(self.base_url('user'), params=params, timeout=timeout)
@@ -483,7 +477,7 @@ class MDBList:
 		clear_cache('mdblist', silent=True)
 		return True
 
-class TMDbList:
+class TMDBList:
 	icon = 'tmdb.png'
 	def __init__(self):
 		self.read = get_setting('tmdb_read_token')
@@ -562,7 +556,7 @@ class TMDbList:
 		params = {'session_id': session_id}
 		response = requests.get(self.base_url('3/account'), params=params, headers=self.headers, timeout=timeout)
 		result = response.json()
-		if not 'id' in result: return
+		if 'id' not in result: return
 		username, session_account_id = str(result['username']), str(result['id'])
 		set_setting('tmdb.username', username)
 		set_setting('tmdb.session_id', session_id)
@@ -570,7 +564,8 @@ class TMDbList:
 		return True
 
 def refer_link(service):
-	url = {'realdebrid': 'https://tinyurl.com/2db65q28', 'torbox': 'https://tinyurl.com/2d2ra6jq'}[service]
+	url = kodi_utils.addon().getSetting('%s_refer_link' % service)
+	if not url: return notification(32574)
 	expires_in, expires_at = 20, 20 + time.monotonic()
 	try: qr_icon = qr_str % '&data=%s' % quote(url)
 	except: qr_icon = kodi_utils.media_path('%s.png' % service)

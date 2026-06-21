@@ -94,7 +94,7 @@
 							<description>Play</description>
 							<animation effect="zoom" start="100" end="102" time="50" tween="sine" easing="inout" center="auto">Focus</animation>
 							<animation effect="zoom" start="102" end="100" time="50" tween="sine" easing="inout" center="auto">Unfocus</animation>
-							<left>147</left>
+							<left>0</left>
 							<width>70</width>
 							<height>45</height>
 							<onleft>10</onleft>
@@ -111,7 +111,7 @@
 							<description>Cancel</description>
 							<animation effect="zoom" start="100" end="102" time="50" tween="sine" easing="inout" center="auto">Focus</animation>
 							<animation effect="zoom" start="102" end="100" time="50" tween="sine" easing="inout" center="auto">Unfocus</animation>
-							<left>294</left>
+							<left>0</left>
 							<width>70</width>
 							<height>45</height>
 							<onleft>11</onleft>

@@ -18,14 +18,14 @@ class source(Debrid):
 			if not enabled_debrids_check('ad'): return internal_results(self.scrape_provider, self.sources)
 			self.scrape_results = []
 			title_filter = filter_by_name(self.scrape_provider)
-			self.media_type, title = info.get('media_type'), info.get('title')
+			self.mediatype, title = info.get('mediatype'), info.get('title')
 			self.year, self.season, self.episode = int(info.get('year')), info.get('season'), info.get('episode')
-			if self.media_type == 'episode': self.seas_ep_query_list = source_utils.seas_ep_query_list(self.season, self.episode)
+			if self.mediatype == 'episode': self.seas_ep_query_list = source_utils.seas_ep_query_list(self.season, self.episode)
 			self.folder_query, self.year_query_list = clean_title(normalize(title)), tuple(map(str, range(self.year - 1, self.year + 2)))
 			self._scrape_cloud()
 			if not self.scrape_results: return internal_results(self.scrape_provider, self.sources)
 			self.aliases = source_utils.get_aliases_titles(info.get('aliases', []))
-			extras_filtering_list = tuple(i for i in extras_filter if not i in title.lower())
+			extras_filtering_list = tuple(i for i in extras_filter if i not in title.lower())
 			for item in self.scrape_results:
 				try:
 					if not item['filename'].lower().endswith(tuple(extensions)): continue
@@ -33,7 +33,7 @@ class source(Debrid):
 					foldername = clean_title(formalized)
 					normalized = normalize(item['filename'])
 					filename = clean_title(normalized)
-					if self.media_type == 'movie':
+					if self.mediatype == 'movie':
 						if any(x in filename for x in extras_filtering_list): continue
 						if not any(x in filename for x in self.year_query_list): continue
 					elif not seas_ep_filter(self.season, self.episode, normalized): continue
@@ -58,26 +58,40 @@ class source(Debrid):
 	def _scrape_cloud(self):
 		try:
 			results_append = self.scrape_results.append
-			threads = [Thread(target=self._scrape_downloads)]
-			for i in threads: i.start()
-			my_cloud_files = self.user_cloud()['magnets']
-			for file in my_cloud_files:
-				for item in file['links']:
-					try:
-						item.update({'folder_name': file['filename']})
-						results_append(item)
-					except: pass
+			threads = []
+			append = threads.append
+			cloud_files = self.user_cloud()
+			for item in cloud_files['magnets']:
+				normalized = normalize(item['filename'])
+				folder_name = clean_title(normalized)
+				if folder_name and self.folder_query not in folder_name: continue
+				append(i := Thread(target=self._scrape_folders, args=(item,)))
+				i.start()
+			self._scrape_downloads()
 			[i.join() for i in threads]
+		except: pass
+
+	def _scrape_folders(self, folder_info):
+		try:
+			results_append = self.scrape_results.append
+			folder = self.torrent_info(folder_info['id'])
+			folder['links'] = self.flatten_magnet_files(folder['files'])
+			for item in folder['links']:
+				try: item.update({
+					'filename': item['n'], 'folder_name': folder_info['filename'],
+					'size': item['s'], 'link': item['l']
+				})
+				except: pass
+				else: results_append(item)
 		except: pass
 
 	def _scrape_downloads(self):
 		try:
 			results_append = self.scrape_results.append
-			my_downloads = self.downloads()['links']
-			for item in my_downloads:
-				try:
-					item.update({'folder_name': item['filename'], 'downloads': True})
-					results_append(item)
+			cloud_downloads = self.downloads()
+			for item in cloud_downloads['links']:
+				try: item.update({'folder_name': item['filename'], 'downloads': True})
 				except: pass
+				else: results_append(item)
 		except: pass
 
