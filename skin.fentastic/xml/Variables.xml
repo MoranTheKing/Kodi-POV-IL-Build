@@ -45,6 +45,10 @@
 		<value>DefaultTVShows.png</value>
 		<!-- ##################### -->
 	</variable>
+	<variable name="osdchangeplayervar">
+	<value condition="Skin.HasSetting(chooseosdplayer)">נגן פשוט</value>
+	<value condition="!Skin.HasSetting(chooseosdplayer)">נגן מתקדם</value>
+	</variable>
 	<variable name="ShiftThumbVar">
 		<value condition="!String.IsEmpty(Listitem.Art(poster))">$INFO[Listitem.Art(poster)]</value>
 		<value condition="ListItem.IsParentFolder">DefaultFolderBackSquare.png</value>

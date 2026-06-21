@@ -211,7 +211,12 @@
 		<label>הגדר עוצמת רקע ב INFO</label>
 		<label2>שקיפות הרקע שונתה ל $INFO[Skin.String(backwindowopecitychange)]</label2>
 		<include>InfoBackWindowOpecityChange</include>
-	</item>	
+	</item>
+	<item>
+		<label>החלף נגן</label>
+		<label2>$VAR[osdchangeplayervar]</label2>
+		<onclick>Skin.ToggleSetting(chooseosdplayer)</onclick>
+	</item>
 	</content>
 	</control>
 	</control>
