@@ -1,1 +1,8 @@
+# Build artifacts produced by the CI packaging step.
+/dist/
+
+# Python caches
+__pycache__/
+*.py[cod]
+
 /.idea/
