@@ -73,12 +73,6 @@
 						<icon>special://skin/extras/icons/download.png</icon>
 						<onclick>RunPlugin(plugin://plugin.video.pov/?mode=myservices&amp;name=%D7%94%D7%A9%D7%99%D7%A8%D7%95%D7%AA%D7%99%D7%9D+%D7%A9%D7%9C%D7%99&amp;isFolder=false&amp;iconImage=special%3A%2F%2Fhome%2Faddons%2Fplugin.video.pov%2Fresources%2Fskins%2FDefault%2Fmedia%2Fsettings.png)</onclick>
 					</item>
-					<item>
-						<onclick>Close</onclick>
-						<label>גיבוי ושחזור</label>
-						<icon>special://skin/extras/icons/year.png</icon>
-						<onclick>ActivateWindow(10001,"Skin.SetString(_povil_noop,1)",return)</onclick>
-					</item>
 
 <!-- 					<item>
 						<onclick>Close</onclick>
@@ -110,12 +104,6 @@
 						<label>השירותים שלי</label>
 						<icon>special://skin/extras/icons/download.png</icon>
 						<onclick>ActivateWindow(10025,"plugin://plugin.video.pov/?iconImage=premium.png&amp;mode=navigator.premium&amp;name=32455",return)</onclick>
-					</item>
-					<item>
-						<onclick>Close</onclick>
-						<label>החשבון שלי</label>
-						<icon>special://skin/extras/icons/download_repo.png</icon>
-						<onclick>RunPlugin(Skin.SetString(_povil_noop,1))</onclick>
 					</item>
 					<item>
 						<onclick>Close</onclick>
