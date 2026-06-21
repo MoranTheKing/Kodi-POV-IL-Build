@@ -10,6 +10,9 @@
   <onload condition="String.IsEmpty(Window(Home).Property(fentastic.starting_widgets))">SetProperty(fentastic.starting_widgets,true)</onload>
 	<!-- <onload>RunScript(script.fentastic.helper,mode=modify_keymap)</onload> -->
 	<!-- <onload>RunScript(script.fentastic.helper,mode=fix_black_screen)</onload> -->
+	<!-- KODI POV IL: Turkish/Dragon menu removed; force the no-Custom4 mode so the
+	     home shows the POV (K) logo instead of the dragon_letters logo. -->
+	<onload condition="!Skin.HasSetting(HomeMenuNoCustom4Button)">Skin.SetBool(HomeMenuNoCustom4Button)</onload>
 	<onload condition="String.IsEmpty(Skin.String(DefaultBackgroundBrightness))">Skin.SetString(DefaultBackgroundBrightness,Medium)</onload>
 	<onload condition="String.IsEmpty(Skin.String(DefaultFanartBrightness))">Skin.SetString(DefaultFanartBrightness,Medium)</onload>
 	<controls>
@@ -78,8 +81,6 @@
 				<control type="group" id="26000">
 					<top>-50</top>
 					<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom4)</visible>
-					<include content="Custom4WidgetsDragon1" condition="!Skin.HasSetting(HomeMenuNoCustom4Button)" />
-					<include content="Custom4WidgetsDragon2" condition="!Skin.HasSetting(HomeMenuNoCustom4Button)" />
 				</control>
 				<!-- VOD12  VOD13 -->
 				<control type="group" id="23000">

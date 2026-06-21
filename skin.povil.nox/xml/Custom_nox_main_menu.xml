@@ -74,14 +74,6 @@
 						<visible>!Skin.HasSetting(HomeMenuNoFavButton)</visible>
 					</item>
 					<item>
-						<label>טורקיות</label>
-						<onclick>ActivateWindow(2110)</onclick>
-						<property name="menu_id">$NUMBER[26000]</property>
-						<thumb>icons/sidemenu/tv.png</thumb>
-						<property name="id">custom4</property>
-						<visible>!Skin.HasSetting(HomeMenuNoCustom4Button)</visible>
-					</item>
-					<item>
 						<label>סרטים</label>
 						<onclick>ActivateWindow(2101)</onclick>
 						<property name="menu_id">$NUMBER[19000]</property>
@@ -701,29 +693,12 @@
 						<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom3)</visible>
 					</item> -->
 					<item>
-						<label>מדובבים DRAX</label>
-						<icon>special://skin/extras/icons/moviekids.png</icon>
-						<onclick>ActivateWindow(10025,"plugin://plugin.video.pov/?action=tmdb_movies_popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;name=32459",return)</onclick>
-						<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom3)</visible>
-					</item>
-					<item>
-						<label>סדרות מדובבות DRAX</label>
-						<icon>special://skin/extras/icons/moviekids.png</icon>
-						<onclick>ActivateWindow(10025,"plugin://plugin.video.pov/?action=tmdb_movies_popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;name=32459",return)</onclick>
-						<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom3)</visible>
-					</item>
-					<item>
 						<label>סדרות אנימה DRAX</label>
 						<icon>special://skin/extras/icons/oscar.png</icon>
 						<onclick>ActivateWindow(10025,"plugin://plugin.video.pov/?action=tmdb_movies_popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;name=32459",return)</onclick>
 						<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom3)</visible>
 					</item>
-<!-- 					<item>
-						<label>מדובבים לפי שם</label>
-						<icon>special://skin/extras/icons/moviekids.png</icon>
-						<onclick>ActivateWindow(10025,"plugin://plugin.video.pov/?action=tmdb_movies_popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;name=32459",return)</onclick>
-						<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom3)</visible>
-					</item> -->
+<!-- -->
 					<item>
 						<label>סרטים אנימציה</label>
 						<icon>special://skin/extras/icons/moviekids.png</icon>
@@ -743,27 +718,6 @@
 						<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom3)</visible>
 					</item> -->
 					<item>
-						<label>סרטים מדובבים</label>
-						<icon>special://skin/extras/icons/kidsdub.png</icon>
-						<onclick>ActivateWindow(Videos,"plugin://plugin.video.idanplus/?name=VOD&amp;url=&amp;mode=2&amp;iconimage=special%3A%2F%2Fhome%2Faddons%2Fplugin.video.idanplus%2Ficon.png&amp;module=&amp;moredata= &amp;data= &amp;original_title= &amp;id= &amp;season= &amp;episode= &amp;tmdbid= &amp;eng_name= &amp;show_original_year= &amp;isr=0&amp;fav_status=false&amp;groups_id=0&amp;next_page=0&amp;video_data=%7B%22title%22%3A+%22%5Cu05e1%5Cu05e8%5Cu05d8%5Cu05d9%5Cu05dd+%5Cu05de%5Cu05d3%5Cu05d5%5Cu05d1%5Cu05d1%5Cu05d9%5Cu05dd+%5Cu05e2%5Cu05de%5Cu05d5%5Cu05d3%5Cu05d9%5Cu05dd%22%2C+%22label%22%3A+%22+%22%2C+%22OriginalTitle%22%3A+%22+%22%2C+%22imdbnumber%22%3A+%22+%22%2C+%22imdbid%22%3A+%22+%22%2C+%22year%22%3A+%22+%22%2C+%22mediatype%22%3A+%22movie%22%2C+%22TVshowtitle%22%3A+%22%22%2C+%22rating%22%3A+%220%22%2C+%22plot%22%3A+%22%5Cu05e1%5Cu05e8%5Cu05d8%5Cu05d9%5Cu05dd+%5Cu05de%5Cu05d3%5Cu05d5%5Cu05d1%5Cu05d1%5Cu05d9%5Cu05dd%22%2C+%22dateadded%22%3A+%22+00%3A00%3A00%22%7D&amp;video_data=%7B%22title%22%3A+%22%5Cu05e1%5Cu05e8%5Cu05d8%5Cu05d9%5Cu05dd+%5Cu05de%5Cu05d3%5Cu05d5%5Cu05d1%5Cu05d1%5Cu05d9%5Cu05dd+%5Cu05e2%5Cu05de%5Cu05d5%5Cu05d3%5Cu05d9%5Cu05dd%22%2C+%22label%22%3A+%22+%22%2C+%22OriginalTitle%22%3A+%22+%22%2C+%22imdbnumber%22%3A+%22+%22%2C+%22imdbid%22%3A+%22+%22%2C+%22year%22%3A+%22+%22%2C+%22mediatype%22%3A+%22movie%22%2C+%22TVshowtitle%22%3A+%22%22%2C+%22rating%22%3A+%220%22%2C+%22plot%22%3A+%22%5Cu05e1%5Cu05e8%5Cu05d8%5Cu05d9%5Cu05dd+%5Cu05de%5Cu05d3%5Cu05d5%5Cu05d1%5Cu05d1%5Cu05d9%5Cu05dd%22%2C+%22dateadded%22%3A+%22+00%3A00%3A00%22%7D",return)</onclick>
-						<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom3)</visible>
-						<visible>false</visible>
-					</item>
-					<item>
-						<label>מדובבים לפי שנים</label>
-						<icon>special://skin/extras/icons/kisddisney.png</icon>
-						<onclick>ActivateWindow(Videos,"plugin://plugin.video.idanplus/?name=VOD&amp;url=&amp;mode=2&amp;iconimage=special%3A%2F%2Fhome%2Faddons%2Fplugin.video.idanplus%2Ficon.png&amp;module=&amp;moredata= &amp;data= &amp;original_title= &amp;id= &amp;season= &amp;episode= &amp;tmdbid= &amp;eng_name= &amp;show_original_year= &amp;isr=0&amp;fav_status=false&amp;groups_id=0&amp;next_page=0&amp;video_data=%7B%22title%22%3A+%22%5Cu05e1%5Cu05e8%5Cu05d8%5Cu05d9%5Cu05dd+%5Cu05de%5Cu05d3%5Cu05d5%5Cu05d1%5Cu05d1%5Cu05d9%5Cu05dd+%5Cu05e9%5Cu05e0%5Cu05d9%5Cu05dd%22%2C+%22label%22%3A+%22+%22%2C+%22OriginalTitle%22%3A+%22+%22%2C+%22imdbnumber%22%3A+%22+%22%2C+%22imdbid%22%3A+%22+%22%2C+%22year%22%3A+%22+%22%2C+%22mediatype%22%3A+%22movie%22%2C+%22TVshowtitle%22%3A+%22%22%2C+%22rating%22%3A+%220%22%2C+%22plot%22%3A+%22%5Cu05dc%5Cu05e4%5Cu05d9+%5Cu05e9%5Cu05e0%5Cu05d9%5Cu05dd%22%2C+%22dateadded%22%3A+%22+00%3A00%3A00%22%7D&amp;video_data=%7B%22title%22%3A+%22%5Cu05e1%5Cu05e8%5Cu05d8%5Cu05d9%5Cu05dd+%5Cu05de%5Cu05d3%5Cu05d5%5Cu05d1%5Cu05d1%5Cu05d9%5Cu05dd+%5Cu05e9%5Cu05e0%5Cu05d9%5Cu05dd%22%2C+%22label%22%3A+%22+%22%2C+%22OriginalTitle%22%3A+%22+%22%2C+%22imdbnumber%22%3A+%22+%22%2C+%22imdbid%22%3A+%22+%22%2C+%22year%22%3A+%22+%22%2C+%22mediatype%22%3A+%22movie%22%2C+%22TVshowtitle%22%3A+%22%22%2C+%22rating%22%3A+%220%22%2C+%22plot%22%3A+%22%5Cu05dc%5Cu05e4%5Cu05d9+%5Cu05e9%5Cu05e0%5Cu05d9%5Cu05dd%22%2C+%22dateadded%22%3A+%22+00%3A00%3A00%22%7D",return)</onclick>
-						<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom3)</visible>
-						<visible>false</visible>
-					</item>
-					<item>
-						<label>מדובבים לפי אותיות</label>
-						<icon>special://skin/extras/icons/kisddisney.png</icon>
-						<onclick>ActivateWindow(Videos,"plugin://plugin.video.idanplus/?name=VOD&amp;url=&amp;mode=2&amp;iconimage=special%3A%2F%2Fhome%2Faddons%2Fplugin.video.idanplus%2Ficon.png&amp;module=&amp;moredata= &amp;data= &amp;original_title= &amp;id= &amp;season= &amp;episode= &amp;tmdbid= &amp;eng_name= &amp;show_original_year= &amp;isr=0&amp;fav_status=false&amp;groups_id=0&amp;next_page=0&amp;video_data=%7B%22title%22%3A+%22+%5Cu05e1%5Cu05e8%5Cu05d8%5Cu05d9%5Cu05dd+%5Cu05de%5Cu05d3%5Cu05d5%5Cu05d1%5Cu05d1%5Cu05d9%5Cu05dd+%5Cu05dc%5Cu05e4%5Cu05d9+%5Cu05d0-%5Cu05d1%22%2C+%22label%22%3A+%22+%22%2C+%22OriginalTitle%22%3A+%22+%22%2C+%22imdbnumber%22%3A+%22+%22%2C+%22imdbid%22%3A+%22+%22%2C+%22year%22%3A+%22+%22%2C+%22mediatype%22%3A+%22movie%22%2C+%22TVshowtitle%22%3A+%22%22%2C+%22rating%22%3A+%220%22%2C+%22plot%22%3A+%22%5Cu05e1%5Cu05e8%5Cu05d8%5Cu05d9%5Cu05dd+%5Cu05de%5Cu05d3%5Cu05d5%5Cu05d1%5Cu05d1%5Cu05d9%5Cu05dd%22%2C+%22dateadded%22%3A+%22+00%3A00%3A00%22%7D&amp;video_data=%7B%22title%22%3A+%22+%5Cu05e1%5Cu05e8%5Cu05d8%5Cu05d9%5Cu05dd+%5Cu05de%5Cu05d3%5Cu05d5%5Cu05d1%5Cu05d1%5Cu05d9%5Cu05dd+%5Cu05dc%5Cu05e4%5Cu05d9+%5Cu05d0-%5Cu05d1%22%2C+%22label%22%3A+%22+%22%2C+%22OriginalTitle%22%3A+%22+%22%2C+%22imdbnumber%22%3A+%22+%22%2C+%22imdbid%22%3A+%22+%22%2C+%22year%22%3A+%22+%22%2C+%22mediatype%22%3A+%22movie%22%2C+%22TVshowtitle%22%3A+%22%22%2C+%22rating%22%3A+%220%22%2C+%22plot%22%3A+%22%5Cu05e1%5Cu05e8%5Cu05d8%5Cu05d9%5Cu05dd+%5Cu05de%5Cu05d3%5Cu05d5%5Cu05d1%5Cu05d1%5Cu05d9%5Cu05dd%22%2C+%22dateadded%22%3A+%22+00%3A00%3A00%22%7D",return)</onclick>
-						<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom3)</visible>
-						<visible>false</visible>
-					</item>
-					<item>
 						<label>סרטים באנגלית</label>
 						<icon>special://skin/extras/icons/kidseng.png</icon>
 						<onclick>ActivateWindow(10025,"plugin://plugin.video.otaku/",return)</onclick>
@@ -779,12 +733,6 @@
 						<label>ילדים ונוער</label>
 						<icon>special://skin/extras/icons/kids3.png</icon>
 						<onclick>ActivateWindow(10025,"plugin://plugin.video.idanplus/?iconimage=C%253A%255CUsers%255CHome%255CAppData%255CRoaming%255CKodi%255Caddons%255Cplugin.video.idanplus%255Cresources%255Cimages%255C23tv.jpg&amp;mode=1&amp;module=kan&amp;moredata=%25D7%259B%25D7%2590%25D7%259F%2b%25D7%2597%25D7%2599%25D7%25A0%25D7%2595%25D7%259B%25D7%2599%25D7%25AA%2b23__4453&amp;name=%5bB%5d%d7%99%d7%9c%d7%93%d7%99%d7%9d%20%d7%95%d7%a0%d7%95%d7%a2%d7%a8%5b%2fB%5d&amp;url=https%253A%252F%252Fwww.kankids.org.il%252Flobby-kids%252Fkids-teens%252F",return)</onclick>
-						<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom3)</visible>
-					</item>
-					<item>
-						<label>סדרות מדובבות</label>
-						<icon>special://skin/extras/icons/kisddisney.png</icon>
-						<onclick>ActivateWindow(10025,"plugin://plugin.video.idanplus/?name=VOD&amp;url=&amp;mode=2&amp;iconimage=special%3A%2F%2Fhome%2Faddons%2Fplugin.video.idanplus%2Ficon.png&amp;module=&amp;moredata=",return)</onclick>
 						<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom3)</visible>
 					</item>
 					<item>
@@ -823,13 +771,6 @@
 						<label>חיפוש</label>
 						<icon>special://skin/extras/icons/dragon.png</icon>
 						<onclick>ActivateWindow(10025,"plugin://plugin.video.pov/?action=tmdb_movies_popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;name=32459",return)</onclick>
-						<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom4)</visible>
-						<visible>False</visible>
-					</item>
-					<item>
-						<label>מתקדמות (טורקיה)</label>
-						<icon>special://skin/extras/icons/dragon.png</icon>
-						<onclick>ActivateWindow(Videos,"plugin://plugin.video.pov/?action=tmdb_movies_popular&amp;iconImage=popular&amp;mode=build_movie_list&amp;name=32459",return)</onclick>
 						<visible>String.IsEqual(Container(9000).ListItem.Property(id),custom4)</visible>
 						<visible>False</visible>
 					</item>
