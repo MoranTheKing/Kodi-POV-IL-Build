@@ -57,15 +57,15 @@
 						<!-- Build Switch Skin  -->
 						<label>[B][COLOR blue]$LOCALIZE[700058][/COLOR][/B]</label>
 						<onclick>Dialog.Close(all)</onclick>
-						<onclick>PlayMedia(&quot;plugin://plugin.program.kodirealdebridisraelwizard/?mode=install&amp;action=build_switch_skin&quot;)</onclick>
+						<onclick>PlayMedia(&quot;plugin://plugin.program.kodipovilwizard/?mode=install&amp;action=build_switch_skin&quot;)</onclick>
 					</item>
 					<item>
 						<!-- KODI ANDORID/WINDOWS Update Check -->
 						<label>[B][COLOR blue]$LOCALIZE[700063][/COLOR][/B]</label>
 						<onclick>Dialog.Close(all)</onclick>
-						<onclick>PlayMedia(&quot;plugin://plugin.program.kodirealdebridisraelwizard/?mode=install&amp;action=kodi_version_update_check&amp;kodi_version_update_check_manual=true&quot;)</onclick>
+						<onclick>PlayMedia(&quot;plugin://plugin.program.kodipovilwizard/?mode=install&amp;action=kodi_version_update_check&amp;kodi_version_update_check_manual=true&quot;)</onclick>
 						<!-- Android/Windows only -->
-						<visible>System.Platform.Android | System.Platform.Windows</visible>
+						<visible>false</visible>
 					</item>
 					<item>
 						<!-- Skin settings -->
