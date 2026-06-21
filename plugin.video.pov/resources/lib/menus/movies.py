@@ -96,13 +96,20 @@ class Movies:
 			else:
 				url_params = play_params
 				cm_append((self.cm_sort['extras'], extras_str, run_plugin % extras_params))
-			# Hide "Trakt Manager" entry when a personal TMDB account is
-			# connected -- TMDB Manager handles favorites/watchlist/lists
-			# without Trakt's rate limits or restricted Collections UI.
-			if not kodi_utils.get_setting('tmdb.account_id'):
+			# Show only the list-managers the user is actually
+			# connected to. When TMDB is personally connected it
+			# takes the top slot (above any other list manager)
+			# and Trakt is hidden -- TMDB has no rate limits or
+			# restricted Collections UI. The bundled default TMDB
+			# key is read-only and doesn't set account_id, so
+			# users without a personal connection still see Trakt.
+			if kodi_utils.get_setting('tmdb.account_id'):
+				tmdb_sort_key = min(self.cm_sort['trakt'], self.cm_sort['mdblist']) - 1
+				cm_append((tmdb_sort_key, tmdbmanager_str, run_plugin % tmdb_manager_params))
+			elif kodi_utils.get_setting('trakt_user', ''):
 				cm_append((self.cm_sort['trakt'], traktmanager_str, run_plugin % trakt_manager_params))
-			cm_append((self.cm_sort['mdblist'], mdblmanager_str, run_plugin % mdbl_manager_params))
-			cm_append((self.cm_sort['tmdblist'], tmdbmanager_str, run_plugin % tmdb_manager_params))
+			if kodi_utils.get_setting('mdblist.token'):
+				cm_append((self.cm_sort['mdblist'], mdblmanager_str, run_plugin % mdbl_manager_params))
 			cm_append((self.cm_sort['favorites'], favmanager_str, run_plugin % fav_manager_params))
 			if progress != '0' or resumetime != '0': cm_append((
 				self.cm_sort['mark'], clearprog_str, run_plugin % build_url({
