@@ -3,6 +3,7 @@
 	<defaultcontrol always="true">5000</defaultcontrol>
 	<backgroundcolor>background</backgroundcolor>
 	<include>OpenCloseWindowFadeAnimation</include>
+	<onunload>Control.SetFocus(201)</onunload>
 	<controls>
 	
 	<!-- FAKE BUTTON -->
