@@ -38,6 +38,7 @@
 	<value condition="ControlGroup(202).HasFocus(43314)">הגדרות אודיו</value>
 	<value condition="ControlGroup(202).HasFocus(43315) + $EXP[__Movies_OSD]">החלף מקור לסרט</value>
 	<value condition="ControlGroup(202).HasFocus(43315) + $EXP[__episode_OSD]">החלף מקור לפרק</value>
+	<value condition="ControlGroup(202).HasFocus(43316)">$VAR[__PlayerChoose]</value>
 	</variable>
 	
 	
@@ -787,6 +788,10 @@
 	<variable name="PlayerControlsPlayImageVar">
 		<value condition="Player.Playing">osd/fullscreen/buttons/pause.png</value>
 		<value>osd/fullscreen/buttons/play.png</value>
+	</variable>	
+	<variable name="PlayerControlsPlayImageVar1">
+		<value condition="Player.Plaused">osd/fullscreen/buttons/pause.png</value>
+		<value condition="!Player.Paused">osd/fullscreen/buttons/play.png</value>
 	</variable>
 	<variable name="PlayerControlsRepeatImageVar">
 		<value condition="Playlist.IsRepeatOne">osd/fullscreen/buttons/repeat-one.png</value>

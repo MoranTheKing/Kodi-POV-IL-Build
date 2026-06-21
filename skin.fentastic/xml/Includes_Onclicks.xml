@@ -23,4 +23,22 @@
 <onclick condition="$EXP[__episode_OSD]">RunPlugin($VAR[OsdReplaceSourceStartPoint]&mediatype=episode&tmdb_id=$VAR[_Fix_TMDB_ID]&season=$INFO[VideoPlayer.Season]&episode=$INFO[VideoPlayer.Episode]&query=$INFO[VideoPlayer.Title]$VAR[AutoPlaySetToFalse])</onclick>
 </include>
 
+<include name="__GlobalPlayerReplacment__OSD">
+<onclick condition="!String.IsEmpty(Skin.String(__chooseplayer,__simpleplayer)">Skin.SetString(__chooseplayer,__simpleplayer)</onclick>
+<onclick condition="Skin.String(__chooseplayer,__simpleplayer)">Skin.SetString(__chooseplayer,__advancedplayer)</onclick>
+<onclick condition="Skin.String(__chooseplayer,__advancedplayer)">Skin.SetString(__chooseplayer,__netflixplayer)</onclick>
+<onclick condition="Skin.String(__chooseplayer,__netflixplayer)">Skin.SetString(__chooseplayer,__simpleplayer)</onclick>
+</include>
+
+<include name="__GlobalPlayerReplacmentItem__OSD">
+<item>
+<label>$VAR[__PlayerChoose]</label>
+<property name="resizedicon2">icons\infodialogs\update.png</property>
+<onclick condition="!String.IsEmpty(Skin.String(__chooseplayer,__simpleplayer)">Skin.SetString(__chooseplayer,__simpleplayer)</onclick>
+<onclick condition="Skin.String(__chooseplayer,__simpleplayer)">Skin.SetString(__chooseplayer,__advancedplayer)</onclick>
+<onclick condition="Skin.String(__chooseplayer,__advancedplayer)">Skin.SetString(__chooseplayer,__netflixplayer)</onclick>
+<onclick condition="Skin.String(__chooseplayer,__netflixplayer)">Skin.SetString(__chooseplayer,__simpleplayer)</onclick>
+</item>
+</include>
+
 </includes>

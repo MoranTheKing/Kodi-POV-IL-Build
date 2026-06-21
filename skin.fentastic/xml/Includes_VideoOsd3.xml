@@ -392,6 +392,20 @@
 						<onclick>ActivateWindow(videoplaylist)</onclick>
 						<onclick></onclick>
 					</control>
+					<control type="radiobutton" id="730455">
+						<include content="OSDButton">
+						<param name="radiowidth">55</param>
+						<param name="radioheight">55</param>
+						<param name="radioposx">12</param>
+						<param name="radioposy">0</param>
+						<param name="font">font_flag</param>
+						<param name="texture" value="icons\infodialogs\update.png"/>
+						</include>
+						<onclick condition="!String.IsEmpty(Skin.String(__chooseplayer,__simpleplayer)">Skin.SetString(__chooseplayer,__simpleplayer)</onclick>
+						<onclick condition="Skin.String(__chooseplayer,__simpleplayer)">Skin.SetString(__chooseplayer,__advancedplayer)</onclick>
+						<onclick condition="Skin.String(__chooseplayer,__advancedplayer)">Skin.SetString(__chooseplayer,__netflixplayer)</onclick>
+						<onclick condition="Skin.String(__chooseplayer,__netflixplayer)">Skin.SetString(__chooseplayer,__simpleplayer)</onclick>
+					</control>
 					<control type="button" id="700455">
 						<description>Idan Plus Channels Menu</description>
 						<width>76</width>
@@ -518,6 +532,15 @@
 					</control>
 				</control>
 				<!-- ##################### -->
+				
+				<control type="label">
+					<align>right</align>
+					<height>20</height>
+					<bottom>155</bottom>
+					<right>10</right>
+					<label>$VAR[__PlayerChoose]</label>
+					<visible>ControlGroup(202).HasFocus(730455)</visible>
+				</control>
 				
 		</control>
 		</include>

@@ -75,6 +75,13 @@
 				<centerleft>50%</centerleft>
 				<texture>$INFO[ListItem.Property(timer)]</texture>
 			</control>
+			<control type="image">
+				<width>24</width>
+				<height>24</height>
+				<centertop>50%</centertop>
+				<centerleft>50%</centerleft>
+				<texture>$INFO[ListItem.Property(resizedicon2)]</texture>
+			</control>
 		</control>
 		</itemlayout>
 		<focusedlayout width="60" height="50">
@@ -121,6 +128,13 @@
 				<centerleft>50%</centerleft>
 				<texture>$INFO[ListItem.Property(timer)]</texture>
 				<colordiffuse>$INFO[Skin.String(osdbuttonfocuscolor)]</colordiffuse>
+			</control>		
+			<control type="image">
+				<width>24</width>
+				<height>24</height>
+				<centertop>50%</centertop>
+				<centerleft>50%</centerleft>
+				<texture>$INFO[ListItem.Property(resizedicon2)]</texture>
 			</control>
 		</control>
 		</focusedlayout>
@@ -248,6 +262,7 @@
 			<onclick>SkipNext</onclick>
 			<visible>Player.Chapter | !String.IsEmpty(VideoPlayer.offset(1).Title)</visible>
 		</item>
+		<include>__GlobalPlayerReplacmentItem__OSD</include>
 		</content>
 	</control>
 </control>

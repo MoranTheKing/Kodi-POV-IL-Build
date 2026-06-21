@@ -217,16 +217,16 @@
 	</include>
 	<include content="Netflix_Base_Menu_Items">
 		<param name="button_id">43302</param>
-		<param name="radioicon">osd/fullscreen/buttons/play.png</param>
-		<param name="visible">Player.PauseEnabled + Player.Paused</param>
+		<param name="radioicon"></param>
+		<param name="visible">Player.PauseEnabled</param>
 		<param name="onclick">PlayerControl(play)</param>
 	</include>
-	<include content="Netflix_Base_Menu_Items">
-		<param name="button_id">43304</param>
-		<param name="radioicon">osd/fullscreen/buttons/pause.png</param>
-		<param name="visible">Player.PauseEnabled + !Player.Paused</param>
-		<param name="onclick">PlayerControl(play)</param>
-	</include>	
+	<!-- <include content="Netflix_Base_Menu_Items"> -->
+		<!-- <param name="button_id">43304</param> -->
+		<!-- <param name="radioicon">osd/fullscreen/buttons/pause.png</param> -->
+		<!-- <param name="visible">Player.PauseEnabled + !Player.Paused</param> -->
+		<!-- <param name="onclick">PlayerControl(play)</param> -->
+	<!-- </include>	 -->
 	<include content="Netflix_Base_Menu_Items">
 		<param name="button_id">43305</param>
 		<param name="radioicon">osd/fullscreen/buttons/stop.png</param>
@@ -315,6 +315,16 @@
 		<param name="radioicon">osd/fullscreen/buttons/guide.png</param>
 		<param name="onclick"></param>
 		<param name="__Onclick">__ChooseSourceOsd__</param>
+	</include>	
+	<include content="Netflix_Base_Menu_Items">
+		<param name="button_id">43316</param>
+		<param name="radiowidth">25</param>
+		<param name="radioheight">25</param>
+		<param name="radioposx">15</param>
+		<param name="radioposy">15</param>
+		<param name="radioicon">icons\infodialogs\update.png</param>
+		<param name="onclick"></param>
+		<param name="__Onclick">__GlobalPlayerReplacment__OSD</param>
 	</include>	
 	</control>
 	<!-- ####### -->
@@ -415,8 +425,7 @@
 	<include>seek_rewind_osd_item</include>
 	</control>
 <!-- ####### end seek rewind-->		
-	
-	
+<include>FixPlayPauseOnNetFlixPlayer</include>	
 </control>
 </include>
 </includes>

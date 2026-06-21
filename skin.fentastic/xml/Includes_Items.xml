@@ -68,13 +68,7 @@
 		<label2>$VAR[OsdPlayerPlaylist]</label2>
 		<onclick>Skin.ToggleSetting(playerplaylist_osd)</onclick>
 	</item>
-	        <item>
-            <!-- KODI-POV-IL - OSD player mode -->
-            <label>שנה נגן</label>
-            <label2>$VAR[OSDPlayerModeVar]</label2>
-            <onclick>Skin.ToggleSetting(chooseosdplayer)</onclick>
-            <onclick>ReloadSkin()</onclick>
-        </item>
+	<include>changeplayer_osd</include>
 </content>
 </include>
 
@@ -111,6 +105,7 @@
 
 <include name="changeplayer_osd">
 <item>
+	<icon>
 	<label>[B][COLOR blue]שנה נגן[/COLOR][/B]</label>
 	<label2>$VAR[__PlayerChoose]</label2>
 	<onclick condition="String.IsEmpty(Skin.String(__chooseplayer,__simpleplayer)">Skin.SetString(__chooseplayer,__simpleplayer)</onclick>
