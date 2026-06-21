@@ -51,6 +51,7 @@
 	<include file="script-nox-widget_tvshows.xml" />
 	<include file="script-nox-widget_vod12.xml" />
 	<include file="script-nox-widget_vod13.xml" />
+	<include file="script-nox-widget_vod11.xml" />
 	<include file="script-nox-widget_dragon_1.xml" />
 	<include file="script-nox-widget_dragon_2.xml" />
 	<include file="script-nox-widget_tv.xml" />
