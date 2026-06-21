@@ -13,6 +13,8 @@
 	<label />
 	<onback>Dialog.Close(1126)</onback>
 	<onup>Dialog.Close(1126)</onup>
+	<ondown>Dialog.Close(1126)</ondown>
+	<ondown>ReplaceWindow(1127)</ondown>
 	</control>
 	
 	

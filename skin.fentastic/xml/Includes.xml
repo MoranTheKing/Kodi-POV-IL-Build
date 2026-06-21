@@ -2808,4 +2808,31 @@
 </control>
 </include>
 
+<include name="__BaseImageIcon__">
+<param name="bgposxy">0</param>
+<param name="bgtexture">buttons/button-focus.png</param>
+<param name="iconposxy">Pad05</param>
+<param name="iconheight">40%</param>
+<param name="icon">Icon</param>
+<definition>
+<control type="group">
+	<control type="image">
+		<top>$PARAM[bgposxy]</top>
+		<left>$PARAM[bgposxy]</left>
+		<bottom>$PARAM[bgposxy]</bottom>
+		<right>$PARAM[bgright]</right>
+		<texture border="16">$PARAM[bgtexture]</texture>
+		<animation condition="true" effect="fade" start="100" end="60" time="0">Conditional</animation>
+	</control>
+	<control type="image">
+		<top>$PARAM[iconposxy]</top>
+		<left>$PARAM[iconposxy]</left>
+		<right>$PARAM[iconposxy]</right>
+		<height>$PARAM[iconheight]</height>
+		<texture>$INFO[ListItem.$PARAM[icon]]</texture>
+	</control>
+</control>
+</definition>
+</include>
+
 </includes>

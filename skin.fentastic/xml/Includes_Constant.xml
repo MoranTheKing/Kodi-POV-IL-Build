@@ -36,7 +36,9 @@
 	<constant name="Pad85">85</constant>
 	<constant name="Pad125">125</constant>
 	<constant name="Pad215">215</constant>
+	<constant name="Pad500">500</constant>
 	<constant name="Padxy5">5</constant>
+	<constant name="fullwidth">1920</constant>
 	<constant name="osdtextureheight">400</constant>
 	<constant name="Pad400">400</constant>
 	<constant name="osdbottom">195</constant>
