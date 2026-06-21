@@ -26,17 +26,23 @@
 	</variable>
 
 	<variable name="EndTime_Osd_VAR">
-	<value condition="!VideoPlayer.Content(LiveTv)">$INFO[Player.TimeRemaining(hh:mm:ss)]</value>
-	<value condition="VideoPlayer.Content(LiveTv) + VideoPlayer.HasEpg">$INFO[PVR.TimeShiftEnd(hh:mm:ss)]</value>
-	<value condition="VideoPlayer.Content(LiveTv) + !VideoPlayer.HasEpg">$INFO[Player.Time(hh:mm:ss)]</value>
-	<value>$INFO[VideoPlayer.Duration(hh:mm:ss)]</value>
+	<value condition="$EXP[IDANPlusCheck_OSd]">$INFO[Player.FinishTime(hh:mm:ss)]</value>
+	<value condition="!$EXP[IDANPlusCheck_OSd]">$INFO[Player.TimeRemaining(hh:mm:ss)]</value>
+	<!-- <value></value> -->
 	</variable>
 	
 	<variable name="osd_middle_info_var">
 	<value condition="VideoPlayer.Content(movies)">$INFO[VideoPlayer.Genre]</value>
 	<value condition="VideoPlayer.Content(episodes)">$INFO[VideoPlayer.Season,עונה(,)] $INFO[VideoPlayer.Episode,פרק(,)]</value>
-	<value condition="VideoPlayer.Content(LiveTv) + VideoPlayer.HasEpg">$INFO[VideoPlayer.StartTime,מתחיל(,)] $INFO[VideoPlayer.EndTime,מסתיים(,)]</value>
-	<value>אין מידע></value>
+	<value condition="VideoPlayer.Content(LiveTv) + VideoPlayer.HasEpg">$INFO[VideoPlayer.StartTime,מתחיל (,)] •  $INFO[VideoPlayer.EndTime,מסתיים (,)]</value>
+	<value>אין מידע</value>
+	</variable>
+
+	<variable name="osd_top_info_var">
+	<value condition="$EXP[__Movies_OSD]">$INFO[VideoPlayer.Title] $INFO[VideoPlayer.Year,(,)]</value>
+	<value condition="$EXP[__episode_OSD]">$INFO[VideoPlayer.TvShowTitle] $INFO[VideoPlayer.Year,(,)]</value>
+	<value condition="$EXP[__livetv_OSD] + VideoPlayer.HasEpg">$INFO[VideoPlayer.StartTime,מתחיל(,)] $INFO[VideoPlayer.EndTime,מסתיים(,)]</value>
+	<value>$INFO[VideoPlayer.Title]</value>
 	</variable>
 	
 	<variable name="netflix_playerpaused_label">
@@ -439,9 +445,9 @@
 		<value condition="Player.Forwarding32x | Player.Rewinding32x">32x</value>
 	</variable>
 	<variable name="SeekLabel">
+		<value condition="!String.IsEmpty(VideoPlayer.Title)">$INFO[VideoPlayer.Title]</value>
 		<value condition="!String.IsEmpty(Player.SeekStepSize)">[COLOR button_focus]$LOCALIZE[773][/COLOR] $INFO[Player.SeekStepSize]</value>
 		<value condition="!String.IsEmpty(Player.SeekOffset) + Player.HasPerformedSeek(3)">[COLOR button_focus]$LOCALIZE[773][/COLOR] $INFO[Player.SeekOffset]</value>
-		<value condition="!Player.Paused">$INFO[VideoPlayer.Title]</value>
 		<value condition="Player.Forwarding">$LOCALIZE[31039] $VAR[VideoPlayerForwardRewindVar]</value>
 		<value condition="Player.Rewinding">$LOCALIZE[31038] $VAR[VideoPlayerForwardRewindVar]</value>
 		<value condition="Player.IsTempo">$LOCALIZE[31142]: $INFO[Player.PlaySpeed]</value>

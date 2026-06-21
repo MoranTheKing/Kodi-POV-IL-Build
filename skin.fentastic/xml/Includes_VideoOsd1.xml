@@ -225,13 +225,13 @@
 			<label>הקטן את משך ההשהיה של כתוביות (השתמש אם הכתוביות מוצגות מאוחר מדי)</label>
 			<property name="timer">https://www.iconsdb.com/icons/preview/white/arrow-142-xxl.png</property>
 			<onclick>SubtitleDelayPlus</onclick>
-			<visible>$EXP[osdmoviestvshowvisible]</visible>
+			<visible>$EXP[__SubtitleCheckTrueOrFalse]</visible>
 		</item>
 		<item id="111">
 			<label>הגדלת משך ההשהיה של הכתוביות (השתמשו אם הכתוביות מוצגות מוקדם מדי)</label>
 			<property name="timer">https://www.iconsdb.com/icons/preview/white/arrow-204-xxl.png</property>
 			<onclick>SubtitleDelayMinus</onclick>
-			<visible>$EXP[osdmoviestvshowvisible]</visible>
+			<visible>$EXP[__SubtitleCheckTrueOrFalse]</visible>
 		</item>
 		<item id="251">
 			<label>הרץ קדימה</label>
@@ -1001,15 +1001,18 @@
 	</include>
 	
 	<include name="__OsdFixedFlags">
+	<param name="bottom">120</param>
+	<param name="groupalign">center</param>
+	<definition>
 	<control type="grouplist">
-	<align>center</align>
+	<align>$PARAM[groupalign]</align>
 	<visible>!Player.Paused</visible>
 	<visible>$PARAM[visible]</visible>
 	<include>$PARAM[animation]</include>
 	<orientation>horizontal</orientation>
 	<animation effect="fade" start="0" end="100" time="150">VisibleChange</animation>
 	<height>100</height>
-	<bottom>120</bottom>
+	<bottom>$PARAM[bottom]</bottom>
 	<itemgap>10</itemgap>
 	<include content="_FixOsdFlags">
 		<param name="left">Padxy5</param>
@@ -1040,6 +1043,7 @@
 		<param name="visible">true</param>
 	</include>
 	</control>
+	</definition>
 	</include>
 	
 </includes>

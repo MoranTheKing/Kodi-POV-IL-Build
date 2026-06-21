@@ -55,27 +55,29 @@
 	<height>$PARAM[height]</height>
 	<width>$PARAM[width]</width>
 	<bottom>$PARAM[bottom]</bottom>
+	<align>$PARAM[groupalign]</align>
 	<right>10</right>
 	<itemgap>$PARAM[iGap]</itemgap>
 	<visible>$PARAM[visible]</visible>
 	<nested />
-	<control type="label">
-		<height max="50">auto</height>
+	<control type="textbox">
+		<height max="auto">auto</height>
 		<align>right</align>
 		<font>font45_title</font>
 		<label>$PARAM[label2]</label>
 	</control>
-	<control type="label">
-	<height max="20">auto</height>
+	<control type="textbox">
+	<height max="auto">auto</height>
 		<align>right</align>
-		<font>font20</font>
+		<font>font22</font>
 		<textcolor>98FFFFFF</textcolor>
 		<label>$PARAM[label1]</label>
 	</control>
 	<control type="textbox">
-		<height max="120">auto</height>
+		<height max="125">auto</height>
 		<align>right</align>
 		<label>$PARAM[label3]</label>
+		<visible>$PARAM[label3visible]</visible>
 		<autoscroll fade="5000" time="5000" repeat="5000">Control.HasFocus(52000)</autoscroll>
 	</control>
 	<nested />
@@ -112,6 +114,7 @@
 	  <textureradioondisabled colordiffuse="deeppink">$PARAM[radioicon]</textureradioondisabled>
       <!-- <selected>Player.Paused</selected> -->
       <onclick>$PARAM[onclick]</onclick>
+	  <include>$PARAM[__Onclick]</include>
 	  <visible>$PARAM[visible]</visible>
 	  <enable>$PARAM[enable]</enable>
 	</control>

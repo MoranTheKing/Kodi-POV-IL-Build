@@ -14,4 +14,8 @@
 <onclick condition="Skin.String(backwindowopecitychange,100)">Skin.SetString(backwindowopecitychange,10)</onclick>
 </include>
 
+<include name="__CloseOSd__">
+<onclick condition="Integer.IsGreater(Playlist.Length(video),0)">Dialog.Close(videoosd,true)</onclick>
+</include>
+
 </includes>
