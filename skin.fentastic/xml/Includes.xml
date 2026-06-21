@@ -55,6 +55,12 @@
 	<constant name="list_bottom_offset">70</constant>
 	<constant name="list_top_offset">110</constant>
 	<constant name="list_item_height">68</constant>
+	<constant name="posxyicon">5</constant>
+	<constant name="osdtextureheight">400</constant>
+	<constant name="osdbottom">195</constant>
+	<constant name="osdzerobottom">0</constant>
+	<expression name="OsdFlagsVisible">Container(201).HasFocus(100) | Container(201).HasFocus(101) | Container(201).HasFocus(102) | Container(201).HasFocus(103) | Container(201).HasFocus(104) | Container(201).HasFocus(105) | Container(201).HasFocus(106) | Container(201).HasFocus(107) | Container(201).HasFocus(108) | Container(201).HasFocus(109) | Container(201).HasFocus(110) | Container(201).HasFocus(111)</expression>
+	<expression name="osdmoviestvshowvisible">VideoPlayer.Content(movies) | VideoPlayer.Content(episodes)</expression>
 	
 	<!-- KODI-RD-IL ADDITION -->
 	<constant name="PadLeft">650</constant>
@@ -2358,6 +2364,32 @@
 		<bottom>0</bottom>
 		<animation condition="true" effect="fade" end="5" time="0">Conditional</animation>
 		<texture flipx="true" colordiffuse="purple">lists/shadow_mask_v.png</texture>
+	</control>
+	</include>
+	
+	<include name="_FixOsdFlags">
+	<control type="group">
+	<width>130</width>
+	<height>60</height>
+	<visible>!String.IsEmpty(VideoPlayer.$PARAM[flaglabel])</visible>
+	<control type="image">
+		<texture>flags/flag.png</texture>
+	</control>
+	<control type="image">
+		<top>20</top>
+		<left>15</left>
+		<right>10</right>
+		<width>20</width>
+		<height>20</height>
+		<texture>$PARAM[texture]</texture>
+		<visible>$PARAM[visible]</visible>
+	</control>
+	<control type="label">
+		<align>center</align>
+		<aligny>center</aligny>
+		<font>font10</font>
+		<label>$INFO[VideoPlayer.$PARAM[flaglabel]]</label>
+	</control>
 	</control>
 	</include>
 	

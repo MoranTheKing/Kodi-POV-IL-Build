@@ -2,20 +2,41 @@
 <window type="dialog" id="1124">
 	<defaultcontrol>9000</defaultcontrol>
 	<backgroundcolor>background</backgroundcolor>
+	<controls>
+	
+	<control type="group">
 	<animation type="WindowOpen">
 	<effect type="slide" start="-550,0" end="0,0" time="650" tween="back" easing="inout"/>
 	</animation>
 	<animation type="WindowClose">
 	<effect type="slide" start="0,0" end="-550,0" time="650" tween="back" easing="inout"/>
 	</animation>
-	<controls>
-	
-	<control type="group">
 	<left>20</left>
 	<width>420</width>
 	<height>600</height>
 	<centertop>50%</centertop>
 	<include>BaseMainMenu</include>
+	<control type="image">
+		<top>10</top>
+		<left>20</left>
+		<width>380</width>
+		<height>105</height>
+		<texture colordiffuse="65FFFFFF">masks/categorywidget-unfocused.png</texture>
+	</control>
+		<control type="label">
+			<top>-5</top>
+			<align>center</align>
+			<height max="75">auto</height>
+			<font>font_clock</font>
+			<label>$INFO[System.Time]</label>
+		</control>
+		<control type="label">
+			<top>70</top>
+			<align>center</align>
+			<height max="45">auto</height>
+			<font>font32</font>
+			<label>$INFO[System.Date]</label>
+		</control>
 	<control type="list" id="9000">
 	<top>150</top>
 	<left>5</left>
@@ -85,12 +106,102 @@
 		<onclick>ActivateWindow(osdsubtitlesettings)</onclick>
 	</item>
 	<item>
-		<label>הגדרות נגן</label>
+		<label>הגדרות נגן בקרוב</label>
 		<icon>https://www.iconsdb.com/icons/preview/white/play-3-xxl.png</icon>
-		<onclick></onclick>
+		<onclick>Control.SetFocus(9001)</onclick>
 	</item>
 	</content>
 	</control>
 	</control>
+	
+	<control type="group">
+	<left>500</left>
+	<width>420</width>
+	<height>600</height>
+	<centertop>50%</centertop>
+	<include>BaseMainMenu</include>
+	<animation type="Visible">
+	<effect type="slide" start="-20" end="0" time="150" tween="sine" easing="inout"/>
+	<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
+	</animation>
+	<animation type="Hidden">
+	<effect type="slide" start="0" end="-20" time="150" tween="sine" easing="inout"/>
+	<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
+	</animation>
+	<visible allowhiddenfocus="true">Control.HasFocus(9001)</visible>
+	<control type="list" id="9001">
+	<onback>9000</onback>
+	<itemlayout width="415" height="95">
+	<control type="group">
+	<height>85</height>
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture colordiffuse="65FFFFFF">masks/categorywidget-unfocused.png</texture>
+	</control>
+	<control type="label">
+		<left>20</left>
+		<top>5</top>
+		<align>left</align>
+		<label>[B]$INFO[ListItem.Label][/B]</label>
+	</control>
+	<control type="label">
+		<left>20</left>
+		<top>45</top>
+		<align>left</align>
+		<font>font10</font>
+		<label>$INFO[ListItem.Label2]</label>
+	</control>
+	</control>
+	</itemlayout>
+	<focusedlayout width="415" height="95">
+	<control type="group">
+	<height>85</height>
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture colordiffuse="65FFFFFF">masks/categorywidget-unfocused.png</texture>
+	</control>
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture colordiffuse="button_focus">masks/categorywidget.png</texture>
+	</control>
+	<control type="label">
+		<left>20</left>
+		<top>5</top>
+		<align>left</align>
+		<label>[B]$INFO[ListItem.Label][/B]</label>
+	</control>
+	<control type="label">
+		<left>20</left>
+		<top>45</top>
+		<align>left</align>
+		<font>font10</font>
+		<label>$INFO[ListItem.Label2]</label>
+	</control>
+	</control>
+	</focusedlayout>
+	<content>
+	<item>
+		<label>הצג חלון כתובית דארקסאבס</label>
+		<label2>$VAR[_ReplaceSubtitle]</label2>
+		<onclick condition="String.IsEmpty(Skin.String(subtitlesearch,darksubs)">Skin.SetString(subtitlesearch,darksubs)</onclick>
+		<onclick condition="Skin.String(subtitlesearch,darksubs)">Skin.SetString(subtitlesearch,kodisubtitle)</onclick>
+		<onclick condition="Skin.String(subtitlesearch,kodisubtitle)">Skin.SetString(subtitlesearch,darksubs)</onclick>
+	</item>	
+	<item>
+		<label>שנה צבע פוקוס בכתפורי הנגן</label>
+		<label2>$INFO[Skin.String(osdbuttonfocuscolor)]</label2>
+		<colorbox>$INFO[Skin.String(osdbuttonfocuscolor)]</colorbox>
+		<onclick>Skin.SetColor(osdbuttonfocuscolor, player)</onclick>
+	</item>
+	</content>
+	</control>
+	</control>
+	
 	</controls>
 </window>

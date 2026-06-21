@@ -23,8 +23,11 @@
 		</control>
 		<control type="label">
 			<align>right</align>
+			<left>1200</left>
 			<height>50</height>
 			<bottom>10</bottom>
+			<scroll>true</scroll>
+			<scrolltime>40</scrolltime>
 			<label>$INFO[ListItem.Label]</label>
 			<visible>![Player.Rewinding | Player.Forwarding]</visible>
 		</control>	
@@ -96,7 +99,7 @@
 				<height>35</height>
 				<centertop>50%</centertop>
 				<centerleft>50%</centerleft>
-				<colordiffuse>red</colordiffuse>
+				<colordiffuse>$INFO[Skin.String(osdbuttonfocuscolor)]</colordiffuse>
 				<texture>$INFO[ListItem.Property(suboff)]</texture>
 				<visible>!VideoPlayer.SubtitlesEnabled + VideoPlayer.HasSubtitles</visible>
 				<visible>Control.HasFocus(201)</visible>
@@ -106,7 +109,7 @@
 				<height>35</height>
 				<centertop>50%</centertop>
 				<centerleft>50%</centerleft>
-				<colordiffuse>red</colordiffuse>
+				<colordiffuse>$INFO[Skin.String(osdbuttonfocuscolor)]</colordiffuse>
 				<texture>$INFO[ListItem.Property(suboff)]</texture>
 				<visible>!VideoPlayer.SubtitlesEnabled + VideoPlayer.HasSubtitles</visible>
 				<visible>!Control.HasFocus(201)</visible>
@@ -117,12 +120,12 @@
 				<centertop>50%</centertop>
 				<centerleft>50%</centerleft>
 				<texture>$INFO[ListItem.Property(timer)]</texture>
-				<colordiffuse>red</colordiffuse>
+				<colordiffuse>$INFO[Skin.String(osdbuttonfocuscolor)]</colordiffuse>
 			</control>
 		</control>
 		</focusedlayout>
 		<content>
-		<item>
+		<item id="100">
 			<label>מעבר לתכנית הקודמת או לפרק הקודם</label>
 			<icon>osd/fullscreen/buttons/previous.png</icon>
 			<onclick>SkipPrevious</onclick>
@@ -142,45 +145,46 @@
 			<property name="info">info</property>
 			<onclick></onclick>
 		</item>
-		<item>
+		<item id="101">
 			<label>עצור</label>
 			<icon>osd/fullscreen/buttons/stop.png</icon>
 			<onclick>PlayerControl(stop)</onclick>
 		</item>
-		<item>
+		<item id="102">
 			<label>המשך ניגון</label>
 			<icon>osd/fullscreen/buttons/play.png</icon>
 			<onclick>PlayerControl(play)</onclick>
 			<visible>Player.PauseEnabled + Player.Paused</visible>
 		</item>
-		<item>
+		<item id="103">
 			<label>לחץ להשהות את הניגון</label>
 			<icon>osd/fullscreen/buttons/pause.png</icon>
 			<onclick>PlayerControl(play)</onclick>
 			<visible>Player.PauseEnabled + !Player.Paused</visible>
 		</item>
-		<item>
+		<item id="104">
 			<property name="timer">icons\infodialogs\timer.png</property>
 			<label>הנגן יסגר בעוד $INFO[Skin.String(OSDAutoCloseTime)] שניות</label>
 			<onclick>Skin.SetNumeric(OSDAutoCloseTime,20)</onclick>
 		</item>
-		<item>
+		<item id="105">
 			<label>כתובית מופעלת</label>
 			<property name="subon">osd/fullscreen/buttons/settings-subtitle.png</property>
 			<onclick>showsubtitles</onclick>
 			<visible>VideoPlayer.SubtitlesEnabled + VideoPlayer.HasSubtitles</visible>
 		</item>
-		<item>
+		<item id="106">
 			<label>כתובית כבוייה</label>
 			<property name="suboff">osd/fullscreen/buttons/settings-subtitle.png</property>
 			<onclick>showsubtitles</onclick>
 			<visible>!VideoPlayer.SubtitlesEnabled + VideoPlayer.HasSubtitles</visible>
 		</item>
-		<item>
+		<item id="107">
 			<label>חפש כתובית</label>
 			<icon>osd/fullscreen/buttons/subs.png</icon>
 			<visible>VideoPlayer.Content(movies) | VideoPlayer.Content(episodes)</visible>
-			<onclick>RunScript(service.subtitles.All_Subs,sub_window_unpause)</onclick>
+			<onclick condition="String.IsEqual(Skin.String(subtitlesearch),darksubs)">RunScript(service.subtitles.All_Subs,sub_window_unpause)</onclick>
+			<onclick condition="String.IsEqual(Skin.String(subtitlesearch),kodisubtitle)">ActivateWindow(subtitlesearch)</onclick>
 		</item>	
 		<item>
 			<label>החלף מקור לניגון</label>
@@ -188,22 +192,41 @@
 			<property name="plyersource">plyersource</property>
 			<property name="onup">$NUMBER[49994]</property>
 			<onclick>Control.SetFocus(49994)</onclick>
-			<visible>!VideoPlayer.Content(LiveTv)</visible>
+			<visible>!VideoPlayer.Content(LiveTv) + !String.Contains(Player.FolderPath,idanplus)</visible>
 		</item>
 		<item>
+			<label>ערוצי עידן פלוס</label>
+			<property name="timer">icons\submenu\channels.png</property>
+			<property name="onup">$NUMBER[60015]</property>
+			<property name="idanchannels">idanchannels</property>
+			<onclick>Control.SetFocus(60015)</onclick>
+		</item>
+		<item id="108">
 		<label>הגדרות ויאודו / אודיו / נגן</label>
 			<icon>osd/fullscreen/buttons/settings.png</icon>
 			<onclick>ActivateWindow(1124)</onclick>
 		</item>
-		<item>
-		<label>הרץ קדימה</label>
-		<icon>osd/fullscreen/buttons/forward.png</icon>
-		<visible>Player.SeekEnabled</visible>
-		<property name="forward">forward</property>
-		<property name="onup">$NUMBER[50001]</property>
-		<onclick>Control.SetFocus(50001)</onclick>
+		<item id="110">
+			<label>הקטן את משך ההשהיה של כתוביות (השתמש אם הכתוביות מוצגות מאוחר מדי)</label>
+			<property name="timer">https://www.iconsdb.com/icons/preview/white/arrow-204-xxl.png</property>
+			<onclick>SubtitleDelayMinus</onclick>
+			<visible>$EXP[osdmoviestvshowvisible]</visible>
+		</item>
+		<item id="111">
+			<label>הגדלת משך ההשהיה של הכתוביות (השתמשו אם הכתוביות מוצגות מוקדם מדי)</label>
+			<property name="timer">https://www.iconsdb.com/icons/preview/white/arrow-142-xxl.png</property>
+			<onclick>SubtitleDelayPlus</onclick>
+			<visible>$EXP[osdmoviestvshowvisible]</visible>
 		</item>
 		<item>
+			<label>הרץ קדימה</label>
+			<icon>osd/fullscreen/buttons/forward.png</icon>
+			<visible>Player.SeekEnabled</visible>
+			<property name="forward">forward</property>
+			<property name="onup">$NUMBER[50001]</property>
+			<onclick>Control.SetFocus(50001)</onclick>
+		</item>
+		<item id="109">
 			<label>מעבר לתוכנית הבאה או לא לפרק הבא</label>
 			<icon>osd/fullscreen/buttons/next.png</icon>
 			<onclick>SkipNext</onclick>
@@ -215,13 +238,41 @@
 <!-- END OSD MAIN MENU -->
 
 <!-- OSD INFO -->
-<include>PoweredOsdInfo</include>
+<include content="PoweredOsdInfo">
+<param name="groupheight">550</param>
+<param name="visible">String.IsEqual(Container(201).ListItem.Property(info),info) + !String.Contains(Player.FolderPath,idanplus)</param>
+</include>
+
+<include content="PoweredOsdInfo">
+<param name="groupheight">400</param>
+<param name="itemgap">5</param>
+<param name="texture">$INFO[Player.Icon]</param>
+<param name="grouplistheight">250</param>
+<param name="label">$INFO[VideoPlayer.Title] $INFO[VideoPlayer.Year,(,)]</param>
+<param name="visible">String.IsEqual(Container(201).ListItem.Property(info),info) + String.Contains(Player.FolderPath,idanplus)</param>
+</include>
 
 <include>_FixedCachedOSd</include>
 
 <include>RightOsdTopBar</include>
 
 <include>LeftOsdTopBar</include>
+
+<include content="__OsdFixedFlags">
+<param name="visible">$EXP[OsdFlagsVisible]</param>
+<param name="animation">bottom2topslideanimation</param>
+</include>
+
+<include content="BasedOsdWidgets">
+	<param name="texture">$INFO[Container(60015).ListItem.icon]</param>
+	<param name="id">60015</param>
+	<param name="orientation">horizontal</param>
+	<param name="content">$VAR[_FixIdanPlusPVR]</param>
+	<param name="visible">String.IsEqual(Container(201).ListItem.Property(idanchannels),idanchannels)</param>
+	<param name="layoutwidth">192</param>
+	<param name="layoutheight">250</param>
+	<param name="groupwidth">185</param>
+</include>
 
 <!-- FORWARD SEEK MENU -->
 <control type="grouplist" id="50001">
@@ -479,7 +530,7 @@
 			<visible>VideoPlayer.Content(movies)</visible>
 		</item>
 		<item>
-			<label>החלף ונגן אוטמט מקור אחר לסרט</label>
+			<label>החלף ונגן אוטומט מקור אחר לסרט</label>
 			<onclick>RunPlugIn($VAR[OsdReplaceSourceStartPoint]&mediatype=movie&tmdb_id=$VAR[_Fix_TMDB_ID]$VAR[AutoPlaySetToTrue])</onclick>
 			<visible>VideoPlayer.Content(movies)</visible>
 		</item>
@@ -489,7 +540,7 @@
 			<visible>VideoPlayer.Content(episodes)</visible>
 		</item>
 		<item>
-			<label>החלף ונגן אוטמט מקור אחר לפרק</label>
+			<label>החלף ונגן אוטומט מקור אחר לפרק</label>
 			<onclick>RunPlugin($VAR[OsdReplaceSourceStartPoint]&mediatype=episode&tmdb_id=$VAR[_Fix_TMDB_ID]&season=$INFO[VideoPlayer.Season]&episode=$INFO[VideoPlayer.Episode]&query=$INFO[VideoPlayer.Title]$VAR[AutoPlaySetToTrue])</onclick>
 			<visible>VideoPlayer.Content(episodes)</visible>
 		</item>
@@ -541,7 +592,7 @@
 	<centertop>50%</centertop>
 	<centerleft>50%</centerleft>
 	<texture>$INFO[ListItem.Icon]</texture>
-	<colordiffuse>red</colordiffuse>
+	<colordiffuse>$INFO[Skin.String(osdbuttonfocuscolor)]</colordiffuse>
 	<visible>$PARAM[nofocus]</visible>
 </control>
 </include>
@@ -587,46 +638,55 @@
 
 
 <include name="PoweredOsdInfo">
+<param name="visible">String.IsEqual(Container(201).ListItem.Property(info),info)</param>
+<param name="groupheight">600</param>
+<param name="texture">$VAR[_FixOsdIcon]</param>
+<param name="grouplistheight">600</param>
+<param name="label">$INFO[VideoPlayer.Title] $INFO[VideoPlayer.Year,(,)]</param>
+<definition>
 <control type="group">
 	<left>10</left>
 	<right>10</right>
-	<visible>true</visible>
-	<height>600</height>
-	<bottom>195</bottom>
+	<visible>$PARAM[visible]</visible>
+	<height>$PARAM[groupheight]</height>
+	<bottom>osdbottom</bottom>
 	<include>bottom2topslideanimation</include>
-	<visible>String.IsEqual(Container(201).ListItem.Property(info),info)</visible>	
+	<visible></visible>	
 <control type="group">
 	<width>380</width>
 	<bottom>0</bottom>
 	<include content="basedframeimage">
-		<param name="texture">$VAR[_FixOsdIcon]</param>
+		<param name="texture">$PARAM[texture]</param>
 	</include>
 </control>
 <control type="grouplist">
 	<left>400</left>
+	<itemgap>$PARAM[itemgap]</itemgap>
 	<orientation>vertical</orientation>
-	<height>600</height>
+	<height>$PARAM[grouplistheight]</height>
 	<align>bottom</align>
 	<bottom>0</bottom>
 	<control type="label">
 		<height max="55">auto</height>
 		<font>font45_title</font>
-		<label>$INFO[VideoPlayer.Title] $INFO[VideoPlayer.Year,(,)]</label>
+		<label>$PARAM[label]</label>
 	</control>
 	<control type="label">
 		<height max="40">auto</height>
 		<font>font32</font>
 		<textcolor>yellow</textcolor>
 		<label>$INFO[VideoPlayer.Genre]</label>
+		<visible>!String.IsEmpty(VideoPlayer.Genre)</visible>
 	</control>
 	<control type="textbox">
-		<height max="auto">auto</height>
+		<height max="145">auto</height>
 		<font>font37</font>
 		<label>$INFO[VideoPlayer.Plot]</label>
-		<autoscroll time="5000" fade="5000" reprat="5000">true</autoscroll>
+		<autoscroll time="5000" fade="5000" repeat="5000">true</autoscroll>
 	</control>
 </control>
 </control>
+</definition>
 </include>
 
 <include name="_FixedCachedOSd">
@@ -769,30 +829,6 @@
 			<visible>!String.IsEmpty(VideoPlayer.Year)</visible>
 			<label>$INFO[VideoPlayer.Year]</label>
 		</control>
-		<control type="grouplist">
-			<height>34</height>
-			<orientation>horizontal</orientation>
-			<itemgap>8</itemgap>
-			<visible>!String.IsEmpty(VideoPlayer.VideoResolution) | !String.IsEmpty(VideoPlayer.AudioCodec) | !String.IsEmpty(VideoPlayer.AudioChannels)</visible>
-			<include content="MediaFlag">
-				<param name="width" value="62" />
-				<param name="height" value="32" />
-				<param name="texture" value="$INFO[VideoPlayer.VideoResolution,flags/videoresolution/,.png]" />
-				<param name="visible" value="!String.IsEmpty(VideoPlayer.VideoResolution)" />
-			</include>
-			<include content="MediaFlag">
-				<param name="width" value="62" />
-				<param name="height" value="32" />
-				<param name="texture" value="$INFO[VideoPlayer.AudioCodec,flags/audiocodec/,.png]" />
-				<param name="visible" value="!String.IsEmpty(VideoPlayer.AudioCodec)" />
-			</include>
-			<include content="MediaFlag">
-				<param name="width" value="62" />
-				<param name="height" value="32" />
-				<param name="texture" value="$INFO[VideoPlayer.AudioChannels,flags/audiochannel/,.png]" />
-				<param name="visible" value="!String.IsEmpty(VideoPlayer.AudioChannels)" />
-			</include>
-		</control>
 		<control type="label">
 			<height max="40">auto</height>
 			<visible>VideoPlayer.Content(episodes)</visible>
@@ -812,5 +848,136 @@
 	</control>
 	</include>
 	
+	
+	<include name="BasedOsdWidgets">
+	<param name="id">60015</param>
+	<param name="orientation">horizontal</param>
+	<param name="content">$VAR[OSDIdanPlusPVR]</param>
+	<param name="textureheight">osdtextureheight</param>
+	<param name="onback">201</param>
+	<param name="ondown">201</param>
+	<param name="focusposition">1</param>
+	<param name="movement">6</param>
+	<param name="animation">top2bottomslideanimation</param>
+	<definition>
+	<control type="group">
+	<left>posxy10</left>
+	<right>posxy10</right>
+	<height>400</height>
+	<bottom>osdbottom</bottom>
+	<include>$PARAM[animation]</include>
+	<visible>$PARAM[visible]</visible>
+	<control type="group">
+		<width>380</width>
+		<height>$PARAM[textureheight]</height>
+		<bottom>osdzerobottom</bottom>
+		<include content="basedframeimage">
+			<param name="texture">$PARAM[texture]</param>
+		</include>
+	</control>
+	<control type="fixedlist" id="$PARAM[id]">
+	<left>400</left>
+	<height>250</height>
+	<left>false</left>
+	<right>false</right>
+	<onback>$PARAM[onback]</onback>
+	<ondown>$PARAM[ondown]</ondown>
+	<bottom>osdzerobottom</bottom>
+	<focuseposition>$PARAM[focusposition]</focuseposition>
+	<movement>$PARAM[movement]</movement>
+	<orientation>$PARAM[orientation]</orientation>
+	<scrolltime tween="cubic">550</scrolltime>
+	<itemlayout width="$PARAM[layoutwidth]" height="$PARAM[layoutheight]">
+	<control type="group">
+		<width>$PARAM[groupwidth]</width>
+		<control type="image">
+			<texture>colors/white.png</texture>
+			<colordiffuse>FF181818</colordiffuse>
+		</control>
+		<control type="image">
+			<left>posxyicon</left>
+			<right>posxyicon</right>
+			<top>posxyicon</top>
+			<height>70%</height>
+			<texture>$INFO[ListItem.Icon]</texture>
+		</control>
+		<control type="textbox">
+			<font>font10</font>
+			<height>30%</height>
+			<bottom>0</bottom>
+			<align>center</align>
+			<aligny>center</aligny>
+			<label>$INFO[ListItem.Label]</label>
+		</control>	
+	</control>
+	</itemlayout>
+	<focusedlayout width="$PARAM[layoutwidth]" height="$PARAM[layoutheight]">
+	<control type="group">
+	<width>$PARAM[groupwidth]</width>
+		<control type="image">
+			<texture>colors/white.png</texture>
+			<colordiffuse>FF181818</colordiffuse>
+			<visible>!Control.HasFocus($PARAM[id])</visible>
+		</control>
+		<control type="image">
+			<texture colordiffuse="FF181818">colors/white.png</texture>
+			<bordertexture>colors/white.png</bordertexture>
+			<bordersize>2</bordersize>
+			<visible>Control.HasFocus($PARAM[id])</visible>
+		</control>
+		<control type="image">
+			<left>posxyicon</left>
+			<right>posxyicon</right>
+			<top>posxyicon</top>
+			<height>70%</height>
+			<texture>$INFO[ListItem.Icon]</texture>
+		</control>
+		<control type="textbox">
+			<font>font10</font>
+			<height>30%</height>
+			<bottom>0</bottom>
+			<align>center</align>
+			<aligny>center</aligny>
+			<label>$INFO[ListItem.Label]</label>
+		</control>
+	</control>
+	</focusedlayout>
+	<content target="videos">$PARAM[content]</content>
+	</control>
+	</control>
+	</definition>
+	</include>
+	
+	<include name="__OsdFixedFlags">
+	<control type="grouplist">
+	<align>center</align>
+	<visible>$PARAM[visible]</visible>
+	<include>$PARAM[animation]</include>
+	<orientation>horizontal</orientation>
+	<animation effect="fade" start="0" end="100" time="150">VisibleChange</animation>
+	<height>100</height>
+	<bottom>120</bottom>
+	<itemgap>10</itemgap>
+	<include content="_FixOsdFlags">
+		<param name="flaglabel">VideoResolution</param>
+	</include>
+	<include content="_FixOsdFlags">
+		<param name="flaglabel">VideoCodec</param>
+	</include>	
+	<include content="_FixOsdFlags">
+		<param name="flaglabel">VideoAspect</param>
+	</include>
+	<include content="_FixOsdFlags">
+		<param name="flaglabel">AudioLanguage</param>
+		<param name="texture">https://www.iconsdb.com/icons/preview/white/speaker-xxl.png</param>
+		<param name="visible">true</param>
+	</include>
+	<include content="_FixOsdFlags">
+		<param name="flaglabel">SubtitlesLanguage</param>
+		<param name="texture">osd/fullscreen/buttons/subs3.png</param>
+		<param name="visible">true</param>
+	</include>
+	</control>
+	</include>
 	
 </includes>
