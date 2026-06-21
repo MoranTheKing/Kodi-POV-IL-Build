@@ -131,7 +131,7 @@ def tmdb_movies_year(year, page_no):
 def tmdb_movies_networks(network_id, page_no):
 	string = 'tmdb_movies_networks_%s_%s' % (network_id, page_no)
 	url = '%s/discover/movie?api_key=%s&language=en-US&region=US' % (base_url, tmdb_api_key())
-	url += '&sort_by=popularity.desc&certification_country=US&with_companies=%s&page=%s' % (network_id, page_no)
+	url += '&sort_by=popularity.desc&watch_region=US&with_watch_providers=%s&page=%s' % (network_id, page_no)
 	return cache_object(get_tmdb, string, url, expiration=EXPIRES_2_DAYS)
 
 def tmdb_movies_similar(tmdb_id, page_no):
