@@ -1,0 +1,49 @@
+{
+  "config_version": "1.0.0",
+  "_comment": "Declarative policy for how the wizard applies the shipped build-config (userdata/) onto a device. Bump config_version whenever ANY file in userdata/ changes -- that is what makes the wizard detect and apply the new config. 'fresh' is used on a clean/first install, 'update' on an existing device. Modes: replace (overwrite whole file), merge_id (per <setting id=...>, build value wins, other user settings untouched), merge_name (per <source><name>, add build's, keep user's), seed_if_absent (write only if the file does not already exist).",
+  "files": [
+    {
+      "src": "guisettings.xml",
+      "dest": "userdata/guisettings.xml",
+      "fresh": "merge_id",
+      "update": "merge_id",
+      "exclude_ids": [
+        "services.deviceuuid",
+        "services.devicename",
+        "videoscreen.resolution",
+        "pictures.displayresolution"
+      ]
+    },
+    {
+      "src": "addon_data/skin.fentastic/settings.xml",
+      "dest": "userdata/addon_data/skin.fentastic/settings.xml",
+      "fresh": "replace",
+      "update": "merge_id",
+      "exclude_ids": []
+    },
+    {
+      "src": "favourites.xml",
+      "dest": "userdata/favourites.xml",
+      "fresh": "replace",
+      "update": "seed_if_absent"
+    },
+    {
+      "src": "sources.xml",
+      "dest": "userdata/sources.xml",
+      "fresh": "replace",
+      "update": "merge_name"
+    },
+    {
+      "src": "advancedsettings.xml",
+      "dest": "userdata/advancedsettings.xml",
+      "fresh": "replace",
+      "update": "replace"
+    }
+  ],
+  "cleanup": {
+    "_comment": "Twilight is dead and replaced by POV. Remove stale Twilight userdata leftovers so they cannot resurrect menus/settings. Paths are relative to special://home/.",
+    "remove_paths": [
+      "userdata/addon_data/plugin.video.twilight"
+    ]
+  }
+}

@@ -30,6 +30,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from kodi_addons import REPO_ROOT, discover_addons  # noqa: E402
+import build_config  # noqa: E402
 
 REPO = os.environ.get("REPO", "MoranTheKing/Kodi-POV-IL-Build")
 RELEASE_TAG = os.environ.get("RELEASE_TAG", "addons-latest")
@@ -63,6 +64,48 @@ def _load_previous() -> dict:
         return data.get("addons", {}) or {}
     except (json.JSONDecodeError, OSError):
         return {}
+
+
+def _load_previous_config() -> dict:
+    if not os.path.isfile(MANIFEST_OUT):
+        return {}
+    try:
+        with open(MANIFEST_OUT, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        return data.get("config", {}) or {}
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def _config_entry(now: str) -> dict:
+    """Build the manifest 'config' block describing the build-config zip.
+
+    Mirrors the addon entries: size/sha256/updated come from the freshly
+    built dist/config-<version>.zip when present, otherwise they are carried
+    over from the previous manifest as long as the version still matches.
+    """
+    version = build_config.read_config_version()
+    filename = build_config.config_zip_name(version)
+    dist_zip = os.path.join(DIST_DIR, filename)
+    entry = {
+        "config_version": version,
+        "filename": filename,
+        "zip": _download_url(filename),
+        "size": None,
+        "sha256": None,
+        "updated": now,
+    }
+    if os.path.isfile(dist_zip):
+        entry["size"] = os.path.getsize(dist_zip)
+        entry["sha256"] = _sha256(dist_zip)
+        entry["updated"] = now
+    else:
+        prev = _load_previous_config()
+        if prev and prev.get("config_version") == version:
+            entry["size"] = prev.get("size")
+            entry["sha256"] = prev.get("sha256")
+            entry["updated"] = prev.get("updated", now)
+    return entry
 
 
 def main() -> int:
@@ -110,6 +153,7 @@ def main() -> int:
         "manifest_url": (
             f"https://raw.githubusercontent.com/{REPO}/main/manifest.json"
         ),
+        "config": _config_entry(now),
         "addons": entries,
     }
 
@@ -117,7 +161,10 @@ def main() -> int:
         json.dump(manifest, fh, indent=2, ensure_ascii=False, sort_keys=False)
         fh.write("\n")
 
-    print(f"Wrote {MANIFEST_OUT} with {len(entries)} addons:")
+    cfg = manifest["config"]
+    cfg_marker = "built" if os.path.isfile(os.path.join(DIST_DIR, cfg["filename"])) else "carry"
+    print(f"Wrote {MANIFEST_OUT} with {len(entries)} addons + config:")
+    print(f"  * config{'':<28} {cfg['config_version']:<10} {'config':<11} [{cfg_marker}]")
     for addon_id, entry in sorted(entries.items()):
         marker = "built" if os.path.isfile(os.path.join(DIST_DIR, entry["filename"])) else "carry"
         print(f"  - {addon_id:<35} {entry['version']:<10} {entry['type']:<11} [{marker}]")
