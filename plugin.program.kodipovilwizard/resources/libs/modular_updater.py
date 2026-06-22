@@ -130,6 +130,19 @@ class ModularUpdater:
 
         return self.execute_updates(update_queue)
 
+    def run_fresh_install(self):
+        """Hydrate a clean device ENTIRELY from the manifest.
+
+        Installs every addon listed in manifest.json and seeds the
+        build-config pack in 'fresh' mode -- the modular replacement for the
+        legacy monolithic build zip. The caller (startup) pins the build
+        settings and performs the single force-close afterwards, so
+        execute_updates must NOT restart/reload here (self.fresh guards it).
+        """
+        self.install_missing = True
+        self.fresh = True
+        return self.run_update_check()
+
     def _config_pending(self, manifest):
         """True when the manifest's config version is ahead of what we last
         applied on this device."""
@@ -250,16 +263,24 @@ class ModularUpdater:
         # updates while still landing new build defaults (skin look, extra repo
         # sources, Hebrew labels...). Idempotent: it self-skips when the
         # device already has the manifest's config_version.
+        fresh = getattr(self, 'fresh', False)
         config_skin_touched = False
         try:
             manifest = getattr(self, '_manifest', None)
             if manifest:
-                res = config_apply.apply_config_pack(manifest, fresh=False, background=self.background)
+                res = config_apply.apply_config_pack(manifest, fresh=fresh, background=self.background)
                 config_skin_touched = bool(res.get('skin_touched'))
         except Exception as e:
             logging.log("[ModularUpdater] config apply failed: {0}".format(e), level=xbmc.LOGERROR)
 
         # 5. Handle Reload/Restart
+        if fresh:
+            # Fresh install: the caller (startup.fresh_build_auto_install_if_needed)
+            # pins the build settings and performs the single force-close AFTER
+            # this returns. Restarting/reloading here would kill Kodi before the
+            # build is marked installed, so just hand control back.
+            return True
+
         if requires_restart:
             from resources.libs.wizard import Wizard
             Wizard().force_close_kodi_in_5_seconds("עדכון קריטי הסתיים. קודי יופעל מחדש.")
