@@ -229,41 +229,37 @@ def fresh_build_auto_install_if_needed():
         return False
 
     try:
-        from resources.libs.downloader import Downloader
-        from resources.libs import extract
-
+        # KODI-POV-IL - MODULAR fresh install (Option 3). The build is no
+        # longer hydrated from a monolithic build zip. Instead we install every
+        # addon listed in manifest.json and seed the build-config pack
+        # (skin/locale/subtitles/favourites/sources/...) in 'fresh' mode. This
+        # is what makes a clean device installed from JUST the new wizard zip
+        # configure itself entirely through the manifest -- with no dependency
+        # on the old full build zip or on having run the legacy wizard first.
         tools.ensure_folders(CONFIG.PACKAGES)
-        zipname = build_name.replace('\\', '').replace('/', '').replace(':', '').replace('*', '').replace('?', '').replace('"', '').replace('<', '').replace('>', '').replace('|', '')
-        lib = os.path.join(CONFIG.PACKAGES, '{0}_fresh_install.zip'.format(zipname))
-        tools.remove_file(lib)
-
         logging.log(
-            "[Fresh Build Auto Install] Installing {0} v{1}".format(
+            "[Fresh Build Auto Install] Modular install of {0} v{1}".format(
                 build_name, build_version
             ),
             level=xbmc.LOGINFO,
         )
-        Downloader().download(build_url, lib)
+
+        from resources.libs.modular_updater import ModularUpdater
+        ModularUpdater(background=False).run_fresh_install()
         xbmc.sleep(500)
 
-        if not os.path.exists(lib) or os.path.getsize(lib) == 0:
-            tools.remove_file(lib)
-            return False
-
-        title = '[COLOR {0}][B]Installing:[/B][/COLOR] [COLOR {1}]{2}[/COLOR]'.format(
-            CONFIG.COLOR2, CONFIG.COLOR1, build_name
-        )
-        percent, errors, error = extract.all(lib, CONFIG.HOME, ignore=True, title=title)
-        if int(float(percent)) <= 0:
+        # Sanity gate: the core video addon must have landed. If it did not,
+        # the manifest/network failed -- do NOT flip the build to 'installed'
+        # (that would strand the user on an empty profile). Returning False
+        # leaves the flags untouched so the next launch retries.
+        if not os.path.exists(os.path.join(CONFIG.ADDONS, 'plugin.video.pov')):
             logging.log(
-                "[Fresh Build Auto Install] Extract failed: {0}".format(error),
+                "[Fresh Build Auto Install] Modular install did not land "
+                "plugin.video.pov; aborting (will retry next launch).",
                 level=xbmc.LOGERROR,
             )
             return False
 
-        installed = db.grab_addons(lib)
-        db.addon_database(installed, 1, True)
-        db.addon_database(CONFIG.ADDON_ID, 1)
         db.fix_metas()
 
         CONFIG.set_setting('buildname', build_name)
@@ -271,16 +267,14 @@ def fresh_build_auto_install_if_needed():
         CONFIG.set_setting('buildversion', build_version)
         CONFIG.set_setting('latestversion', build_version)
         CONFIG.set_setting('nextbuildcheck', tools.get_date(days=CONFIG.UPDATECHECK, formatted=True))
-        CONFIG.set_setting('extract', percent)
-        CONFIG.set_setting('errors', errors)
+        CONFIG.set_setting('extract', '100')
+        CONFIG.set_setting('errors', '0')
         CONFIG.set_setting('fresh_build_auto_install_done', build_version)
 
         CONFIG.BUILDNAME = build_name
         CONFIG.BUILDVERSION = build_version
         CONFIG.BUILDLATEST = build_version
         CONFIG.INSTALLED = 'true'
-
-        tools.remove_file(lib)
 
         from resources.libs.gui import window as _window
         note_id, _msg = _window.split_notify(CONFIG.QUICK_UPDATE_NOTIFICATION_URL)
