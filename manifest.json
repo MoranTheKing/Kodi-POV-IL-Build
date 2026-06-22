@@ -3,8 +3,16 @@
   "name": "Kodi POV IL Build",
   "repo": "MoranTheKing/Kodi-POV-IL-Build",
   "release_tag": "addons-latest",
-  "generated": "2026-06-21T19:06:33Z",
+  "generated": "2026-06-22T08:08:26Z",
   "manifest_url": "https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL-Build/main/manifest.json",
+  "config": {
+    "config_version": "1.0.0",
+    "filename": "config-1.0.0.zip",
+    "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/config-1.0.0.zip",
+    "size": 6477,
+    "sha256": "c849c0f2965029e2e85ae770f761570628faae4f148eeaceabfc11f5c77745da",
+    "updated": "2026-06-22T08:08:26Z"
+  },
   "addons": {
     "plugin.program.kodipovilwizard": {
       "id": "plugin.program.kodipovilwizard",

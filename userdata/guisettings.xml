@@ -1,0 +1,53 @@
+<settings version="2">
+    <!--
+      CURATED build-identity fragment of guisettings.xml. This is NOT a full
+      guisettings dump. It holds ONLY the settings the build deliberately
+      changes away from Kodi defaults (extracted as the settings WITHOUT
+      default="true" in the source build), and it deliberately OMITS
+      machine-specific values (services.deviceuuid, services.devicename,
+      videoscreen.resolution, pictures.displayresolution) so an update never
+      clones a UUID or forces a wrong display/audio resolution onto a device.
+
+      Apply policy (userdata/config_policy.json):
+        fresh install -> every id here is written (replace).
+        update        -> every id here is merged by id (build value wins),
+                         leaving all other user settings untouched.
+    -->
+    <setting id="lookandfeel.skin">skin.fentastic</setting>
+    <setting id="lookandfeel.enablerssfeeds">false</setting>
+    <setting id="locale.language">resource.language.he_il</setting>
+    <setting id="locale.keyboardlayouts">English QWERTY|Hebrew QWERTY</setting>
+    <setting id="locale.country">Israel</setting>
+    <setting id="locale.audiolanguage">English</setting>
+    <setting id="locale.subtitlelanguage">Hebrew</setting>
+    <setting id="videoplayer.autoplaynextitem">0,1,2,3,4</setting>
+    <setting id="videoplayer.seeksteps">-30,-10,10,30</setting>
+    <setting id="videoplayer.seekdelay">500</setting>
+    <setting id="videoplayer.convertdovi">true</setting>
+    <setting id="videoplayer.preferdefaultflag">false</setting>
+    <setting id="subtitles.fontname">Arial</setting>
+    <setting id="subtitles.fontsize">52</setting>
+    <setting id="subtitles.style">1</setting>
+    <setting id="subtitles.opacity">90</setting>
+    <setting id="subtitles.bordersize">41</setting>
+    <setting id="subtitles.backgroundtype">2</setting>
+    <setting id="subtitles.bgopacity">35</setting>
+    <setting id="subtitles.shadowopacity">35</setting>
+    <setting id="subtitles.shadowsize">5</setting>
+    <setting id="subtitles.marginvertical">3.3</setting>
+    <setting id="subtitles.charset">CP1255</setting>
+    <setting id="subtitles.languages">Hebrew</setting>
+    <setting id="subtitles.tv">service.subtitles.All_Subs</setting>
+    <setting id="subtitles.movie">service.subtitles.All_Subs</setting>
+    <setting id="services.webserverauthentication">false</setting>
+    <setting id="services.esallinterfaces">true</setting>
+    <setting id="filecache.buffermode">0</setting>
+    <setting id="filecache.memorysize">128</setting>
+    <setting id="filecache.readfactor">1000</setting>
+    <setting id="audiooutput.config">3</setting>
+    <setting id="general.addonupdates">0</setting>
+    <setting id="general.addonnotifications">true</setting>
+    <setting id="addons.unknownsources">true</setting>
+    <setting id="addons.updatemode">1</setting>
+    <setting id="system.playlistspath">special://profile/playlists/</setting>
+</settings>

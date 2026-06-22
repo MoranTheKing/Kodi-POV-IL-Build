@@ -9,6 +9,7 @@ from resources.libs.common import tools
 from resources.libs.downloader import Downloader
 from resources.libs import extract
 from resources.libs import db
+from resources.libs import config_apply
 
 
 class ModularUpdater:
@@ -73,6 +74,11 @@ class ModularUpdater:
             logging.log("[ModularUpdater] Manifest parsing failed: {0}".format(e), level=xbmc.LOGERROR)
             return False
 
+        # Keep the parsed manifest so execute_updates can also apply the
+        # build-config pack (skin/locale/favourites/sources/...) in the same
+        # pass, at the value/id level -- without clobbering the user's keys.
+        self._manifest = manifest
+
         # 2. Compare Versions
         #
         # FIX #2 (safety): only update addons that are ALREADY installed.
@@ -110,13 +116,28 @@ class ModularUpdater:
                 update_queue.append(mod)
 
         # 3. Execute Updates if needed
-        if not update_queue:
-            logging.log("[ModularUpdater] All modules are up to date.", level=xbmc.LOGINFO)
+        #
+        # The build-config pack carries its own version, independent of the
+        # addons. A user can be up to date on code but behind on config (e.g.
+        # a new skin tweak / extra repo source), so we run the update pass when
+        # EITHER an addon moved OR the config moved.
+        config_pending = self._config_pending(manifest)
+        if not update_queue and not config_pending:
+            logging.log("[ModularUpdater] All modules and config are up to date.", level=xbmc.LOGINFO)
             if not self.background:
                 self.dialog.ok(CONFIG.ADDONTITLE, "כל ההרחבות מעודכנות לגרסה האחרונה.")
             return True
 
         return self.execute_updates(update_queue)
+
+    def _config_pending(self, manifest):
+        """True when the manifest's config version is ahead of what we last
+        applied on this device."""
+        cfg = (manifest or {}).get('config') or {}
+        remote = cfg.get('config_version')
+        if not remote:
+            return False
+        return CONFIG.get_setting('config_applied_version') != remote
 
     def execute_updates(self, queue):
         """Download, extract, and register the queued modules."""
@@ -173,6 +194,21 @@ class ModularUpdater:
             if not os.path.exists(zip_path) or os.path.getsize(zip_path) == 0:
                 continue
 
+            # Integrity check: the manifest ships a sha256 for every addon, but
+            # nothing used to verify it. A truncated/corrupt download would be
+            # extracted blindly. Verify before touching special://home/addons.
+            want_sha = mod.get('sha256')
+            if want_sha:
+                try:
+                    got_sha = config_apply.sha256_file(zip_path)
+                except Exception as e:
+                    logging.log("[ModularUpdater] sha256 read failed for {0}: {1}".format(addon_id, e), level=xbmc.LOGERROR)
+                    got_sha = None
+                if got_sha and got_sha.lower() != str(want_sha).lower():
+                    logging.log("[ModularUpdater] sha256 mismatch for {0} (want {1}, got {2}); skipping".format(addon_id, want_sha, got_sha), level=xbmc.LOGERROR)
+                    tools.remove_file(zip_path)
+                    continue
+
             # Extract
             #
             # FIX #1 (critical): a single-addon Kodi zip has the addon id as
@@ -209,13 +245,28 @@ class ModularUpdater:
             xbmc.executebuiltin('UpdateLocalAddons')
             xbmc.sleep(1500)
 
+        # 4b. Apply the build-config pack (value/id-level merge). This is what
+        # keeps the user's RD/Trakt keys, widgets and tweaks intact across
+        # updates while still landing new build defaults (skin look, extra repo
+        # sources, Hebrew labels...). Idempotent: it self-skips when the
+        # device already has the manifest's config_version.
+        config_skin_touched = False
+        try:
+            manifest = getattr(self, '_manifest', None)
+            if manifest:
+                res = config_apply.apply_config_pack(manifest, fresh=False, background=self.background)
+                config_skin_touched = bool(res.get('skin_touched'))
+        except Exception as e:
+            logging.log("[ModularUpdater] config apply failed: {0}".format(e), level=xbmc.LOGERROR)
+
         # 5. Handle Reload/Restart
         if requires_restart:
             from resources.libs.wizard import Wizard
             Wizard().force_close_kodi_in_5_seconds("עדכון קריטי הסתיים. קודי יופעל מחדש.")
-        elif extracted_addons:
-            # Standard plugins/services/inactive-skins: reload the skin so new
-            # menus/widgets/code are picked up without a reboot.
+        elif extracted_addons or config_skin_touched:
+            # Standard plugins/services/inactive-skins OR a config change that
+            # touched the active skin's look: reload the skin so new
+            # menus/widgets/code/settings are picked up without a reboot.
             xbmc.executebuiltin('ReloadSkin()')
             if not self.background:
                 self.dialog.ok(CONFIG.ADDONTITLE, "העדכון המודולרי הסתיים בהצלחה!")
