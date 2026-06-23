@@ -31,18 +31,10 @@ BUILDNAME_DEFAULT = 'Kodi POV IL - FENtastic'
 # we ship in dist/Kodi-POV-IL-FENtastic-test-*.zip.
 BUILDVERSION_DEFAULT = '0.1.45'
 EXCLUDES = [ADDON_ID]
-# KODI-POV-IL - LEGACY MONOLITHIC build descriptor (OpenWizard-style build.txt).
-# SUPERSEDED by MANIFEST_URL (manifest.json) below. This file lives on the OLD
-# monolithic repo (MoranTheKing/Kodi-POV-IL) and is FROZEN -- it still advertises
-# the pre-migration wizard (0.1.30) and a monolithic build / "quickfix" zip.
-# Nothing extracts those zips any more: quick_update() is now a thin wrapper
-# around ModularUpdater and fresh install runs run_fresh_install(). build.txt is
-# only still read (read-only) by the legacy Builds menu and the defensive
-# build-version pinning in startup. RECOMMENDATION: migrate the Builds menu /
-# full-install button to manifest.json, then delete BUILDFILE + the build.txt
-# asset (and the monolithic build()/gui() paths in wizard.py) entirely.
-# Please read https://github.com/a4k-openproject/plugin.program.openwizard/wiki/Installing-Builds
-BUILDFILE = 'https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL/main/wizard/assets/build.txt'
+# KODI-POV-IL - build.txt / BUILDFILE has been DELETED. The build is now
+# described entirely by manifest.json (MANIFEST_URL, below); the full install and
+# all updates go through ModularUpdater. There is no monolithic build / quickfix
+# zip and no remote build descriptor any more.
 # How often you would like it to check for build updates in days
 # 0 being every startup of kodi
 UPDATECHECK = 0

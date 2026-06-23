@@ -57,139 +57,82 @@ class Wizard:
             install.wipe()
 
     def build(self, name, over=False):
-        # if action == 'normal':
-            # if CONFIG.KEEPTRAKT == 'true':
-                # from resources.libs import traktit
-                # traktit.auto_update('all')
-                # CONFIG.set_setting('traktnextsave', tools.get_date(days=3, formatted=True))
-            # if CONFIG.KEEPDEBRID == 'true':
-                # from resources.libs import debridit
-                # debridit.auto_update('all')
-                # CONFIG.set_setting('debridnextsave', tools.get_date(days=3, formatted=True))
-            # if CONFIG.KEEPLOGIN == 'true':
-                # from resources.libs import loginit
-                # loginit.auto_update('all')
-                # CONFIG.set_setting('loginnextsave', tools.get_date(days=3, formatted=True))
-
-        temp_kodiv = int(CONFIG.KODIV)
-        buildv = int(float(check.check_build(name, 'kodi')))
-
-        if not temp_kodiv == buildv:
-            warning = True
-        else:
-            warning = False
-
-        if warning:
-            yes_pressed = self.dialog.yesno("{0} - [COLOR red]WARNING!![/COLOR]".format(CONFIG.ADDONTITLE), '[COLOR {0}]There is a chance that the skin will not appear correctly'.format(CONFIG.COLOR2) + '\n' + 'When installing a {0} build on a Kodi {1} install'.format(check.check_build(name, 'kodi'), CONFIG.KODIV) + '\n' + 'Would you still like to install: [COLOR {0}]{1} v{2}[/COLOR]?[/COLOR]'.format(CONFIG.COLOR1, name, check.check_build(name, 'version')), nolabel='[B][COLOR red]No, Cancel[/COLOR][/B]', yeslabel='[B][COLOR springgreen]Yes, Install[/COLOR][/B]')
-        else:
-            if over:
-                yes_pressed = 1
-            else:
-                yes_pressed = self.dialog.yesno(CONFIG.ADDONTITLE, '[COLOR {0}]האם ברצונך להוריד ולהתקין את '.format(CONFIG.COLOR2) + '[COLOR {0}]{1} v{2}[/COLOR]?[/COLOR]'.format(CONFIG.COLOR1, name, check.check_build(name,'version')), nolabel='[B][COLOR red]ביטול[/COLOR][/B]', yeslabel='[B][COLOR springgreen]התקנה[/COLOR][/B]')
-        if yes_pressed:
-            CONFIG.clear_setting('build')
-            buildzip = check.check_build(name, 'url')
-            zipname = name.replace('\\', '').replace('/', '').replace(':', '').replace('*', '').replace('?', '').replace('"', '').replace('<', '').replace('>', '').replace('|', '')
-
-            self.dialogProgress.create(CONFIG.ADDONTITLE, '[COLOR {0}][B]Downloading:[/B][/COLOR] [COLOR {1}]{2} v{3}[/COLOR]'.format(CONFIG.COLOR2, CONFIG.COLOR1, name, check.check_build(name, 'version')) + '\n' + 'Please Wait')
-
-            lib = os.path.join(CONFIG.MYBUILDS, '{0}.zip'.format(zipname))
-            
-            try:
-                os.remove(lib)
-            except:
-                pass
-
-            Downloader().download(buildzip, lib)
-            xbmc.sleep(500)
-            
-            if os.path.getsize(lib) == 0:
-                try:
-                    os.remove(lib)
-                except:
-                    pass
-                    
+        # KODI-POV-IL - FULL INSTALL, now fully MODULAR.
+        # The legacy path downloaded a monolithic build zip from build.txt, ran
+        # install.wipe(), and extracted it over special://home. ALL of that is
+        # gone. A "Full Install" is now a foreground ModularUpdater fresh install:
+        # every addon in manifest.json + the build-config pack, with the content
+        # addons provisioned via Kodi's native InstallAddon. No wipe, no
+        # monolithic zip, no build.txt -- and it is guarded by the same
+        # .provisioned marker, so an interrupted run resumes on the next launch.
+        if not over:
+            if not self.dialog.yesno(
+                    CONFIG.ADDONTITLE,
+                    '[COLOR {0}]האם ברצונך להתקין את '.format(CONFIG.COLOR2)
+                    + '[COLOR {0}]{1}[/COLOR]?[/COLOR]'.format(CONFIG.COLOR1, name),
+                    nolabel='[B][COLOR red]ביטול[/COLOR][/B]',
+                    yeslabel='[B][COLOR springgreen]התקנה[/COLOR][/B]'):
+                logging.log_notify(CONFIG.ADDONTITLE,
+                                   '[COLOR {0}]התקנת בילד: בוטלה![/COLOR]'.format(CONFIG.COLOR2))
                 return
-                
-            install.wipe()
-                
-            skin.look_and_feel_data('save')
-            
-            title = '[COLOR {0}][B]Installing:[/B][/COLOR] [COLOR {1}]{2} v{3}[/COLOR]'.format(CONFIG.COLOR2, CONFIG.COLOR1, name, check.check_build(name, 'version'))
-            self.dialogProgress.update(0, title + '\n' + 'Please Wait')
-            percent, errors, error = extract.all(lib, CONFIG.HOME, title=title)
-            
-            skin.skin_to_default('Build Install')
 
-            if int(float(percent)) > 0:
-                db.fix_metas()
-                CONFIG.set_setting('buildname', name)
-                CONFIG.set_setting('buildversion', check.check_build(name, 'version'))
-                CONFIG.set_setting('buildtheme', '')
-                CONFIG.set_setting('latestversion', check.check_build(name, 'version'))
-                CONFIG.set_setting('nextbuildcheck', tools.get_date(days=CONFIG.UPDATECHECK, formatted=True))
-                CONFIG.set_setting('installed', 'true')
-                CONFIG.set_setting('extract', percent)
-                CONFIG.set_setting('errors', errors)
-                logging.log('INSTALLED {0}: [ERRORS:{1}]'.format(percent, errors))
+        CONFIG.clear_setting('build')
 
-                # try:
-                    # os.remove(lib)
-                # except:
-                    # pass
+        build_name = CONFIG.BUILDNAME_DEFAULT
+        build_version = CONFIG.BUILDVERSION_DEFAULT
 
-                if int(float(errors)) > 0:
-                    yes_pressed = self.dialog.yesno(CONFIG.ADDONTITLE,
-                                       '[COLOR {0}][COLOR {1}]{2} v{3}[/COLOR]'.format(CONFIG.COLOR2, CONFIG.COLOR1, name, check.check_build(name, 'version')) +'\n' + 'Completed: [COLOR {0}]{1}{2}[/COLOR] [Errors:[COLOR {3}]{4}[/COLOR]]'.format(CONFIG.COLOR1, percent, '%', CONFIG.COLOR1, errors) + '\n' + 'Would you like to view the errors?[/COLOR]',
-                                       nolabel='[B][COLOR red]No Thanks[/COLOR][/B]',
-                                       yeslabel='[B][COLOR springgreen]View Errors[/COLOR][/B]')
-                    if yes_pressed:
-                        from resources.libs.gui import window
-                        window.show_text_box("Viewing Build Install Errors", error)
-                self.dialogProgress.close()
+        from resources.libs.modular_updater import ModularUpdater
+        logging.log("[Build] Full modular install of {0} v{1}".format(build_name, build_version),
+                    level=xbmc.LOGINFO)
 
-                from resources.libs.gui.build_menu import BuildMenu
-                themecount = BuildMenu().theme_count(name)
+        # A user-triggered Full Install starts clean: drop the marker so the whole
+        # fresh sequence runs (and so an interrupted run is resumable).
+        ModularUpdater.clear_provisioned()
 
-                if themecount > 0:
-                    self.theme(name)
+        try:
+            ModularUpdater(background=False).run_fresh_install()
+        except Exception as err:
+            logging.log("[Build] Modular fresh install failed: {0}".format(err), level=xbmc.LOGERROR)
+            self.dialog.ok(CONFIG.ADDONTITLE,
+                           "[COLOR {0}]התקנת הבילד נכשלה. נסה שוב.[/COLOR]".format(CONFIG.COLOR2))
+            return
 
-                db.addon_database(CONFIG.ADDON_ID, 1)
-                # db.force_check_updates(over=True)
-                # if os.path.exists(os.path.join(CONFIG.USERDATA, '.enableall')):
-                    # CONFIG.set_setting('enable_all', 'true')
-                
-                #########################################################################################################
-                # KODI-RD-IL
-                # Enable all addons in build's ZIP file.
-                installed = db.grab_addons(lib)
-                db.addon_database(installed, 1, True)
-                try:
-                    os.remove(lib)
-                except:
-                    pass
-                
-                from resources.libs.gui import window
-                note_id, msg = window.split_notify(CONFIG.QUICK_UPDATE_NOTIFICATION_URL)
-                if note_id:
-                    # Don't show the quick update notification window after build install (first build launch notification window will show), no quick update will be installed (wizard's noteid == latest noteid from URL)
-                    CONFIG.set_setting('quick_update_notedismiss', 'true')
-                    CONFIG.set_setting('quick_update_noteid', note_id)
-                # Show first build launch notification window
-                CONFIG.set_setting('notedismiss', 'false')
-                # Show first build launch build skin switch notification window
-                CONFIG.set_setting('build_skin_switch_notifcation_dismiss', 'false')
-                #########################################################################################################
+        xbmc.sleep(500)
 
-                # self.dialog.ok(CONFIG.ADDONTITLE, "[COLOR {0}]התקנת הבילד הסתיימה. לחץ אישור/OK כדי לסגור את קודי. לאחר מכן, הפעל אותו מחדש.[/COLOR]".format(CONFIG.COLOR2))
-                # tools.kill_kodi(over=True)
-                self.force_close_kodi_in_5_seconds(dialog_header="התקנת הבילד הסתיימה בהצלחה")
-            else:
-                from resources.libs.gui import window
-                window.show_text_box("Viewing Build Install Errors", error)
-        else:
-            logging.log_notify(CONFIG.ADDONTITLE,
-                               '[COLOR {0}]התקנת בילד: בוטלה![/COLOR]'.format(CONFIG.COLOR2))
+        # Completion gate: the build engine must be on disk AND run_fresh_install
+        # must have written the .provisioned marker (ran end-to-end). Otherwise do
+        # NOT flip the build to installed -- startup resumes it next launch.
+        engine_present = os.path.exists(os.path.join(CONFIG.ADDONS, 'service.subtitles.kodipovilai'))
+        if not engine_present or not ModularUpdater.is_provisioned():
+            logging.log("[Build] Full install did not complete (engine={0}, marker={1}); "
+                        "will resume next launch.".format(engine_present, ModularUpdater.is_provisioned()),
+                        level=xbmc.LOGERROR)
+            self.dialog.ok(CONFIG.ADDONTITLE,
+                           "[COLOR {0}]ההתקנה לא הושלמה. הפעל מחדש את קודי כדי להמשיך.[/COLOR]".format(CONFIG.COLOR2))
+            return
+
+        db.fix_metas()
+        CONFIG.set_setting('buildname', build_name)
+        CONFIG.set_setting('buildversion', build_version)
+        CONFIG.set_setting('buildtheme', '')
+        CONFIG.set_setting('latestversion', build_version)
+        CONFIG.set_setting('nextbuildcheck', tools.get_date(days=CONFIG.UPDATECHECK, formatted=True))
+        CONFIG.set_setting('installed', 'true')
+        CONFIG.set_setting('extract', '100')
+        CONFIG.set_setting('errors', '0')
+        CONFIG.set_setting('fresh_build_auto_install_done', build_version)
+        db.addon_database(CONFIG.ADDON_ID, 1)
+
+        CONFIG.BUILDNAME = build_name
+        CONFIG.BUILDVERSION = build_version
+        CONFIG.BUILDLATEST = build_version
+        CONFIG.INSTALLED = 'true'
+
+        # First-launch notification windows (build-first-launch + skin-switch help).
+        CONFIG.set_setting('notedismiss', 'false')
+        CONFIG.set_setting('build_skin_switch_notifcation_dismiss', 'false')
+
+        self.force_close_kodi_in_5_seconds(dialog_header="התקנת הבילד הסתיימה בהצלחה")
 
     def gui(self, name, over=False):
         # KODI-POV-IL - DEPRECATED legacy "GuiFix" quickfix installer.

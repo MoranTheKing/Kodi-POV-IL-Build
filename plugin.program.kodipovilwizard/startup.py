@@ -160,113 +160,69 @@ def auto_quick_update():  # noqa: legacy, unused
             Wizard().quick_update(name=CONFIG.BUILDNAME, auto_quick_update="true")
 
 
-def sync_quickfix_build_version():
-    try:
-        if CONFIG.get_setting('buildname') != CONFIG.BUILDNAME_DEFAULT:
-            return
-
-        latest_version = check.check_build(CONFIG.BUILDNAME_DEFAULT, 'version')
-        if not latest_version:
-            return
-
-        if CONFIG.get_setting('buildversion') == latest_version:
-            if CONFIG.get_setting('latestversion') != latest_version:
-                CONFIG.set_setting('latestversion', latest_version)
-            return
-
-        CONFIG.set_setting('buildversion', latest_version)
-        CONFIG.set_setting('latestversion', latest_version)
-        CONFIG.BUILDVERSION = latest_version
-        CONFIG.BUILDLATEST = latest_version
-        logging.log(
-            "[QUICK-UPDATE] Synced buildversion/latestversion to {0} "
-            "to prevent full-build prompts; quick_update remains the update path.".format(latest_version),
-            level=xbmc.LOGINFO,
-        )
-    except Exception as sync_err:
-        logging.log(
-            "[QUICK-UPDATE] Failed to sync quickfix build version: {0}".format(sync_err),
-            level=xbmc.LOGERROR,
-        )
-
-
 def fresh_build_auto_install_if_needed():
-    """Hydrate a clean profile with the full build once.
+    """Hydrate (or RESUME) the modular build install.
 
-    Existing users already have buildname set and stay on the safe quick_update
-    path. A fresh APK/IPK/Windows/wizard profile needs the full build extracted
-    once so guisettings, FENtastic settings, favourites, and addon DB rows exist.
+    Gated on the persistent .provisioned marker rather than buildname/installed,
+    so a setup the user force-closed mid-provisioning (addons half-installed,
+    config.zip never applied) is RESUMED on the next launch instead of being left
+    permanently broken. run_fresh_install() is idempotent -- present addons are
+    skipped, the config pack self-applies once -- and it writes the marker only
+    after the WHOLE sequence completes.
     """
-    if CONFIG.get_setting('buildname'):
-        return False
-    if CONFIG.get_setting('installed') == 'true':
-        return False
-    # Pre-seeded installs (e.g. the Windows installer extracts the full
-    # build into portable_data before the first launch) already have the
-    # build on disk -- re-downloading it here would extract over a live
-    # profile for nothing. Let the auto-set-buildname block below adopt
-    # the existing install instead.
-    if os.path.exists(os.path.join(CONFIG.ADDONS, 'plugin.video.pov')):
-        logging.log(
-            "[Fresh Build Auto Install] plugin.video.pov already on disk; "
-            "skipping hydration and letting auto-set-buildname adopt it.",
-            level=xbmc.LOGINFO,
-        )
+    from resources.libs.modular_updater import ModularUpdater
+
+    # 1. Already fully provisioned end-to-end -> nothing to do.
+    if ModularUpdater.is_provisioned():
         return False
 
+    # 2. Migration / pre-marker HEALTHY install: a device fully set up BEFORE the
+    #    marker existed must NOT be reinstalled. If buildname/installed are set,
+    #    the build engine + every content addon are present and the config pack
+    #    was applied, just stamp the marker (no reinstall, no restart).
+    engine_present = os.path.exists(os.path.join(CONFIG.ADDONS, 'service.subtitles.kodipovilai'))
+    provision_present = all(
+        xbmc.getCondVisibility('System.HasAddon({0})'.format(a))
+        for a in ModularUpdater.PROVISION_IDS
+    )
+    if (CONFIG.get_setting('buildname') and CONFIG.get_setting('installed') == 'true'
+            and CONFIG.get_setting('config_applied_version')
+            and engine_present and provision_present):
+        logging.log(
+            "[Fresh Build Auto Install] Healthy pre-marker install detected; "
+            "stamping .provisioned marker (no reinstall).", level=xbmc.LOGINFO)
+        ModularUpdater.mark_provisioned(
+            CONFIG.get_setting('buildversion') or CONFIG.BUILDVERSION_DEFAULT)
+        return False
+
+    # 3. Marker absent AND setup incomplete -> (re)run the modular fresh install
+    #    to FINISH the job. Covers a brand-new device AND a force-closed setup
+    #    (pov may already be on disk, but config and/or other addons never
+    #    landed -- exactly the case that used to break the build permanently).
     build_name = CONFIG.BUILDNAME_DEFAULT
     build_version = CONFIG.BUILDVERSION_DEFAULT
     try:
-        build_url = check.check_build(build_name, 'url')
-        remote_version = check.check_build(build_name, 'version')
-        if remote_version:
-            build_version = remote_version
-    except Exception as err:
-        logging.log(
-            "[Fresh Build Auto Install] Failed reading build.txt: {0}".format(err),
-            level=xbmc.LOGERROR,
-        )
-        return False
-
-    if not build_url:
-        return False
-
-    if CONFIG.get_setting('fresh_build_auto_install_done') == build_version:
-        return False
-
-    try:
-        # KODI-POV-IL - MODULAR fresh install (Option 3). The build is no
-        # longer hydrated from a monolithic build zip. Instead we install every
-        # addon listed in manifest.json and seed the build-config pack
-        # (skin/locale/subtitles/favourites/sources/...) in 'fresh' mode. This
-        # is what makes a clean device installed from JUST the new wizard zip
-        # configure itself entirely through the manifest -- with no dependency
-        # on the old full build zip or on having run the legacy wizard first.
         tools.ensure_folders(CONFIG.PACKAGES)
         logging.log(
-            "[Fresh Build Auto Install] Modular install of {0} v{1}".format(
-                build_name, build_version
-            ),
-            level=xbmc.LOGINFO,
-        )
+            "[Fresh Build Auto Install] Modular fresh install / resume of {0} v{1}".format(
+                build_name, build_version), level=xbmc.LOGINFO)
 
-        from resources.libs.modular_updater import ModularUpdater
         ModularUpdater(background=False).run_fresh_install()
         xbmc.sleep(500)
 
-        # Sanity gate: our build engine (a manifest addon, installed
-        # synchronously) must have landed. plugin.video.pov is NOT checked here
-        # any more -- it is provisioned asynchronously via InstallAddon and may
-        # still be downloading. If the engine is missing the manifest/network
-        # failed, so do NOT flip the build to 'installed' (that would strand the
-        # user on an empty profile); returning False leaves the flags untouched
-        # so the next launch retries.
+        # Sanity gate: the build engine must be on disk AND run_fresh_install
+        # must have written the .provisioned marker (i.e. it ran to completion
+        # and was NOT force-closed mid-provisioning). If either is missing, leave
+        # the flags untouched so the next launch resumes.
         if not os.path.exists(os.path.join(CONFIG.ADDONS, 'service.subtitles.kodipovilai')):
             logging.log(
-                "[Fresh Build Auto Install] Modular install did not land the "
-                "build engine; aborting (will retry next launch).",
-                level=xbmc.LOGERROR,
-            )
+                "[Fresh Build Auto Install] build engine missing after install; "
+                "will resume next launch.", level=xbmc.LOGERROR)
+            return False
+        if not ModularUpdater.is_provisioned():
+            logging.log(
+                "[Fresh Build Auto Install] provisioning did not complete (marker "
+                "absent); will resume next launch.", level=xbmc.LOGWARNING)
             return False
 
         db.fix_metas()
@@ -284,12 +240,6 @@ def fresh_build_auto_install_if_needed():
         CONFIG.BUILDVERSION = build_version
         CONFIG.BUILDLATEST = build_version
         CONFIG.INSTALLED = 'true'
-
-        from resources.libs.gui import window as _window
-        note_id, _msg = _window.split_notify(CONFIG.QUICK_UPDATE_NOTIFICATION_URL)
-        if note_id:
-            CONFIG.set_setting('quick_update_noteid', note_id)
-            CONFIG.set_setting('quick_update_notedismiss', 'true')
 
         from resources.libs.wizard import Wizard
         Wizard().force_close_kodi_in_5_seconds(
@@ -335,28 +285,15 @@ def installed_build_check():
                 if skin.skin_to_default(defaults):
                     skin.look_and_feel_data('restore')
         if not CONFIG.SKIN == defaults and not CONFIG.BUILDNAME == "":
-            gui_xml = check.check_build(CONFIG.BUILDNAME, 'gui')
-
-            response = tools.open_url(gui_xml, check=True)
-            if not response:
-                logging.log("[Build Installed Check] Guifix was set to http://", level=xbmc.LOGINFO)
-                dialog.ok(CONFIG.ADDONTITLE,
-                          "[COLOR {0}]It looks like the skin settings was not applied to the build.".format(CONFIG.COLOR2)
-                          +'\n'+"Sadly no gui fix was attached to the build"
-                          +'\n'+"You will need to reinstall the build and make sure to do a force close[/COLOR]")
-            else:
-                yes = dialog.yesno(CONFIG.ADDONTITLE,
-                                       '{0} was not installed correctly!'.format(CONFIG.BUILDNAME)
-                                       +'\n'+'It looks like the skin settings was not applied to the build.'
-                                       +'\n'+'Would you like to apply the GuiFix?',
-                                       nolabel='[B]No, Cancel[/B]', yeslabel='[B]Apply Fix[/B]')
-                if yes:
-                    xbmc.executebuiltin("PlayMedia(plugin://{0}/?mode=install&name={1}&url=gui)".format(CONFIG.ADDON_ID,
-                                                                                                        quote_plus(CONFIG.BUILDNAME)))
-                    logging.log("[Build Installed Check] Guifix attempting to install")
-                else:
-                    logging.log('[Build Installed Check] Guifix url working but cancelled: {0}'.format(gui_xml),
-                                level=xbmc.LOGINFO)
+            # KODI-POV-IL - the build skin was reset to a stock Kodi skin. The
+            # legacy monolithic "GuiFix" zip recovery is gone; instead force the
+            # modular updater to RE-APPLY the build-config pack on the next OTA
+            # pass (it re-seeds the build skin + look) by clearing the
+            # applied-config marker. Silent and non-destructive.
+            logging.log("[Build Installed Check] Build skin reset to {0}; clearing "
+                        "config marker so ModularUpdater re-applies the build config."
+                        .format(CONFIG.SKIN), level=xbmc.LOGWARNING)
+            CONFIG.set_setting('config_applied_version', '')
     else:
         logging.log('[Build Installed Check] Install seems to be completed correctly', level=xbmc.LOGINFO)
         
@@ -375,21 +312,6 @@ def installed_build_check():
             loginit.login_it('restore', 'all')
 
         CONFIG.clear_setting('install')
-
-
-def build_update_check():
-    response = tools.open_url(CONFIG.BUILDFILE, check=True)
-
-    if not response:
-        logging.log("[Build Check] Not a valid URL for Build File: {0}".format(CONFIG.BUILDFILE), level=xbmc.LOGINFO)
-    elif not CONFIG.BUILDNAME == '':
-        # if CONFIG.SKIN in ['skin.confluence', 'skin.estuary', 'skin.estouchy'] and not CONFIG.DEFAULTIGNORE == 'true':
-            # check.check_skin()
-
-        logging.log("[Build Check] Build Installed: Checking Updates", level=xbmc.LOGINFO)
-        check.check_build_update()
-
-    CONFIG.set_setting('nextbuildcheck', tools.get_date(days=CONFIG.UPDATECHECK, formatted=True))
 
 
 def save_trakt():
@@ -652,33 +574,22 @@ except Exception as _autoset_err:
 ######################################
 
 ######################################
-# KODI-POV-IL - MODULAR UPDATE (Phase 2/3) -- replaces the legacy text-file
-# auto_quick_update() loop. Polls the Monorepo manifest.json and updates only
-# the addons whose version moved, silently in the background; only a Wizard or
-# active-skin update forces a restart. sync_quickfix_build_version() is kept on
-# purpose: it pins buildversion so the legacy build_update_check() below can
-# never fire the destructive full-build-install dialog.
+# KODI-POV-IL - MODULAR OTA UPDATE + STRICT MANIFEST ENFORCEMENT.
+# Polls manifest.json and updates addons whose version moved (silent background;
+# only a Wizard or active-skin update forces a restart). Then heal_missing_addons
+# does the bulletproof part: it physically verifies System.HasAddon(id) for EVERY
+# required addon in the manifest + every content addon, and silently installs any
+# that are missing -- e.g. a YouTube that timed out during a previous provisioning
+# pass and was skipped. This is what makes a half-provisioned build self-complete
+# on the very next launch instead of staying broken.
 if CONFIG.get_setting('buildname'):
-    sync_quickfix_build_version()
     try:
         from resources.libs.modular_updater import ModularUpdater
-        ModularUpdater(background=True).run_update_check()
+        _mu = ModularUpdater(background=True)
+        _mu.run_update_check()        # version bumps for installed addons + config
+        _mu.heal_missing_addons()     # strict HasAddon enforcement -> install missing
     except Exception as _modular_err:
         logging.log("[ModularUpdater] Startup check failed: {0}".format(_modular_err),
-                    level=xbmc.LOGERROR)
-
-    # Self-heal: the third-party content addons are provisioned via InstallAddon
-    # (not the manifest). If a fresh-install provisioning pass was interrupted
-    # (no GUI yet, an install prompt, a slow repo), finish it now -- GUI is
-    # ready at this point and the call is idempotent (installed addons skip).
-    try:
-        if not xbmc.getCondVisibility('System.HasAddon(plugin.video.pov)'):
-            from resources.libs.modular_updater import ModularUpdater
-            logging.log("[Provisioning] plugin.video.pov missing on startup; running self-heal",
-                        level=xbmc.LOGINFO)
-            ModularUpdater(background=True).post_install_provisioning()
-    except Exception as _prov_err:
-        logging.log("[Provisioning] Startup self-heal failed: {0}".format(_prov_err),
                     level=xbmc.LOGERROR)
 ######################################
     
@@ -689,44 +600,12 @@ if tools.platform() in ['android', 'windows'] and CONFIG.get_setting('buildname'
     kodi_version_update_check()
 ######################################
 
-# BUILD UPDATE CHECK
-buildcheck = CONFIG.get_setting('nextbuildcheck')
-if CONFIG.get_setting('buildname'):
-    current_time = time.time()
-    epoch_check = time.mktime(time.strptime(buildcheck, "%Y-%m-%d %H:%M:%S"))
-    
-    if current_time >= epoch_check:
-        logging.log("[Build Update Check] Started", level=xbmc.LOGINFO)
-        build_update_check()
-else:
-    logging.log("[Build Update Check] Next Check: {0}".format(buildcheck), level=xbmc.LOGINFO)
-
-# KODI-RD-IL - BUILD INSTALL ON STARTUP
-if tools.open_url(CONFIG.BUILDFILE, check=True) and CONFIG.get_setting('installed') == 'false':
-    logging.log("[Current Build Check] Build Not Installed", level=xbmc.LOGINFO)
-    CONFIG.set_setting('nextbuildcheck', tools.get_date(days=CONFIG.UPDATECHECK, formatted=True))
-    CONFIG.set_setting('installed', 'ignored')
-    
-    # Taken from build_menu.py - get_listing()
-    import re
-    response = tools.open_url(CONFIG.BUILDFILE)
-    link = tools.clean_text(response.text)
-        
-    total, *_ = check.build_count()
-    match = re.compile('name="(.+?)".+?ersion="(.+?)".+?rl="(.+?)".+?ui="(.+?)".+?odi="(.+?)".+?heme="(.+?)".+?con="(.+?)".+?anart="(.+?)".+?dult="(.+?)".+?escription="(.+?)"').findall(link)
-    
-    # Open the wizard's Builds menu in the UI so the user can hit
-    # "Fresh Install" themselves. We previously tried auto-installing
-    # via Wizard().build(over=True) and then via RunPlugin(...&over=true),
-    # but on Android the service / queued plugin invocation kept dying
-    # somewhere between download and full install -- Kodi exited after
-    # the 45 MB download and the build state never settled. The manual
-    # UI click path (Add-ons -> Kodi POV IL Wizard -> Builds -> Fresh
-    # Install) works reliably, so we delegate to it.
-    url = 'plugin://{0}/?mode=builds'.format(CONFIG.ADDON_ID)
-    xbmc.executebuiltin('ActivateWindow(Programs, {0}, return)'.format(url))
-else:
-    logging.log("[Current Build Check] Build Installed: {0}".format(CONFIG.BUILDNAME), level=xbmc.LOGINFO)
+# KODI-POV-IL - The legacy "BUILD UPDATE CHECK" (build.txt full-build version
+# diff) and "BUILD INSTALL ON STARTUP" (open the Builds menu when build.txt is
+# reachable and the build is not installed) blocks have been REMOVED. Both were
+# driven by the retired build.txt. Fresh install / interrupted-setup resume is
+# now handled by fresh_build_auto_install_if_needed() (marker-gated, above) and
+# ongoing updates + missing-addon healing by the modular OTA block above.
 
 
 # INSTALLED BUILD CHECK
