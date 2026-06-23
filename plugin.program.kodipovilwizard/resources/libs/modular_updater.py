@@ -158,7 +158,7 @@ class ModularUpdater:
         'resource.language.he_il',          # <- Kodi official repo (Hebrew language pack)
     ]
 
-    def post_install_provisioning(self, per_addon_timeout=90):
+    def post_install_provisioning(self, per_addon_timeout=60):
         """Silently install the third-party content addons via Kodi's native
         InstallAddon (so Kodi resolves the script.module.* / context.* deps and
         they keep getting OTA updates from their own repos).
@@ -174,6 +174,7 @@ class ModularUpdater:
         both right after a fresh install AND as a startup self-heal.
         """
         import threading
+        import time
         import xbmc
         monitor = xbmc.Monitor()
 
@@ -211,6 +212,12 @@ class ModularUpdater:
             10151,  # DialogExtendedProgressBar (addon download progress)
             10138,  # DialogBusy
             10160,  # DialogBusyNoCancel
+            # Native, USER-invoked menus -- never an addon's first-run popup, so
+            # they must be left alone. The watchdog was eating the Power/Shutdown
+            # menu (10111) when the user opened it to force-quit a perceived
+            # freeze; protect it (and the context menu) so user input is honored.
+            10111,  # WINDOW_DIALOG_BUTTON_MENU (power / shutdown menu)
+            10106,  # WINDOW_DIALOG_CONTEXT_MENU
         )
         stop = threading.Event()
         stray = {'id': 0, 'hits': 0}
@@ -294,10 +301,18 @@ class ModularUpdater:
                 logging.log("[Provisioning] Installing {0} (silent)".format(addon_id), level=xbmc.LOGINFO)
                 xbmc.executebuiltin('InstallAddon({0})'.format(addon_id))
 
-                # InstallAddon is asynchronous; wait (bounded) for the addon to
-                # land so a fresh install never force-closes Kodi mid-download.
+                # InstallAddon is asynchronous; wait for the addon to land so a
+                # fresh install never force-closes Kodi mid-download. This wait is
+                # STRICTLY bounded (per_addon_timeout seconds): an addon can
+                # silently fail or be starved by another addon's background
+                # services (e.g. Otaku's AnimESchedule thread churning right when
+                # YouTube tries to install), and we must NEVER let the queue hang
+                # forever waiting on System.HasAddon. On timeout we log an error
+                # and move on to the next addon -- the missing one self-heals on
+                # the next launch / OTA pass.
                 installed = False
-                for _ in range(int(per_addon_timeout)):
+                deadline = time.time() + int(per_addon_timeout)
+                while time.time() < deadline:
                     if monitor.waitForAbort(1):
                         return
                     if xbmc.getCondVisibility('System.HasAddon({0})'.format(addon_id)):
@@ -306,11 +321,24 @@ class ModularUpdater:
                 if installed:
                     logging.log("[Provisioning] {0} installed".format(addon_id), level=xbmc.LOGINFO)
                 else:
-                    logging.log("[Provisioning] {0} did not appear within {1}s (will retry on "
-                                "next launch / OTA)".format(addon_id, per_addon_timeout),
-                                level=xbmc.LOGWARNING)
+                    logging.log("[Provisioning] TIMEOUT: {0} did not install within {1}s -- "
+                                "skipping to next addon (will retry on next launch / OTA)".format(
+                                    addon_id, per_addon_timeout),
+                                level=xbmc.LOGERROR)
         finally:
+            # Watchdog lifecycle: the watcher is hard-bound to this loop. Signal
+            # it to stop the instant the queue finishes OR times out, then JOIN
+            # it so it is provably dead before we return. Otherwise a lingering
+            # watchdog would keep force-closing dialogs the user opens AFTER
+            # provisioning -- e.g. it was eating the native Power Menu (window
+            # 10111) when the user opened it to force-quit a perceived freeze.
             stop.set()
+            watcher.join(5)
+            if watcher.is_alive():
+                logging.log("[Provisioning][watchdog] did not stop within 5s after signal",
+                            level=xbmc.LOGWARNING)
+            else:
+                logging.log("[Provisioning][watchdog] stopped", level=xbmc.LOGINFO)
 
         logging.log("[Provisioning] Silent provisioning finished", level=xbmc.LOGINFO)
 
