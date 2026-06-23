@@ -131,11 +131,18 @@ def show_notification():
                     level=xbmc.LOGINFO)
 
 
+# KODI-POV-IL - DEPRECATED / DEAD CODE (no longer called).
+# This legacy loop polled the old text-file quick_update.txt notification feed
+# and, on a new note id, triggered the monolithic-zip quick_update(). It has
+# been fully superseded by the modular block further down (search
+# "MODULAR UPDATE (Phase 2/3)") which polls manifest.json and updates only the
+# addons whose version moved. It is intentionally NOT invoked anywhere -- kept
+# only for reference. RECOMMENDATION: delete this function together with
+# CONFIG.QUICK_UPDATE_NOTIFICATION_URL and the quick_update_note* settings.
 # xbmc.executebuiltin(f"RunPlugin(plugin://{CONFIG.ADDON_ID}/?mode=install&action=quick_update&name={quote_plus(CONFIG.BUILDNAME)}&auto_quick_update=true)")
-def auto_quick_update():
-        
+def auto_quick_update():  # noqa: legacy, unused
     note_id, msg = window.split_notify(CONFIG.QUICK_UPDATE_NOTIFICATION_URL)
-    
+
     if note_id:
         logging.log(f'[QUICK-UPDATE] note_id={note_id} | CONFIG.QUICK_UPDATE_NOTEID={CONFIG.QUICK_UPDATE_NOTEID}')
         if note_id == CONFIG.QUICK_UPDATE_NOTEID:
@@ -147,11 +154,10 @@ def auto_quick_update():
             CONFIG.set_setting('quick_update_noteid', note_id)
             CONFIG.set_setting('quick_update_notedismiss', 'false')
             from resources.libs.wizard import Wizard
-            quick_update_status = Wizard().quick_update(name=CONFIG.BUILDNAME, auto_quick_update="true")
-            if not quick_update_status:
-                CONFIG.set_setting('quick_update_notedismiss', 'true')
-                return
-            Wizard().force_close_kodi_in_5_seconds(dialog_header="עדכון מהיר הסתיים בהצלחה")
+            # quick_update() is now a thin manifest-based ModularUpdater wrapper
+            # that handles its own restart, so the force_close below is no longer
+            # needed (this whole function is dead anyway).
+            Wizard().quick_update(name=CONFIG.BUILDNAME, auto_quick_update="true")
 
 
 def sync_quickfix_build_version():
