@@ -248,14 +248,17 @@ def fresh_build_auto_install_if_needed():
         ModularUpdater(background=False).run_fresh_install()
         xbmc.sleep(500)
 
-        # Sanity gate: the core video addon must have landed. If it did not,
-        # the manifest/network failed -- do NOT flip the build to 'installed'
-        # (that would strand the user on an empty profile). Returning False
-        # leaves the flags untouched so the next launch retries.
-        if not os.path.exists(os.path.join(CONFIG.ADDONS, 'plugin.video.pov')):
+        # Sanity gate: our build engine (a manifest addon, installed
+        # synchronously) must have landed. plugin.video.pov is NOT checked here
+        # any more -- it is provisioned asynchronously via InstallAddon and may
+        # still be downloading. If the engine is missing the manifest/network
+        # failed, so do NOT flip the build to 'installed' (that would strand the
+        # user on an empty profile); returning False leaves the flags untouched
+        # so the next launch retries.
+        if not os.path.exists(os.path.join(CONFIG.ADDONS, 'service.subtitles.kodipovilai')):
             logging.log(
-                "[Fresh Build Auto Install] Modular install did not land "
-                "plugin.video.pov; aborting (will retry next launch).",
+                "[Fresh Build Auto Install] Modular install did not land the "
+                "build engine; aborting (will retry next launch).",
                 level=xbmc.LOGERROR,
             )
             return False
@@ -656,6 +659,20 @@ if CONFIG.get_setting('buildname'):
         ModularUpdater(background=True).run_update_check()
     except Exception as _modular_err:
         logging.log("[ModularUpdater] Startup check failed: {0}".format(_modular_err),
+                    level=xbmc.LOGERROR)
+
+    # Self-heal: the third-party content addons are provisioned via InstallAddon
+    # (not the manifest). If a fresh-install provisioning pass was interrupted
+    # (no GUI yet, an install prompt, a slow repo), finish it now -- GUI is
+    # ready at this point and the call is idempotent (installed addons skip).
+    try:
+        if not xbmc.getCondVisibility('System.HasAddon(plugin.video.pov)'):
+            from resources.libs.modular_updater import ModularUpdater
+            logging.log("[Provisioning] plugin.video.pov missing on startup; running self-heal",
+                        level=xbmc.LOGINFO)
+            ModularUpdater(background=True).post_install_provisioning()
+    except Exception as _prov_err:
+        logging.log("[Provisioning] Startup self-heal failed: {0}".format(_prov_err),
                     level=xbmc.LOGERROR)
 ######################################
     

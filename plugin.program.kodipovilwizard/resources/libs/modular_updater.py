@@ -143,6 +143,73 @@ class ModularUpdater:
         self.fresh = True
         return self.run_update_check()
 
+    # Hybrid provisioning: third-party content addons are NOT vendored in our
+    # manifest. The manifest ships only our private addons + the third-party
+    # repositories; the content addons themselves are installed here through
+    # Kodi's native InstallAddon so that (a) Kodi resolves their dependencies
+    # natively (script.module.*, context.otaku, inputstream.adaptive ...) and
+    # (b) they keep receiving OTA updates straight from their own developers.
+    PROVISION_IDS = [
+        'plugin.video.pov',                 # <- repository.kodifitzwell (+ patched at runtime)
+        'plugin.video.idanplus',            # <- repository.Fishenzon
+        'plugin.video.otaku',               # <- repository.otaku (+ context.otaku)
+        'plugin.video.youtube',             # <- Kodi official repo
+        'service.subtitles.localsubtitle',  # <- repository.peno64
+        'resource.language.he_il',          # <- Kodi official repo (Hebrew language pack)
+    ]
+
+    def post_install_provisioning(self, per_addon_timeout=60):
+        """Install the third-party content addons via Kodi's native InstallAddon.
+
+        Idempotent: addons already present are skipped, so this is safe to call
+        both right after a fresh install AND as a startup self-heal if an
+        earlier pass was interrupted. Each target resolves from a repository we
+        just installed (or Kodi's official repo), and Kodi pulls in the
+        script.module.* / context.* dependencies on its own.
+        """
+        import xbmc
+        monitor = xbmc.Monitor()
+
+        logging.log("[Provisioning] Starting post-install provisioning of {0} addons".format(
+            len(self.PROVISION_IDS)), level=xbmc.LOGINFO)
+
+        # The repositories were just extracted to disk. Force Kodi to load them
+        # and refresh their addons.xml index, otherwise the first InstallAddon
+        # after a fresh repo extract can fail with 'addon not available'.
+        xbmc.executebuiltin('UpdateLocalAddons')
+        xbmc.executebuiltin('UpdateAddonRepos', True)  # wait=True -> block until repos refreshed
+        if monitor.waitForAbort(3):
+            return
+
+        for addon_id in self.PROVISION_IDS:
+            if monitor.abortRequested():
+                return
+            if xbmc.getCondVisibility('System.HasAddon({0})'.format(addon_id)):
+                logging.log("[Provisioning] {0} already present -- skipping".format(addon_id),
+                            level=xbmc.LOGINFO)
+                continue
+
+            logging.log("[Provisioning] InstallAddon({0})".format(addon_id), level=xbmc.LOGINFO)
+            xbmc.executebuiltin('InstallAddon({0})'.format(addon_id))
+
+            # InstallAddon is asynchronous; wait (bounded) for the addon to land
+            # so a fresh install never force-closes Kodi mid-download.
+            installed = False
+            for _ in range(int(per_addon_timeout)):
+                if monitor.waitForAbort(1):
+                    return
+                if xbmc.getCondVisibility('System.HasAddon({0})'.format(addon_id)):
+                    installed = True
+                    break
+            if installed:
+                logging.log("[Provisioning] {0} installed".format(addon_id), level=xbmc.LOGINFO)
+            else:
+                logging.log("[Provisioning] {0} did not appear within {1}s (will retry on "
+                            "next launch / OTA)".format(addon_id, per_addon_timeout),
+                            level=xbmc.LOGWARNING)
+
+        logging.log("[Provisioning] Post-install provisioning finished", level=xbmc.LOGINFO)
+
     def _config_pending(self, manifest):
         """True when the manifest's config version is ahead of what we last
         applied on this device."""
@@ -272,6 +339,16 @@ class ModularUpdater:
                 config_skin_touched = bool(res.get('skin_touched'))
         except Exception as e:
             logging.log("[ModularUpdater] config apply failed: {0}".format(e), level=xbmc.LOGERROR)
+
+        # 4c. Fresh install only: now that our private addons + the third-party
+        # repositories are on disk, provision the actual content addons via
+        # Kodi's native InstallAddon (dependency resolution + future OTA updates
+        # handled by Kodi / the original developers).
+        if fresh:
+            try:
+                self.post_install_provisioning()
+            except Exception as e:
+                logging.log("[ModularUpdater] provisioning failed: {0}".format(e), level=xbmc.LOGERROR)
 
         # 5. Handle Reload/Restart
         if fresh:

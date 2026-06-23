@@ -29,6 +29,7 @@ EXCLUDE_SUFFIXES = (".pyc", ".pyo", ".pyd")
 # that also declares xbmc.service is still classified as a "skin".
 _EXTENSION_TYPE_PRIORITY = [
     ("xbmc.gui.skin", "skin"),
+    ("xbmc.addon.repository", "repository"),
     ("xbmc.subtitle.module", "subtitle"),
     ("xbmc.metadata.scraper", "scraper"),       # prefix match (video/music/...)
     ("xbmc.python.pluginsource", "plugin"),
