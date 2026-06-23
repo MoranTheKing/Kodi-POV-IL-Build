@@ -3,7 +3,7 @@
   "name": "Kodi POV IL Build",
   "repo": "MoranTheKing/Kodi-POV-IL-Build",
   "release_tag": "addons-latest",
-  "generated": "2026-06-23T15:45:10Z",
+  "generated": "2026-06-23T16:37:12Z",
   "manifest_url": "https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL-Build/main/manifest.json",
   "config": {
     "config_version": "1.1.0",
@@ -28,13 +28,13 @@
     "plugin.program.kodipovilwizard": {
       "id": "plugin.program.kodipovilwizard",
       "name": "[COLOR yellow]Kodi POV IL Wizard[/COLOR]",
-      "version": "0.1.33",
+      "version": "0.1.34",
       "type": "plugin",
-      "filename": "plugin.program.kodipovilwizard-0.1.33.zip",
-      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.kodipovilwizard-0.1.33.zip",
-      "size": 4547105,
-      "sha256": "98bf81e123400588be99f6bcbb5c179633fa9ecbea55fa04d5a4fd2cc8ab24c7",
-      "updated": "2026-06-23T15:45:10Z"
+      "filename": "plugin.program.kodipovilwizard-0.1.34.zip",
+      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.kodipovilwizard-0.1.34.zip",
+      "size": 4547843,
+      "sha256": "c5bcbad637ca4a2fe29eca2f825f76fd54b5262f7d7b9b6163c2e424fb1b4126",
+      "updated": "2026-06-23T16:37:12Z"
     },
     "plugin.program.orderfavourites-hebrew": {
       "id": "plugin.program.orderfavourites-hebrew",
@@ -138,35 +138,35 @@
     "skin.estuary": {
       "id": "skin.estuary",
       "name": "Estuary (Kodi + Real Debrid Israel)",
-      "version": "4.0.0",
+      "version": "4.0.1",
       "type": "skin",
-      "filename": "skin.estuary-4.0.0.zip",
-      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/skin.estuary-4.0.0.zip",
-      "size": 6815771,
-      "sha256": "d30f84fec7e9b5d725f24a2e4b05fcf8db78b5baf88aa233546e1949389c8059",
-      "updated": "2026-06-21T19:06:04Z"
+      "filename": "skin.estuary-4.0.1.zip",
+      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/skin.estuary-4.0.1.zip",
+      "size": 6815785,
+      "sha256": "83dc456a79d55506fa6f8b7c754313ea4f81891645083bfd83d1c5c5bdf0bc16",
+      "updated": "2026-06-23T16:37:12Z"
     },
     "skin.fentastic": {
       "id": "skin.fentastic",
       "name": "FENtastic",
-      "version": "1.0.25",
+      "version": "1.0.26",
       "type": "skin",
-      "filename": "skin.fentastic-1.0.25.zip",
-      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/skin.fentastic-1.0.25.zip",
-      "size": 10069056,
-      "sha256": "42861cb0ffe237bd621e2af164d4fd619c9cd1fcc72f108754f3ece43fd948d0",
-      "updated": "2026-06-21T19:06:04Z"
+      "filename": "skin.fentastic-1.0.26.zip",
+      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/skin.fentastic-1.0.26.zip",
+      "size": 10069068,
+      "sha256": "cf1769719443f5470987296b77010e642f81512fea45c7716484c0ed53c580e5",
+      "updated": "2026-06-23T16:37:12Z"
     },
     "skin.povil.nox": {
       "id": "skin.povil.nox",
       "name": "Kodi POV IL - NOX",
-      "version": "1.0.10",
+      "version": "1.0.11",
       "type": "skin",
-      "filename": "skin.povil.nox-1.0.10.zip",
-      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/skin.povil.nox-1.0.10.zip",
-      "size": 24370782,
-      "sha256": "deb3bb8e5dab6c2fc15d00311764aee5012dcbbc2c9577bf42c0aa4da9c43104",
-      "updated": "2026-06-21T19:06:04Z"
+      "filename": "skin.povil.nox-1.0.11.zip",
+      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/skin.povil.nox-1.0.11.zip",
+      "size": 24370777,
+      "sha256": "b69aea80b5b699a2241114a6f9243fdef3a789870e7580f585222b5b0eacfc6c",
+      "updated": "2026-06-23T16:37:12Z"
     }
   }
 }
