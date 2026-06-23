@@ -202,6 +202,10 @@ class ModularUpdater:
         #      an addon asks on first run is wanted.
         # Kodi's own install progress / busy dialogs are PROTECTED so we never
         # cancel an in-flight download.
+        # ONLY Kodi's own busy/progress dialogs are protected -- everything else
+        # that appears during provisioning is an unwanted prompt/popup and gets
+        # closed aggressively (we have our settings pre-seeded; nothing an addon
+        # asks on first run is wanted).
         PROTECTED_DIALOGS = (
             10101,  # DialogProgress
             10151,  # DialogExtendedProgressBar (addon download progress)
@@ -210,43 +214,67 @@ class ModularUpdater:
         )
         stop = threading.Event()
         stray = {'id': 0, 'hits': 0}
+        seen = {'win': -1, 'dlg': -1}
 
         def _watchdog():
             while not stop.is_set():
                 try:
+                    win = xbmcgui.getCurrentWindowId()
                     dlg = xbmcgui.getCurrentWindowDialogId()
+
+                    # OBSERVABILITY: log the foreground window + dialog id every
+                    # time either changes, so a secondary freeze is never a
+                    # mystery again -- the offending window id is in kodi.log.
+                    if win != seen['win'] or dlg != seen['dlg']:
+                        seen['win'], seen['dlg'] = win, dlg
+                        logging.log("[Provisioning][watchdog] foreground window={0} dialog={1}".format(win, dlg),
+                                    level=xbmc.LOGINFO)
+
                     if dlg == 10100:
                         stray['id'] = 0
+                        stray['hits'] = 0
+                        logging.log("[Provisioning][watchdog] confirming install dialog 10100 (SendClick 11)",
+                                    level=xbmc.LOGINFO)
                         xbmc.executebuiltin('SendClick(11)')  # Yes / OK
                         # let it close before re-checking so we don't click
                         # control 11 of whatever sits underneath.
                         if monitor.waitForAbort(0.8):
                             return
                         continue
+
                     if dlg > 10100 and dlg not in PROTECTED_DIALOGS:
                         # an addon's own first-run popup -> force-close it so the
                         # provisioning queue keeps moving. Try the targeted close
                         # first; if the same dialog is still stuck after a few
                         # passes (e.g. a Python window id Dialog.Close can't
-                        # address), escalate to closing all dialogs -- by then the
-                        # addon's own install progress is already gone.
+                        # address), escalate -- first Action(Back), then close ALL
+                        # dialogs (by then the addon's own install progress is
+                        # already gone).
                         stray['hits'] = stray['hits'] + 1 if stray['id'] == dlg else 1
                         stray['id'] = dlg
-                        if stray['hits'] >= 3:
-                            logging.log("[Provisioning] watchdog force-closing all dialogs (stuck {0})".format(dlg),
+                        if stray['hits'] >= 4:
+                            logging.log("[Provisioning][watchdog] dialog {0} STILL stuck -> Dialog.Close(all)".format(dlg),
                                         level=xbmc.LOGWARNING)
                             xbmc.executebuiltin('Dialog.Close(all,true)')
+                        elif stray['hits'] == 3:
+                            logging.log("[Provisioning][watchdog] dialog {0} sticky -> Action(Back)".format(dlg),
+                                        level=xbmc.LOGWARNING)
+                            xbmc.executebuiltin('Action(Back)')
                         else:
-                            logging.log("[Provisioning] watchdog closing stray dialog {0}".format(dlg),
+                            logging.log("[Provisioning][watchdog] closing stray dialog {0} (Dialog.Close)".format(dlg),
                                         level=xbmc.LOGINFO)
                             xbmc.executebuiltin('Dialog.Close({0},true)'.format(dlg))
                         if monitor.waitForAbort(0.5):
                             return
                         continue
+
                     stray['id'] = 0
                     stray['hits'] = 0
-                except Exception:
-                    pass
+                except Exception as _wd_err:
+                    try:
+                        logging.log("[Provisioning][watchdog] error: {0}".format(_wd_err), level=xbmc.LOGERROR)
+                    except Exception:
+                        pass
                 if monitor.waitForAbort(0.3):
                     return
 
