@@ -158,19 +158,26 @@ class ModularUpdater:
         'resource.language.he_il',          # <- Kodi official repo (Hebrew language pack)
     ]
 
-    def post_install_provisioning(self, per_addon_timeout=60):
-        """Install the third-party content addons via Kodi's native InstallAddon.
+    def post_install_provisioning(self, per_addon_timeout=90):
+        """Silently install the third-party content addons via Kodi's native
+        InstallAddon (so Kodi resolves the script.module.* / context.* deps and
+        they keep getting OTA updates from their own repos).
+
+        Silent: InstallAddon raises a native Yes/No confirm ("install the
+        following add-ons / dependencies?"). That dialog is CGUIDialogYesNo
+        (window 10100) whose button ids are FIXED by Kodi core regardless of
+        skin (10 = No, 11 = Yes), so a short-lived watcher thread auto-confirms
+        it by clicking control 11. This keeps installs hands-off -- our settings
+        are pre-seeded in userdata, so the user is never prompted.
 
         Idempotent: addons already present are skipped, so this is safe to call
-        both right after a fresh install AND as a startup self-heal if an
-        earlier pass was interrupted. Each target resolves from a repository we
-        just installed (or Kodi's official repo), and Kodi pulls in the
-        script.module.* / context.* dependencies on its own.
+        both right after a fresh install AND as a startup self-heal.
         """
+        import threading
         import xbmc
         monitor = xbmc.Monitor()
 
-        logging.log("[Provisioning] Starting post-install provisioning of {0} addons".format(
+        logging.log("[Provisioning] Starting SILENT provisioning of {0} addons".format(
             len(self.PROVISION_IDS)), level=xbmc.LOGINFO)
 
         # The repositories were just extracted to disk. Force Kodi to load them
@@ -181,34 +188,60 @@ class ModularUpdater:
         if monitor.waitForAbort(3):
             return
 
-        for addon_id in self.PROVISION_IDS:
-            if monitor.abortRequested():
-                return
-            if xbmc.getCondVisibility('System.HasAddon({0})'.format(addon_id)):
-                logging.log("[Provisioning] {0} already present -- skipping".format(addon_id),
-                            level=xbmc.LOGINFO)
-                continue
+        # Auto-confirm watcher: accept the native install/dependency Yes/No so
+        # the whole sequence is silent. Active ONLY for the provisioning window.
+        stop = threading.Event()
 
-            logging.log("[Provisioning] InstallAddon({0})".format(addon_id), level=xbmc.LOGINFO)
-            xbmc.executebuiltin('InstallAddon({0})'.format(addon_id))
-
-            # InstallAddon is asynchronous; wait (bounded) for the addon to land
-            # so a fresh install never force-closes Kodi mid-download.
-            installed = False
-            for _ in range(int(per_addon_timeout)):
-                if monitor.waitForAbort(1):
+        def _auto_confirm():
+            while not stop.is_set():
+                try:
+                    if xbmc.getCondVisibility('Window.IsActive(10100)'):  # DialogYesNo
+                        xbmc.executebuiltin('SendClick(11)')  # 11 = Yes (fixed by Kodi core)
+                        # let the dialog close before re-checking, so we never
+                        # click control 11 of whatever window is underneath.
+                        if monitor.waitForAbort(1.0):
+                            return
+                        continue
+                except Exception:
+                    pass
+                if monitor.waitForAbort(0.4):
                     return
-                if xbmc.getCondVisibility('System.HasAddon({0})'.format(addon_id)):
-                    installed = True
-                    break
-            if installed:
-                logging.log("[Provisioning] {0} installed".format(addon_id), level=xbmc.LOGINFO)
-            else:
-                logging.log("[Provisioning] {0} did not appear within {1}s (will retry on "
-                            "next launch / OTA)".format(addon_id, per_addon_timeout),
-                            level=xbmc.LOGWARNING)
 
-        logging.log("[Provisioning] Post-install provisioning finished", level=xbmc.LOGINFO)
+        watcher = threading.Thread(target=_auto_confirm)
+        watcher.daemon = True
+        watcher.start()
+
+        try:
+            for addon_id in self.PROVISION_IDS:
+                if monitor.abortRequested():
+                    break
+                if xbmc.getCondVisibility('System.HasAddon({0})'.format(addon_id)):
+                    logging.log("[Provisioning] {0} already present -- skipping".format(addon_id),
+                                level=xbmc.LOGINFO)
+                    continue
+
+                logging.log("[Provisioning] Installing {0} (silent)".format(addon_id), level=xbmc.LOGINFO)
+                xbmc.executebuiltin('InstallAddon({0})'.format(addon_id))
+
+                # InstallAddon is asynchronous; wait (bounded) for the addon to
+                # land so a fresh install never force-closes Kodi mid-download.
+                installed = False
+                for _ in range(int(per_addon_timeout)):
+                    if monitor.waitForAbort(1):
+                        return
+                    if xbmc.getCondVisibility('System.HasAddon({0})'.format(addon_id)):
+                        installed = True
+                        break
+                if installed:
+                    logging.log("[Provisioning] {0} installed".format(addon_id), level=xbmc.LOGINFO)
+                else:
+                    logging.log("[Provisioning] {0} did not appear within {1}s (will retry on "
+                                "next launch / OTA)".format(addon_id, per_addon_timeout),
+                                level=xbmc.LOGWARNING)
+        finally:
+            stop.set()
+
+        logging.log("[Provisioning] Silent provisioning finished", level=xbmc.LOGINFO)
 
     def _config_pending(self, manifest):
         """True when the manifest's config version is ahead of what we last

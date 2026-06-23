@@ -51,6 +51,18 @@ class Router:
         kodi_version_update_check_manual = self.params['kodi_version_update_check_manual'] if 'kodi_version_update_check_manual' in self.params else None
         #####################################################
 
+        #####################################################
+        # KODI-POV-IL - In-wizard force close. Replaces the external
+        # plugin.close.kodi addon: the skins' power menu now calls
+        # RunPlugin(plugin://plugin.program.kodipovilwizard/?action=force_close).
+        # Handled here -- before the mode-less branch (which opens the main
+        # menu) -- so a no-mode force_close URL never pops the wizard UI.
+        if action == 'force_close':
+            logging.log("[ForceClose] Wizard-native force close requested", level=xbmc.LOGINFO)
+            tools.kill_kodi(over=True)
+            return
+        #####################################################
+
         # MAIN MENU
         if mode is None:
             from resources.libs.gui.main_menu import MainMenu
