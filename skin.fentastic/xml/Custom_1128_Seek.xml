@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <window type="dialog" id="1128">
 	<zorder>4</zorder>
-	<visible>Player.Seeking | Player.Forwarding | Player.Rewinding | Player.Caching</visible>
+	<include>modalDialogInOutVerticalVisible</include>
+	<visible>Player.Seeking | Player.Forwarding | Player.Rewinding | Player.Caching  | Player.Paused | Player.HasPerformedSeek(3)</visible>
 	<controls>
 	
 	<include>SeekBarEnabled</include>
+	<include content="SeekBarEnabled">
+	<param name="visible">$EXP[__NetflixPlayerVisiblity] | $EXP[__AdvancedPlayerVisiblity] | $EXP[__PrettyplayerPlayerVisiblity] + $EXP[__seekvisibilty]</param>
+	</include>
 		
 	</controls>
 </window>

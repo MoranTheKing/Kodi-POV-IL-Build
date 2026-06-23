@@ -266,6 +266,17 @@
 		<texture>$INFO[ListItem.Icon]</texture>
 	</control>
 	<control type="image">
+		<top>0</top>
+		<left>0</left>
+		<right>0</right>
+		<bottom>0</bottom>
+		<width>55</width>
+		<height>55</height>
+		<centerleft>50%</centerleft>
+		<centertop>50%</centertop>
+		<texture>$INFO[ListItem.Property(subssyncresize)]</texture>
+	</control>
+	<control type="image">
 		<top>15</top>
 		<left>16</left>
 		<right>15</right>
@@ -347,7 +358,18 @@
 		<centertop>50%</centertop>
 		<texture colordiffuse="98000000">$INFO[ListItem.Icon]</texture>
 		<visible>Control.HasFocus(201)</visible>
-	</control>	
+	</control>
+	<control type="image">
+		<top>0</top>
+		<left>0</left>
+		<right>0</right>
+		<bottom>0</bottom>
+		<width>55</width>
+		<height>55</height>
+		<centerleft>50%</centerleft>
+		<centertop>50%</centertop>
+		<texture colordiffuse="98000000">$INFO[ListItem.Property(subssyncresize)]</texture>
+	</control>
 	<control type="image">
 		<top>12</top>
 		<left>12</left>
@@ -463,14 +485,9 @@
 	</item>	
 	<item>
 		<label>סנכרן כתוביות</label>
-		<icon>masks/arrowup.png</icon>
-		<onclick>SubtitleDelayPlus</onclick>
-		<visible>VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</visible>
-	</item>
-	<item>
-		<label>סנכרן כתוביות</label>
-		<icon>masks/arrowdown.png</icon>
-		<onclick>SubtitleDelayMinus</onclick>
+		<property name="subssyncresize">osd/fullscreen/buttons/subs2.png</property>
+		<onclick>Dialog.Close(videoosd,true)</onclick>
+		<onclick>SubtitleDelay</onclick>
 		<visible>VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</visible>
 	</item>
 	<item>
@@ -633,7 +650,7 @@
 	<left>200</left>
 	<right>100</right>
 	<height>125</height>
-	<bottom>165</bottom>
+	<bottom>-60</bottom>
 	<onback>201</onback>
 	<ondown>201</ondown>
 	<onleft>false</onleft>
@@ -644,7 +661,7 @@
 	<animation type="Hidden">
 		<effect type="fade" start="100" end="0" time="250" tween="sine" easing="inout"/>
 	</animation>
-	<visible>String.IsEqual(Container(204).ListItem.Property(id),forward)</visible>
+	<visible>String.IsEqual(Container(201).ListItem.Property(id),forward)</visible>
 	<itemlayout width="145">
 	<control type="group">
 	<width>175</width>
@@ -684,7 +701,7 @@
 	<left>200</left>
 	<right>100</right>
 	<height>125</height>
-	<bottom>165</bottom>
+	<bottom>-60</bottom>
 	<onback>201</onback>
 	<ondown>201</ondown>
 	<onleft>false</onleft>
@@ -695,7 +712,7 @@
 	<animation type="Hidden">
 		<effect type="fade" start="100" end="0" time="250" tween="sine" easing="inout"/>
 	</animation>
-	<visible>String.IsEqual(Container(204).ListItem.Property(id),rewind)</visible>
+	<visible>String.IsEqual(Container(201).ListItem.Property(id),rewind)</visible>
 	<itemlayout width="145">
 	<control type="group">
 	<width>125</width>
@@ -768,6 +785,21 @@
 	<texturesliderbar colordiffuse="white">colors/white.png</texturesliderbar>
 	<animation effect="fade" start="0" end="100" time="500" delay="500">Visible</animation>
 	<animation effect="fade" start="0" end="100" time="0">Hidden</animation>
+</control>
+
+<control type="group">
+	<visible>$EXP[sliderdialogfalseortrue]</visible>
+	<control type="image">
+		<top>-100</top>
+		<left>-40</left>
+		<width>120%</width>
+		<height>350</height>
+		<top>0</top>
+		<texture>frame/osdfade.png</texture>
+	</control>
+	<visible>$EXP[__NetflixPlayerVisiblity] + !Player.Paused</visible>
+	<include>RightOsdTopBar</include>
+	<include>LeftOsdTopBar</include>
 </control>
 
 </include>

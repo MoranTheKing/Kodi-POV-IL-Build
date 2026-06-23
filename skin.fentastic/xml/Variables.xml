@@ -31,6 +31,18 @@
 	<value condition="Window.IsActive(1127)">חזור לסגירה</value>
 	</variable>
 	
+	<variable name="pauseddbtype_osd">
+	<value condition="$EXP[__Movies_OSD]">סרט</value>
+	<value condition="$EXP[__episode_OSD]">פרק</value>
+	</variable>
+	
+	<variable name="ifpauseddbtype_osd">
+	<value condition="$EXP[__Movies_OSD] + Player.Paused">הסרט מושהה</value>
+	<value condition="$EXP[__Movies_OSD] + !Player.Paused">השהה סרט</value>
+	<value condition="$EXP[__episode_OSD] + Player.Paused">הפרק מושהה</value>
+	<value condition="$EXP[__episode_OSD] + !Player.Paused">השהה פרק</value>
+	</variable>
+	
 	<variable name="NetFlixMenuLeftLabel">
 	<value condition="ControlGroup(201).HasFocus(43300)">הקודם</value>
 	<value condition="ControlGroup(201).HasFocus(43301)">העבר אחורה</value>
@@ -186,7 +198,7 @@
 	</variable>
 	
 	<variable name="__osdprettylabelpercent">
-	<value>$INFO[Player.TimeRemaining(hh:mm:ss)] • $INFO[Player.FinishTime(hh:mm:ss)] • $INFO[Player.Progress]%</value>
+	<value>$INFO[Player.TimeRemaining(hh:mm:ss)] • $INFO[Player.Time(hh:mm:ss)] • $INFO[Player.Progress]%</value>
 	</variable>
 	
 	<variable name="StudiologoShortCutPath">

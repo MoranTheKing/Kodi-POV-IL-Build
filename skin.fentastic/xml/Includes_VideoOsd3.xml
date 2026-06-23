@@ -13,6 +13,18 @@
 			<texturenofocus />
 			<onclick>Action(close)</onclick>
 		</control>
+
+		<control type="group">
+		<control type="image">
+		<left>-40</left>
+		<width>120%</width>
+		<height>200</height>
+		<texture >frame/osdfade.png</texture>
+		</control>
+			<visible>$EXP[__SimplePlayerVisiblity] + !Player.Paused</visible>
+			<include>RightOsdTopBar</include>
+			<include>LeftOsdTopBar</include>
+		</control>
 		
 		<control type="group">
 			<include>Animation_BottomSlide</include>
@@ -23,8 +35,8 @@
 				<left>0</left>
 				<top>0</top>
 				<width>100%</width>
-				<height>155</height>
-				<texture colordiffuse="D0FFFFFF" border="0,55,0,0">frame/osdfade.png</texture>
+				<height>655</height>
+				<texture colordiffuse="black">colors/white.png</texture>
 			</control>
 			<control type="label">
 				<left>10</left>
@@ -217,7 +229,10 @@
 						<height>100</height>
 						<texturenofocus colordiffuse="grey_a"></texturenofocus>
 						<texturefocus colordiffuse="button_focus"></texturefocus>
+						<onclick>Dialog.Close(videoosd,true)</onclick>
 						<onclick>SubtitleDelay</onclick>
+						
+						
 						<visible>!VideoPlayer.Content(LiveTV) | VideoPlayer.HasSubtitles</visible>
 						<!-- If current playing addon is NOT Idan Plus -->
 						<visible>!String.Contains(Player.Folderpath, plugin.video.idanplus)</visible>
@@ -537,7 +552,7 @@
 				<control type="label">
 					<align>right</align>
 					<height>20</height>
-					<bottom>155</bottom>
+					<bottom>225</bottom>
 					<right>10</right>
 					<label>$VAR[__PlayerChoose]</label>
 					<visible>ControlGroup(202).HasFocus(730455)</visible>

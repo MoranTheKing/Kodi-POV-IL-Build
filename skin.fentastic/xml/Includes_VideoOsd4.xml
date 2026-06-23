@@ -7,7 +7,8 @@
 <height>850</height>
 <width>fullwidth</width>
 <bottom>0</bottom>
-<include>Animation_BottomSlide</include>
+<include>bottom2topslideanimation</include>
+<visible>$EXP[sliderdialogfalseortrue]</visible>
 <animation condition="$EXP[groupcontrol1]" effect="slide" start="0,0" end="0,-220" time="250">Conditional</animation>
 <!-- ####### BG -->
 <control type="image">
@@ -22,10 +23,12 @@
 <!-- ####### MAIN MENU -->
 <control type="grouplist" id="201">
 <height>200</height>
-<align>justify</align>
-<width>fullwidth</width>
+<align>center</align>
+<width>1895</width>
 <bottom>-50</bottom>
+<itemgap>-35</itemgap>
 <onup>204</onup>
+<centerleft>50%</centerleft>
 <onup>SetProperty(lastlist,50,home)</onup>
 <ondown>SetProperty(lastlist,60,home)</ondown>
 <ondown>202</ondown>
@@ -35,7 +38,7 @@
 <control type="button" id="29993">
 	<label>עצור</label>
 	<height>170</height>
-	<width>350</width>
+	<width>335</width>
 	<font>font36_title</font>
 	<align>center</align>
 	<aligny>center</aligny>
@@ -47,10 +50,10 @@
 	<onclick>PlayerControl(stop)</onclick>
 </control>
 <control type="togglebutton" id="29994">
-	<label>לחץ להשהייה</label>
-	<altlabel>מושהה</altlabel>
+	<label>השהה $VAR[pauseddbtype_osd]</label>
+	<altlabel>$VAR[pauseddbtype_osd] מושהה</altlabel>
 	<height>170</height>
-	<width>350</width>
+	<width>335</width>
 	<font>font36_title</font>
 	<align>center</align>
 	<aligny>center</aligny>
@@ -67,7 +70,7 @@
 <control type="button" id="29995">
 	<label>חפש כתובית</label>
 	<height>170</height>
-	<width>350</width>
+	<width>335</width>
 	<font>font36_title</font>
 	<align>center</align>
 	<textcolor>white</textcolor>
@@ -80,7 +83,7 @@
 <control type="button" id="29997">
 	<label>החלף מקור</label>
 	<height>170</height>
-	<width>350</width>
+	<width>335</width>
 	<font>font36_title</font>
 	<align>center</align>
 	<textcolor>white</textcolor>
@@ -90,11 +93,25 @@
 	<texturefocus border="5">masks/menumain.png</texturefocus>
 	<include>__ChooseSourceOsd__</include>
 </control>
-<control type="togglebutton" id="29996">
+<control type="button" id="29998">
+	<label>השהה כתובית</label>
+	<height>170</height>
+	<width>335</width>
+	<font>font36_title</font>
+	<align>center</align>
+	<textcolor>white</textcolor>
+	<focusedcolor>black</focusedcolor>
+	<shadowcolor>black</shadowcolor>
+	<texturenofocus colordiffuse="25FFFFFF" border="5">masks/menumain.png</texturenofocus>
+	<texturefocus border="5">masks/menumain.png</texturefocus>
+	<onclick>SubtitleDelay</onclick>
+	<visible>VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</visible>
+</control>
+<control type="togglebutton" id="29999">
 	<label>כתובית כבוייה</label>
 	<altlabel>כתובית מופעלת</altlabel>
 	<height>170</height>
-	<width>350</width>
+	<width>335</width>
 	<font>font36_title</font>
 	<align>center</align>
 	<aligny>center</aligny>
@@ -192,7 +209,8 @@
 <animation effect="fade" start="0" end="100" time="0">Hidden</animation>
 <orientation>horizontal</orientation>
 <visible>$EXP[groupcontrol5]</visible>
-<include>Animation_BottomSlide</include>
+<include>bottom2topslideanimation</include>
+<visible>$EXP[sliderdialogfalseortrue]</visible>
 <height>105</height>
 <bottom>150</bottom>
 <itemgap>-25</itemgap>
@@ -486,12 +504,13 @@
 <!-- ######## arrows --->
 <control type="group">
 <include>Animation_BottomSlide</include>
-<visible>$EXP[__Movies_OSD] | $EXP[__episode_OSD] + [Player.Paused] + Window.IsActive(videoosd) + !$EXP[__CheckIdanplus_OSD]</visible>
+<visible>$EXP[__Movies_OSD] | $EXP[__episode_OSD] + [Window.IsActive(videoosd) + !$EXP[__CheckIdanplus_OSD]]</visible>
 <visible>ControlGroup(201).HasFocus()</visible>
+<visible>Player.Paused</visible>
 <animation effect="fade" start="0" end="100" time="250">VisibleChange</animation>
 <width>500</width>
 <height>250</height>
-<top>180</top>
+<top>185</top>
 <right>10</right>
 <centerleft>50%</centerleft>
 	<control type="image">
@@ -556,16 +575,17 @@
 	<control type="group">
 	<height max="auto">auto</height>
 		<control type="image">
-		<top>80</top>
+		<top>110</top>
 		<height max="100">auto</height>
 			<texture>$VAR[PlayerClearLogoVar]</texture>
+			<aspectratio>keep</aspectratio>
 			<visible>!String.IsEmpty(Player.Art(clearlogo)</visible>
 		</control>
 	</control>	
 	<control type="group">
 	<height max="auto">auto</height>
 		<control type="image">
-		<top>80</top>
+		<top>100</top>
 		<height max="100">auto</height>
 			<aspectratio>keep</aspectratio>
 			<texture>$VAR[StudiologoShortCutPath]$VAR[Studiologotextureinfo]</texture>
@@ -573,6 +593,21 @@
 		</control>
 	</control>
 	</control>
+</control>
+
+<control type="group">
+	<visible>$EXP[sliderdialogfalseortrue]</visible>
+	<control type="image">
+		<top>-100</top>
+		<left>-40</left>
+		<width>120%</width>
+		<height>350</height>
+		<top>0</top>
+		<texture>frame/osdfade.png</texture>
+	</control>
+	<visible>$EXP[__PrettyplayerPlayerVisiblity]</visible>
+	<include>RightOsdTopBar</include>
+	<include>LeftOsdTopBar</include>
 </control>
 </include>
 		

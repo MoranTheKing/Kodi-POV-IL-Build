@@ -6,6 +6,7 @@
 <control type="group">
 	<left>10</left>
 	<right>10</right>
+	<visible>$EXP[sliderdialogfalseortrue]</visible>
 	<include>bottom2topslideanimation</include>
 		<control type="image">
 			<left>-40</left>
@@ -13,13 +14,6 @@
 			<height>700</height>
 			<bottom>0</bottom>
 			<texture flipy="true">frame/osdfade.png</texture>
-		</control>
-		<control type="image">
-			<left>-40</left>
-			<width>120%</width>
-			<height>200</height>
-			<top>0</top>
-			<texture>frame/osdfade.png</texture>
 		</control>
 		<control type="label">
 			<align>right</align>
@@ -82,6 +76,13 @@
 				<centerleft>50%</centerleft>
 				<texture>$INFO[ListItem.Property(resizedicon2)]</texture>
 			</control>
+			<control type="image">
+				<width>54</width>
+				<height>54</height>
+				<centertop>50%</centertop>
+				<centerleft>50%</centerleft>
+				<texture>$INFO[ListItem.Property(subfixresizing)]</texture>
+			</control>
 		</control>
 		</itemlayout>
 		<focusedlayout width="60" height="50">
@@ -135,6 +136,13 @@
 				<centertop>50%</centertop>
 				<centerleft>50%</centerleft>
 				<texture>$INFO[ListItem.Property(resizedicon2)]</texture>
+			</control>	
+			<control type="image">
+				<width>54</width>
+				<height>54</height>
+				<centertop>50%</centertop>
+				<centerleft>50%</centerleft>
+				<texture colordiffuse="$INFO[Skin.String(osdbuttonfocuscolor)]">$INFO[ListItem.Property(subfixresizing)]</texture>
 			</control>
 		</control>
 		</focusedlayout>
@@ -236,15 +244,9 @@
 			<onclick>ActivateWindow(1124)</onclick>
 		</item>
 		<item id="110">
-			<label>הקטן את משך ההשהיה של כתוביות (השתמש אם הכתוביות מוצגות מאוחר מדי)</label>
-			<property name="timer">https://www.iconsdb.com/icons/preview/white/arrow-142-xxl.png</property>
-			<onclick>SubtitleDelayPlus</onclick>
-			<visible>$EXP[__SubtitleCheckTrueOrFalse]</visible>
-		</item>
-		<item id="111">
-			<label>הגדלת משך ההשהיה של הכתוביות (השתמשו אם הכתוביות מוצגות מוקדם מדי)</label>
-			<property name="timer">https://www.iconsdb.com/icons/preview/white/arrow-204-xxl.png</property>
-			<onclick>SubtitleDelayMinus</onclick>
+			<label>השהה כתובית</label>
+			<property name="subfixresizing">osd/fullscreen/buttons/subs2.png</property>
+			<onclick>SubtitleDelay</onclick>
 			<visible>$EXP[__SubtitleCheckTrueOrFalse]</visible>
 		</item>
 		<item id="251">
@@ -368,16 +370,30 @@
 
 <include>_FixedCachedOSd</include>
 
-<include>RightOsdTopBar</include>
-
-<include>LeftOsdTopBar</include>
+<control type="group">
+	<visible>$EXP[sliderdialogfalseortrue]</visible>
+	<control type="image">
+		<top>-100</top>
+		<left>-40</left>
+		<width>120%</width>
+		<height>350</height>
+		<top>0</top>
+		<texture>frame/osdfade.png</texture>
+	</control>
+	<visible>$EXP[__AdvancedPlayerVisiblity] + !Player.Paused</visible>
+	<include>RightOsdTopBar</include>
+	<include>LeftOsdTopBar</include>
+</control>
 
 <include>PauseTendViewType</include>
 
-<include content="__OsdFixedFlags">
-<param name="visible">$EXP[OsdFlagsVisible]</param>
-<param name="animation">bottom2topslideanimation</param>
-</include>
+<control type="group">
+	<visible>$EXP[sliderdialogfalseortrue]</visible>
+	<include content="__OsdFixedFlags">
+	<param name="visible">$EXP[OsdFlagsVisible]</param>
+	<param name="animation">bottom2topslideanimation</param>
+	</include>
+</control>
 
 <include content="BasedOsdWidgets">
 	<param name="texture">$INFO[Container(60015).ListItem.icon]</param>
@@ -813,6 +829,7 @@
 		<right>10</right>
 		<height>60</height>
 		<bottom>80</bottom>
+		<visible>$EXP[sliderdialogfalseortrue]</visible>
 		<include>bottom2topslideanimation</include>
 		<control type="label">
 			<centerleft>50%</centerleft>
