@@ -188,26 +188,69 @@ class ModularUpdater:
         if monitor.waitForAbort(3):
             return
 
-        # Auto-confirm watcher: accept the native install/dependency Yes/No so
-        # the whole sequence is silent. Active ONLY for the provisioning window.
+        # Dialog watchdog -- keeps the whole provisioning sequence unattended.
+        # Active ONLY for the provisioning window, it handles two things:
+        #   1. The native install Yes/No (DialogConfirm, window 10100): confirm
+        #      it (control 11 = Yes/OK, fixed by Kodi core) so installs are silent.
+        #   2. ANY other modal an addon throws up on first run -- e.g. Otaku's
+        #      custom "ChangeLog & News" WindowXMLDialog, plus news/migration/
+        #      setup popups. These block the GUI's nested message loop, so the
+        #      NEXT addon's confirm can't appear and the queue stalls. We
+        #      force-close them by id (Dialog.Close, not Action(Back), because
+        #      addon windows can have broken Back handlers -- Otaku's onAction is
+        #      literally bugged). We have our own settings pre-seeded, so nothing
+        #      an addon asks on first run is wanted.
+        # Kodi's own install progress / busy dialogs are PROTECTED so we never
+        # cancel an in-flight download.
+        PROTECTED_DIALOGS = (
+            10101,  # DialogProgress
+            10151,  # DialogExtendedProgressBar (addon download progress)
+            10138,  # DialogBusy
+            10160,  # DialogBusyNoCancel
+        )
         stop = threading.Event()
+        stray = {'id': 0, 'hits': 0}
 
-        def _auto_confirm():
+        def _watchdog():
             while not stop.is_set():
                 try:
-                    if xbmc.getCondVisibility('Window.IsActive(10100)'):  # DialogYesNo
-                        xbmc.executebuiltin('SendClick(11)')  # 11 = Yes (fixed by Kodi core)
-                        # let the dialog close before re-checking, so we never
-                        # click control 11 of whatever window is underneath.
-                        if monitor.waitForAbort(1.0):
+                    dlg = xbmcgui.getCurrentWindowDialogId()
+                    if dlg == 10100:
+                        stray['id'] = 0
+                        xbmc.executebuiltin('SendClick(11)')  # Yes / OK
+                        # let it close before re-checking so we don't click
+                        # control 11 of whatever sits underneath.
+                        if monitor.waitForAbort(0.8):
                             return
                         continue
+                    if dlg > 10100 and dlg not in PROTECTED_DIALOGS:
+                        # an addon's own first-run popup -> force-close it so the
+                        # provisioning queue keeps moving. Try the targeted close
+                        # first; if the same dialog is still stuck after a few
+                        # passes (e.g. a Python window id Dialog.Close can't
+                        # address), escalate to closing all dialogs -- by then the
+                        # addon's own install progress is already gone.
+                        stray['hits'] = stray['hits'] + 1 if stray['id'] == dlg else 1
+                        stray['id'] = dlg
+                        if stray['hits'] >= 3:
+                            logging.log("[Provisioning] watchdog force-closing all dialogs (stuck {0})".format(dlg),
+                                        level=xbmc.LOGWARNING)
+                            xbmc.executebuiltin('Dialog.Close(all,true)')
+                        else:
+                            logging.log("[Provisioning] watchdog closing stray dialog {0}".format(dlg),
+                                        level=xbmc.LOGINFO)
+                            xbmc.executebuiltin('Dialog.Close({0},true)'.format(dlg))
+                        if monitor.waitForAbort(0.5):
+                            return
+                        continue
+                    stray['id'] = 0
+                    stray['hits'] = 0
                 except Exception:
                     pass
-                if monitor.waitForAbort(0.4):
+                if monitor.waitForAbort(0.3):
                     return
 
-        watcher = threading.Thread(target=_auto_confirm)
+        watcher = threading.Thread(target=_watchdog)
         watcher.daemon = True
         watcher.start()
 
