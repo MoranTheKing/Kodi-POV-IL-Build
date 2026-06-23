@@ -31,7 +31,17 @@ BUILDNAME_DEFAULT = 'Kodi POV IL - FENtastic'
 # we ship in dist/Kodi-POV-IL-FENtastic-test-*.zip.
 BUILDVERSION_DEFAULT = '0.1.45'
 EXCLUDES = [ADDON_ID]
-# Text File with build info in it. Please read https://github.com/a4k-openproject/plugin.program.openwizard/wiki/Installing-Builds
+# KODI-POV-IL - LEGACY MONOLITHIC build descriptor (OpenWizard-style build.txt).
+# SUPERSEDED by MANIFEST_URL (manifest.json) below. This file lives on the OLD
+# monolithic repo (MoranTheKing/Kodi-POV-IL) and is FROZEN -- it still advertises
+# the pre-migration wizard (0.1.30) and a monolithic build / "quickfix" zip.
+# Nothing extracts those zips any more: quick_update() is now a thin wrapper
+# around ModularUpdater and fresh install runs run_fresh_install(). build.txt is
+# only still read (read-only) by the legacy Builds menu and the defensive
+# build-version pinning in startup. RECOMMENDATION: migrate the Builds menu /
+# full-install button to manifest.json, then delete BUILDFILE + the build.txt
+# asset (and the monolithic build()/gui() paths in wizard.py) entirely.
+# Please read https://github.com/a4k-openproject/plugin.program.openwizard/wiki/Installing-Builds
 BUILDFILE = 'https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL/main/wizard/assets/build.txt'
 # How often you would like it to check for build updates in days
 # 0 being every startup of kodi
@@ -42,7 +52,12 @@ APKFILE = 'http://'
 #########################################################
 # KODI-RD-IL - BUILD SKIN SWITCH
 BUILD_SKIN_SWITCH_IMAGE_URL = 'https://github.com/MoranTheKing/Kodi-POV-IL/raw/main/wizard/assets/build_menu_screenshots/pov_il_splash.jpg'
-# KODI-RD-IL - AUTO QUICK UPDATES
+# KODI-POV-IL - DEPRECATED. Legacy text-file notification feed that drove the
+# old monolithic auto_quick_update() loop (now dead code in startup.py).
+# Replaced by the modular updater (MANIFEST_URL). Still referenced read-only by
+# a couple of legacy call-sites that pin the note id to suppress re-notifying
+# the user. RECOMMENDATION: delete together with auto_quick_update() and the
+# quick_update_note* settings.
 QUICK_UPDATE_NOTIFICATION_URL = 'https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL/main/wizard/assets/notification_files/quick_update.txt'
 # KODI-POV-IL - MODULAR UPDATER (Phase 2/3, manifest-based; replaces the
 # legacy text-file quick_update). Raw manifest.json produced by the new
