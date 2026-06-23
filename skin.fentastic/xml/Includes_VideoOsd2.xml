@@ -23,8 +23,16 @@
 	<control type="image">
 		<left>-40</left>
 		<width>120%</width>
-		<height>400</height>
-		<bottom>-115</bottom>
+		<height>550</height>
+		<bottom>-395</bottom>
+		<texture flipy="true">frame/osdfade.png</texture>
+		<animation condition="[Window.IsActive(1126) | Window.IsActive(1127)]" effect="zoom" start="100,100" end="100,200" time="0">Conditional</animation>
+	</control>
+	<control type="image">
+		<left>-40</left>
+		<width>120%</width>
+		<height>550</height>
+		<bottom>-395</bottom>
 		<texture flipy="true">frame/osdfade.png</texture>
 		<animation condition="[Window.IsActive(1126) | Window.IsActive(1127)]" effect="zoom" start="100,100" end="100,200" time="0">Conditional</animation>
 	</control>
@@ -202,19 +210,19 @@
 	<!-- ####### -->
 	
 	<!-- ####### -->
-	<include content="NetFlix_Base_Info">
-		<param name="orientation">vertical</param>
-		<param name="height">245</param>
-		<param name="width">750</param>
-		<param name="bottom">85</param>
-		<param name="iGap">-5</param>
-		<param name="groupalign">bottom</param>
-		<param name="visible">Control.HasFocus(52000) | Player.Paused</param>
-		<param name="label1">$VAR[osd_middle_info_var]</param>
-		<param name="label2">$VAR[osd_top_info_var]</param>
-		<param name="label3">$INFO[VideoPlayer.Plot]</param>
-		<param name="label3visible">!String.IsEmpty(VideoPlayer.Plot)</param>
-	</include>
+	<!-- <include content="NetFlix_Base_Info"> -->
+		<!-- <param name="orientation">vertical</param> -->
+		<!-- <param name="height">245</param> -->
+		<!-- <param name="width">750</param> -->
+		<!-- <param name="bottom">85</param> -->
+		<!-- <param name="iGap">-5</param> -->
+		<!-- <param name="groupalign">bottom</param> -->
+		<!-- <param name="visible">Control.HasFocus(52000) | Player.Paused</param> -->
+		<!-- <param name="label1">$VAR[osd_middle_info_var]</param> -->
+		<!-- <param name="label2">$VAR[osd_top_info_var]</param> -->
+		<!-- <param name="label3">$INFO[VideoPlayer.Plot]</param> -->
+		<!-- <param name="label3visible">!String.IsEmpty(VideoPlayer.Plot)</param> -->
+	<!-- </include> -->
 	
 	<!-- ####### progress-->
 	<control type="progress">
@@ -425,6 +433,7 @@
 	<content>
 	<item>
 		<label>הקודם</label>
+		<property name="id">previous</property>
 		<icon>osd/fullscreen/buttons/previous.png</icon>
 		<visible>!String.IsEmpty(VideoPlayer.offset(-1).Title) | Player.Chapter</visible>
 		<onclick>SkipPrevious</onclick>
@@ -455,8 +464,9 @@
 	</item>
 	<item>
 		<label>לחץ למידע על התוכנית</label>
+		<property name="id">info</property>
 		<icon>osd/fullscreen/buttons/information.png</icon>
-		<onclick>SetFocus(52000)</onclick>
+		<onclick>ActivateWindow(1125)</onclick>
 	</item>
 	<item>
 		<label>חפש כתובית</label>
@@ -499,6 +509,7 @@
 	</item>	
 	<item>
 		<label>הבא</label>
+		<property name="id">next</property>
 		<icon>osd/fullscreen/buttons/next.png</icon>
 		<onclick>SkipNext</onclick>
 		<visible>!String.IsEmpty(VideoPlayer.offset(1).Title) | Player.Chapter</visible>
@@ -801,6 +812,50 @@
 	<include>RightOsdTopBar</include>
 	<include>LeftOsdTopBar</include>
 </control>
+
+<include>__OsdInfo__</include> <!-- current played info -->
+
+
+<include content="__OsdInfo__"> <!-- next played info -->
+<param name="groupwidth">500</param>
+<param name="groupheight">280</param>
+<param name="bottom">220</param>
+<param name="visible">String.IsEqual(Container(201).ListItem.Property(id),next) + !String.IsEmpty(VideoPlayer.offset(1).Title)</param>
+<param name="texture">$VAR[texturenextimage]</param>
+<param name="grouplistleft">515</param>
+<param name="grouplistheight">$PARAM[groupheight]</param>
+<param name="grouplistwidth">1280</param>
+<param name="label1">$VAR[OsdTitleNextLabelVar]</param>
+<param name="label1visible">true</param>
+<param name="label2">$VAR[osd_middle_info_next_var]</param>
+<param name="label2visible">$EXP[__Movies_OSD] | $EXP[__episode_OSD] | [VideoPlayer.Content(LiveTv) + VideoPlayer.HasEpg]</param>
+<param name="label3">$VAR[__Osdprettyplayernextlabeltime]</param>
+<param name="label3visible">$EXP[__episode_OSD] | $EXP[__Movies_OSD]</param>
+<param name="label4">$INFO[VideoPlayer.offset(1).Plot]</param>
+<param name="label4visible">!String.IsEmpty(VideoPlayer.offset(1).Plot)</param>
+<param name="itemvisible">String.IsEqual(Container(201).ListItem.Property(id),next) + !String.IsEmpty(VideoPlayer.offset(1).Title)</param>
+</include>
+
+<include content="__OsdInfo__"> <!-- previous played info -->
+<param name="groupwidth">500</param>
+<param name="groupheight">280</param>
+<param name="bottom">220</param>
+<param name="visible">String.IsEqual(Container(201).ListItem.Property(id),previous) + !String.IsEmpty(VideoPlayer.offset(-1).Title)</param>
+<param name="texture">$VAR[texturepreviousimage]</param>
+<param name="grouplistleft">515</param>
+<param name="grouplistheight">$PARAM[groupheight]</param>
+<param name="grouplistwidth">1280</param>
+<param name="label1">$VAR[OsdTitlePreviousLabelVar]</param>
+<param name="label1visible">true</param>
+<param name="label2">$VAR[osd_middle_info_previous_var]</param>
+<param name="label2visible">$EXP[__Movies_OSD] | $EXP[__episode_OSD] | [VideoPlayer.Content(LiveTv) + VideoPlayer.HasEpg]</param>
+<param name="label3">$VAR[__Osdprettyplayerpreviouslabeltime]</param>
+<param name="label3visible">$EXP[__episode_OSD] | $EXP[__Movies_OSD]</param>
+<param name="label4">$INFO[VideoPlayer.offset(-1).Plot]</param>
+<param name="label4visible">!String.IsEmpty(VideoPlayer.offset(-1).Plot)</param>
+<param name="itemvisible">String.IsEqual(Container(201).ListItem.Property(id),previous) + !String.IsEmpty(VideoPlayer.offset(-1).Title)</param>
+<param name="label3visible">$EXP[__episode_OSD]</param>
+</include>
 
 </include>
 </includes>

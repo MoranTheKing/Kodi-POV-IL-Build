@@ -459,7 +459,7 @@
 		<label2>$INFO[Skin.String(osdprettychangecolor)]</label2>
 		<label>החלף צבע</label>
 		<colorbox>$INFO[Skin.String(osdprettychangecolor)]</colorbox>
-		<onclick>Skin.SetColor(osdprettychangecolor, FF9F3434)</onclick>
+		<onclick>Skin.SetColor(osdprettychangecolor, FF1A4876)</onclick>
 	</control>
 	<control type="colorbutton" id="5001">
 	<!-- player background color -->
@@ -467,7 +467,7 @@
 		<label2>$INFO[Skin.String(osdprettychangecolortext)]</label2>
 		<label>החלף צבע טקסט במידע</label>
 		<colorbox>$INFO[Skin.String(osdprettychangecolortext)]</colorbox>
-		<onclick>Skin.SetColor(osdprettychangecolortext, FF9F3434)</onclick>
+		<onclick>Skin.SetColor(osdprettychangecolortext, FF1974D2)</onclick>
 	</control>
 	</include>
 	

@@ -123,6 +123,7 @@
 <param name="groupwidth">600</param>
 <param name="id">200323</param>
 <param name="plotbottom">20</param>
+<param name="falseplottop">100</param>
 <definition>
 <itemlayout width="$PARAM[layoutwidth]" height="$PARAM[layoutheight]">
 <control type="group">
@@ -188,6 +189,7 @@
 <width>$PARAM[groupwidth]</width>
 <left>$PARAM[infoleft]</left>
 <centerleft>50%</centerleft>
+<visible>!String.IsEmpty(ListItem.Plot)</visible>
 <control type="label">
 	<right>40</right>
 	<top>10</top>
@@ -216,6 +218,35 @@
 	<align>center</align>
 	<label>$INFO[ListItem.Plot]</label>
 	<autoscroll fade="3500" time="3500" repeat="3500">control.hasfocus($PARAM[id])</autoscroll>
+</control>
+</control>
+<control type="group">
+<visible>control.hasfocus($PARAM[id])</visible>
+<width>$PARAM[groupwidth]</width>
+<left>$PARAM[infoleft]</left>
+<centerleft>50%</centerleft>
+<top>$PARAM[falseplottop]</top>
+<visible>String.IsEmpty(ListItem.Plot)</visible>
+<control type="label">
+	<right>40</right>
+	<top>10</top>
+	<align>center</align>
+	<font>font45_title</font>
+	<label>$INFO[ListItem.TvShowTitle]</label>
+</control>
+<control type="label">
+	<right>40</right>
+	<top>70</top>
+	<align>center</align>
+	<textcolor>deeppink</textcolor>
+	<label>$INFO[ListItem.Genre]</label>
+</control>
+<control type="label">
+	<right>40</right>
+	<top>110</top>
+	<align>center</align>
+	<textcolor>yellow</textcolor>
+	<label>עונה [COLOR yellow]$INFO[ListItem.Season,(,)][/COLOR] פרק [COLOR yellow]$INFO[ListItem.Episode,(,)][/COLOR]</label>
 </control>
 </control>
 </focusedlayout>

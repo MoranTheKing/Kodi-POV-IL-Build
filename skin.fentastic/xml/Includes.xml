@@ -2884,13 +2884,11 @@
 	<visible>$EXP[sliderdialogfalseortrue]</visible>
 	<animation effect="fade" start="0" end="100" time="300">VisibleChange</animation>
 	<animation effect="slide" start="0,0" end="0,-80" time="300" condition="Player.Paused + Integer.IsGreaterOrEqual(Skin.TimerElapsedSecs(1109_topbaroverlay),5)">Conditional</animation>
-	<!-- <control type="image"> -->
-	<!-- <left>0</left> -->
-	<!-- <top>0</top> -->
-	<!-- <width>100%</width> -->
-	<!-- <height>55</height> -->
-	<!-- <texture colordiffuse="D0FFFFFF" border="0,55,0,0">frame/osdfade.png</texture> -->
-	<!-- </control> -->
+	<control type="image">
+	<height>72</height>
+	<texture>colors/white.png</texture>
+	<colordiffuse>black</colordiffuse>
+	</control>
 	<control type="label">
 		<left>25</left>
 		<top>6</top>
@@ -3120,10 +3118,106 @@
 <param name="groupwidth">500</param>
 <param name="plotbottom">25</param>
 <param name="infoleft">20</param>
+<param name="falseplottop">70</param>
 <param name="id">500323</param>
 </include>
 <content target="videos">$VAR[build_Episodes_Url_OSD]</content>
 </control>
+</include>
+
+
+<include name="__OsdInfo__">
+<param name="groupwidth">500</param>
+<param name="groupheight">280</param>
+<param name="bottom">220</param>
+<param name="visible">String.IsEqual(Container(201).ListItem.Property(id),info)</param>
+<param name="texture">$VAR[texturecurrentimage]</param>
+<param name="grouplistleft">515</param>
+<param name="grouplistheight">250</param>
+<param name="grouplistwidth">1280</param>
+<param name="label1">$VAR[OsdTitleLabelVar]</param>
+<param name="label1visible">true</param>
+<param name="label2">$VAR[osd_middle_info_var]</param>
+<param name="label2visible">$EXP[__Movies_OSD] | $EXP[__episode_OSD] | [VideoPlayer.Content(LiveTv) + VideoPlayer.HasEpg]</param>
+<param name="label3">$VAR[__Osdprettyplayerlabeltime]</param>
+<param name="label3visible">$EXP[__episode_OSD] | $EXP[__Movies_OSD]</param>
+<param name="label4">$INFO[VideoPlayer.Plot]</param>
+<param name="label4visible">!String.IsEmpty(VideoPlayer.Plot)</param>
+<param name="itemvisible">String.IsEqual(Container(201).ListItem.Property(id),info)</param>
+<definition>
+<control type="group">
+<!-- <visible>$PARAM[itemvisible]</visible> -->
+<width>$PARAM[groupwidth]</width>
+<height>$PARAM[groupheight]</height>
+<bottom>$PARAM[bottom]</bottom>
+<control type="image">
+<left>-50</left>
+<top>-40</top>
+<height>370</height>
+<width>2200</width>
+<visible>$PARAM[visible]</visible>
+<include>right2leftslideanimation</include>
+<texture>masks/list_shadow.png</texture>
+</control>
+<control type="group">
+<include>left2rightslideanimation</include>
+<visible>$PARAM[visible]</visible>
+<include content="BasedResizedWidgetFrame">
+	<include>BasedResizedWidgetImage</include>
+</include>
+<include name="BasedResizedWidgetFrameBox">
+	<include content="BasedResizedWidgetImage">
+		<param name="resize">0</param>
+		<param name="bottom">0</param>
+	</include>
+</include>
+<include content="BasedResizedWidgetTexture">
+	<include content="BasedResizedWidgetImage">
+		<param name="resize">10</param>
+		<param name="bottom">10</param>
+	</include>
+	<param name="texture">$PARAM[texture]</param>
+</include>
+</control>
+<control type="grouplist">
+<include>right2leftslideanimation</include>
+<visible>$PARAM[visible]</visible>
+<align>bottom</align>
+<left>$PARAM[grouplistleft]</left>
+<bottom>5</bottom>
+<height>$PARAM[grouplistheight]</height>
+<width>$PARAM[grouplistwidth]</width>
+<orientation>vertical</orientation>
+<control type="label">
+<height max="54">auto</height>
+<align>left</align>
+<font>font45_title</font>
+<label>$PARAM[label1]</label>
+<visible>$PARAM[label1visible]</visible>
+</control>
+<control type="label">
+<height max="40">auto</height>
+<align>left</align>
+<font>font32_title</font>
+<label>$PARAM[label2]</label>
+<visible>$PARAM[label2visible]</visible>
+</control>
+<control type="label">
+<height max="40">auto</height>
+<align>left</align>
+<font>font32_title</font>
+<label>$PARAM[label3]</label>
+<visible>$PARAM[label3visible]</visible>
+</control>
+<control type="textbox">
+<height max="195">auto</height>
+<align>left</align>
+<label>$PARAM[label4]</label>
+<visible>$PARAM[label4visible]</visible>
+</control>
+</control>
+</control>
+</definition>
 </include>
 
 </includes>
