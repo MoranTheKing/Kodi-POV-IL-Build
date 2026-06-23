@@ -744,7 +744,14 @@
 	<!-- <include>bottom2topslideanimation</include> -->
 	<animation effect="fade" start="0" end="100" time="500" delay="500">Visible</animation>
 	<animation effect="fade" start="100" end="0" time="500">Hidden</animation>
-	<include>OsdNetflixEpisodesInSeasonsLayout</include>
+	<include content="OsdNetflixEpisodesInSeasonsLayout">
+	<param name="layoutwidth">640</param>
+	<param name="layoutheight">350</param>
+	<param name="groupwidth">600</param>
+	<param name="id">200323</param>
+	<param name="plotbottom">20</param>
+	<param name="infoleft">20</param>
+	</include>
 	<content target="videos">$VAR[build_Episodes_Url_OSD]</content>
 </control>
 

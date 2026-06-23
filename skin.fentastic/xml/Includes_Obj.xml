@@ -4,20 +4,47 @@
 <include name="BasedResizedWidgetImage">
 <param name="resize">5</param>
 <param name="bottom">5</param>
+<param name="centerleft">$PARAM[centerleft]</param>
+<param name="centertop">$PARAM[centertop]</param>
 <definition>
-<left>$PARAM[resize]</left>
-<right>$PARAM[resize]</right>
-<top>$PARAM[resize]</top>
-<bottom>$PARAM[bottom]</bottom>
+	<centertop>$PARAM[centertop]</centertop>
+	<centerleft>$PARAM[centerleft]</centerleft>
+	<left>$PARAM[resize]</left>
+	<right>$PARAM[resize]</right>
+	<top>$PARAM[resize]</top>
+	<bottom>$PARAM[bottom]</bottom>
+</definition>
+</include>
+
+<include name="BasedResizedLabelOBJ">
+<param name="height">25</param>
+<param name="align">center</param>
+<param name="aligny">center</param>
+<param name="font">$PARAM[font]</param>
+<param name="textcolor">$PARAM[textcolor]</param>
+<param name="centerleft">$PARAM[centerleft]</param>
+<param name="centertop">$PARAM[centertop]</param>
+<definition>
+	<centertop>$PARAM[centertop]</centertop>
+	<centerleft>$PARAM[centerleft]</centerleft>
+	<height>$PARAM[height]</height>
+	<align>$PARAM[align]</align>
+	<aligny>$PARAM[aligny]</aligny>
+	<font>$PARAM[font]</font>
+	<textcolor>$PARAM[textcolor]</textcolor>
 </definition>
 </include>
 
 <include name="BasedResizedWidgetFrame">
+<param name="texture">icons/box21.png</param>
+<param name="colordiffuse">FF181818</param>
+<definition>
 <control type="image">
 	<nested />
-	<texture border="16">icons/box21.png</texture>
-	<colordiffuse>FF181818</colordiffuse>
+	<texture border="16">$PARAM[texture]</texture>
+	<colordiffuse>$PARAM[colordiffuse]</colordiffuse>
 </control>
+</definition>
 </include>
 
 <include name="BasedResizedWidgetFrameBox">
@@ -37,5 +64,15 @@
 	<texture>$PARAM[texture]</texture>
 </control>
 </include>
-	
+
+<include name="BasedLabelWidgetOBJ">
+<param name="label">$VAR[osd_top_info_var]</param>
+<definition>
+<control type="label">
+<nested />
+	<label>$PARAM[label]</label>
+</control>
+</definition>
+</include>
+
 </includes>

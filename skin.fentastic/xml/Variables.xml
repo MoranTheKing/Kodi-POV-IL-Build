@@ -183,7 +183,21 @@
 
 	<variable name="__Osdprettyplayerlabeltime">
 	<value condition="$EXP[__episode_OSD] | $EXP[__Movies_OSD]">[B]נשאר עד סוף הצפיה: [COLOR $INFO[Skin.String(osdprettychangecolortext)]]$INFO[Player.TimeRemaining][/COLOR][/B] [B]מסתיים: [COLOR $INFO[Skin.String(osdprettychangecolortext)]]$INFO[Player.FinishTime][/COLOR][/B] [B]:אחוזי צפיה עד כה [COLOR $INFO[Skin.String(osdprettychangecolortext)]]$INFO[Player.Progress]% אחוז[/COLOR][/B] $VAR[__Osdprettyplayerlabelepisode]</value>
+	</variable>
+	
+	<variable name="__osdprettylabelpercent">
+	<value>$INFO[Player.TimeRemaining(hh:mm:ss)] • $INFO[Player.FinishTime(hh:mm:ss)] • $INFO[Player.Progress]%</value>
+	</variable>
+	
+	<variable name="StudiologoShortCutPath">
+	<value>kodirdil/studiologos/</value>
 	</variable>	
+	
+	<variable name="Studiologotextureinfo">
+	<value>$INFO[VideoPlayer.Studio].png</value>
+	</variable>
+	
+	
 	
 	<variable name="__Osdprettyplayerlabelepisode">
 	<value condition="$EXP[__episode_OSD]">[B]עונה: [COLOR $INFO[Skin.String(osdprettychangecolortext)]]$INFO[VideoPlayer.Season,(,)][/COLOR][/B] [B]פרק: [COLOR $INFO[Skin.String(osdprettychangecolortext)]]$INFO[VideoPlayer.Episode,(,)][/COLOR][/B]</value>
@@ -198,7 +212,7 @@
 	
 	<variable name="SetDefaultColorpretttyosd">
 	<value condition="!String.IsEmpty(Skin.String(osdprettychangecolor))">$INFO[Skin.String(osdprettychangecolor)]</value>
-	<value>FFE74F00</value>
+	<value>FF9F3434</value>
 	</variable>
 	
 	<variable name="LeftCornerFixTitle_osd">
