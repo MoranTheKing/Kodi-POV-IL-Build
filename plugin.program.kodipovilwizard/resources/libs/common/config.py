@@ -52,7 +52,7 @@ class Config:
         self.BUILDNAME_DEFAULT = uservar.BUILDNAME_DEFAULT
         self.BUILDVERSION_DEFAULT = uservar.BUILDVERSION_DEFAULT
         self.EXCLUDES = uservar.EXCLUDES
-        self.BUILDFILE = uservar.BUILDFILE
+        # KODI-POV-IL - BUILDFILE (build.txt) removed; superseded by MANIFEST_URL.
         self.UPDATECHECK = uservar.UPDATECHECK
         self.APKFILE = uservar.APKFILE
         ###################################

@@ -122,12 +122,18 @@ class ModularUpdater:
         # a new skin tweak / extra repo source), so we run the update pass when
         # EITHER an addon moved OR the config moved.
         config_pending = self._config_pending(manifest)
-        if not update_queue and not config_pending:
+        fresh = getattr(self, 'fresh', False)
+        if not update_queue and not config_pending and not fresh:
             logging.log("[ModularUpdater] All modules and config are up to date.", level=xbmc.LOGINFO)
             if not self.background:
                 self.dialog.ok(CONFIG.ADDONTITLE, "כל ההרחבות מעודכנות לגרסה האחרונה.")
             return True
 
+        # Fresh install ALWAYS falls through to execute_updates even with an
+        # empty queue, so provisioning + the .provisioned marker still run on a
+        # device that already happens to have every addon (e.g. resuming an
+        # interrupted setup whose addons all landed but whose config / marker
+        # never did).
         return self.execute_updates(update_queue)
 
     def run_fresh_install(self):
@@ -142,6 +148,96 @@ class ModularUpdater:
         self.install_missing = True
         self.fresh = True
         return self.run_update_check()
+
+    # ---- Provisioning state marker -------------------------------------------
+    # A persistent file written to userdata ONLY when a fresh install has run all
+    # the way to the end (every addon attempted + the config.zip applied).
+    # startup.py uses it to tell a COMPLETED setup apart from one the user
+    # force-closed mid-provisioning, so an interrupted setup is resumed instead
+    # of being left half-built forever.
+    @staticmethod
+    def provision_marker_path():
+        return os.path.join(CONFIG.USERDATA, 'kodipovil.provisioned')
+
+    @classmethod
+    def is_provisioned(cls):
+        try:
+            return os.path.exists(cls.provision_marker_path())
+        except Exception:
+            return False
+
+    @classmethod
+    def mark_provisioned(cls, version=''):
+        try:
+            with open(cls.provision_marker_path(), 'w') as fh:
+                fh.write(str(version or ''))
+            logging.log("[Provisioning] wrote .provisioned marker (v{0})".format(version),
+                        level=xbmc.LOGINFO)
+        except Exception as e:
+            logging.log("[Provisioning] failed writing .provisioned marker: {0}".format(e),
+                        level=xbmc.LOGERROR)
+
+    @classmethod
+    def clear_provisioned(cls):
+        try:
+            os.remove(cls.provision_marker_path())
+        except Exception:
+            pass
+
+    def heal_missing_addons(self):
+        """Strict OTA enforcement (beyond version bumps).
+
+        Physically verify with System.HasAddon that every REQUIRED addon is
+        actually installed, and silently (re)install any that are missing -- e.g.
+        a content addon that timed out during a previous provisioning pass
+        (YouTube), or a manifest addon that never landed. On-demand skins
+        (type 'skin') are intentionally EXCLUDED: by design they are installed
+        only via Switch Skin, never force-installed here.
+
+        Reuses self._manifest if run_update_check already fetched it this run.
+        """
+        manifest = getattr(self, '_manifest', None)
+        if not manifest:
+            response = tools.open_url(self.manifest_url)
+            if not response:
+                return
+            try:
+                manifest = json.loads(response.text)
+                self._manifest = manifest
+            except Exception as e:
+                logging.log("[OTA-Heal] manifest parse failed: {0}".format(e), level=xbmc.LOGERROR)
+                return
+        addons = manifest.get('addons', {})
+
+        # 1. Manifest addons (our private addons + the third-party repos),
+        #    excluding on-demand skins. Missing ones are downloaded + extracted
+        #    via the normal modular pipeline (sha-verified, DB-registered).
+        missing = []
+        for addon_id, mod in addons.items():
+            if mod.get('type') == 'skin':
+                continue
+            if not xbmc.getCondVisibility('System.HasAddon({0})'.format(addon_id)):
+                missing.append(mod)
+        if missing:
+            logging.log("[OTA-Heal] Missing manifest addons -> installing: {0}".format(
+                [m.get('id') for m in missing]), level=xbmc.LOGWARNING)
+            try:
+                self.execute_updates(missing)
+            except Exception as e:
+                logging.log("[OTA-Heal] manifest heal failed: {0}".format(e), level=xbmc.LOGERROR)
+
+        # 2. Third-party CONTENT addons (provisioned via native InstallAddon).
+        #    post_install_provisioning is idempotent -- present addons are
+        #    skipped -- so this re-attempts ONLY what is genuinely missing.
+        missing_provision = [a for a in self.PROVISION_IDS
+                             if not xbmc.getCondVisibility('System.HasAddon({0})'.format(a))]
+        if missing_provision:
+            logging.log("[OTA-Heal] Missing content addons -> provisioning: {0}".format(
+                missing_provision), level=xbmc.LOGWARNING)
+            try:
+                self.post_install_provisioning()
+            except Exception as e:
+                logging.log("[OTA-Heal] provisioning heal failed: {0}".format(e), level=xbmc.LOGERROR)
 
     # Hybrid provisioning: third-party content addons are NOT vendored in our
     # manifest. The manifest ships only our private addons + the third-party
@@ -500,6 +596,20 @@ class ModularUpdater:
                 self.post_install_provisioning()
             except Exception as e:
                 logging.log("[ModularUpdater] provisioning failed: {0}".format(e), level=xbmc.LOGERROR)
+
+            # ABSOLUTE END of the fresh-install sequence: every addon has been
+            # attempted and the config.zip applied. Stamp the persistent
+            # .provisioned marker -- but ONLY if Kodi is not aborting. If the
+            # user force-closed mid-provisioning, abortRequested() is True and we
+            # must leave the marker ABSENT so startup resumes the setup next
+            # launch. Any single addon that timed out (still missing) is caught
+            # separately by the startup HasAddon OTA enforcement.
+            if not xbmc.Monitor().abortRequested():
+                cfg = (getattr(self, '_manifest', None) or {}).get('config') or {}
+                self.mark_provisioned(cfg.get('config_version') or CONFIG.BUILDVERSION_DEFAULT)
+            else:
+                logging.log("[Provisioning] abort detected -- NOT writing .provisioned "
+                            "marker (setup will resume next launch)", level=xbmc.LOGWARNING)
 
         # 5. Handle Reload/Restart
         if fresh:

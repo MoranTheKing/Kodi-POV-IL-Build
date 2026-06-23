@@ -33,25 +33,10 @@ class MainMenu:
         errors = int(logging.error_checking(count=True))
         errorsfound = str(errors) + ' Error(s) Found' if errors > 0 else 'None Found'
 
-        if CONFIG.AUTOUPDATE == 'Yes':
-            response = tools.open_url(CONFIG.BUILDFILE, check=True)
-
-            if response:
-                ver = check.check_wizard('version')
-                if ver:
-                    if ver > CONFIG.ADDON_VERSION:
-                        directory.add_file(
-                            '{0} [v{1}] [COLOR red][B][UPDATE v{2}][/B][/COLOR]'.format(CONFIG.ADDONTITLE,
-                                                                                        CONFIG.ADDON_VERSION, ver),
-                            {'mode': 'wizardupdate'}, themeit=CONFIG.THEME2)
-                    else:
-                        directory.add_file('{0} [v{1}]'.format(CONFIG.ADDONTITLE, CONFIG.ADDON_VERSION),
-                                           themeit=CONFIG.THEME2)
-            else:
-                directory.add_file('{0} [v{1}]'.format(CONFIG.ADDONTITLE, CONFIG.ADDON_VERSION),
-                                   themeit=CONFIG.THEME2)
-        else:
-            directory.add_file('{0} [v{1}]'.format(CONFIG.ADDONTITLE, CONFIG.ADDON_VERSION), themeit=CONFIG.THEME2)
+        # KODI-POV-IL - the wizard self-updates through ModularUpdater
+        # (manifest.json) now, not the retired build.txt, so just show the
+        # current version (the startup OTA pass bumps it when a new one ships).
+        directory.add_file('{0} [v{1}]'.format(CONFIG.ADDONTITLE, CONFIG.ADDON_VERSION), themeit=CONFIG.THEME2)
         if len(CONFIG.BUILDNAME) > 0:
             version = check.check_build(CONFIG.BUILDNAME, 'version')
             build = '{0} (v{1})'.format(CONFIG.BUILDNAME, CONFIG.BUILDVERSION)
