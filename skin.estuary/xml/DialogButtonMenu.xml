@@ -29,7 +29,7 @@
 						<label>[B][COLOR blue]$LOCALIZE[13012][/COLOR][/B]</label>
 						<!-- Original - <onclick>Quit()</onclick> -->
 						<!-- Force Close Kodi Script:  -->
-						<onclick>RunScript(&quot;plugin.close.kodi&quot;)</onclick>
+						<onclick>RunPlugin(plugin://plugin.program.kodipovilwizard/?action=force_close)</onclick>
 						<visible>System.ShowExitButton</visible>
 					</item>
 					<item>
