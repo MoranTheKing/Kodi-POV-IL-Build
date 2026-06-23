@@ -3,7 +3,7 @@
   "name": "Kodi POV IL Build",
   "repo": "MoranTheKing/Kodi-POV-IL-Build",
   "release_tag": "addons-latest",
-  "generated": "2026-06-23T17:02:37Z",
+  "generated": "2026-06-23T19:04:26Z",
   "manifest_url": "https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL-Build/main/manifest.json",
   "config": {
     "config_version": "1.1.0",
@@ -32,9 +32,9 @@
       "type": "plugin",
       "filename": "plugin.program.kodipovilwizard-0.1.35.zip",
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.kodipovilwizard-0.1.35.zip",
-      "size": 4554082,
-      "sha256": "3b7ca5de3746b1ced8edd1395be8c032b45350a6903b76cb8e77ab19d9c7a5db",
-      "updated": "2026-06-23T17:02:37Z"
+      "size": 4554083,
+      "sha256": "69a7ba21904221f779c3fe9ab7b2533b35a958804bda4c9ad51a1cc3a7d10320",
+      "updated": "2026-06-23T19:04:26Z"
     },
     "plugin.program.orderfavourites-hebrew": {
       "id": "plugin.program.orderfavourites-hebrew",
@@ -127,13 +127,13 @@
     "service.subtitles.kodipovilai": {
       "id": "service.subtitles.kodipovilai",
       "name": "MoranSubs",
-      "version": "0.2.243",
+      "version": "0.2.262",
       "type": "subtitle",
-      "filename": "service.subtitles.kodipovilai-0.2.243.zip",
-      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/service.subtitles.kodipovilai-0.2.243.zip",
-      "size": 6914746,
-      "sha256": "3e94c65bd1cab1d8d8096fc9a9dcf8cbc3a39aeee25f58ac0f7a747697a01b10",
-      "updated": "2026-06-21T19:06:04Z"
+      "filename": "service.subtitles.kodipovilai-0.2.262.zip",
+      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/service.subtitles.kodipovilai-0.2.262.zip",
+      "size": null,
+      "sha256": null,
+      "updated": "2026-06-23T19:04:26Z"
     },
     "skin.estuary": {
       "id": "skin.estuary",
