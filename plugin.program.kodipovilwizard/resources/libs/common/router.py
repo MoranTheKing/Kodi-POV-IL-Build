@@ -59,6 +59,7 @@ class Router:
         # menu) -- so a no-mode force_close URL never pops the wizard UI.
         if action == 'force_close':
             logging.log("[ForceClose] Wizard-native force close requested", level=xbmc.LOGINFO)
+            from resources.libs.common import tools
             tools.kill_kodi(over=True)
             return
         #####################################################
