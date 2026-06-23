@@ -192,147 +192,56 @@ class Wizard:
                                '[COLOR {0}]התקנת בילד: בוטלה![/COLOR]'.format(CONFIG.COLOR2))
 
     def gui(self, name, over=False):
-        if name == CONFIG.get_setting('buildname'):
-            if over:
-                yes_pressed = 1
-            else:
-                yes_pressed = self.dialog.yesno(CONFIG.ADDONTITLE,
-                                   '[COLOR {0}]האם ברצונך לבצע עדכון מהיר עבור:'.format(CONFIG.COLOR2) + '\n' + '[COLOR {0}]{1}[/COLOR]?[/COLOR]'.format(CONFIG.COLOR1, name),
-                                   nolabel='[B][COLOR red]ביטול[/COLOR][/B]',
-                                   yeslabel='[B][COLOR springgreen]עדכון מהיר[/COLOR][/B]')
-        else:
-            yes_pressed = self.dialog.yesno("{0} - [COLOR red]!שים לב[/COLOR]".format(CONFIG.ADDONTITLE),
-                               "[COLOR {0}][COLOR {1}]{2}[/COLOR] - הבילד עדיין לא מותקן".format(CONFIG.COLOR2, CONFIG.COLOR1, name) + '\n' + "יש קודם כל לבצע התקנה מלאה של הבילד![/COLOR]",
-                               nolabel='[B][COLOR red]ביטול[/COLOR][/B]',
-                               yeslabel='[B][COLOR springgreen]המשך בכל זאת[/COLOR][/B]')
-        if yes_pressed:
-            guizip = check.check_build(name, 'gui')
-            zipname = name.replace('\\', '').replace('/', '').replace(':', '').replace('*', '').replace('?', '').replace('"', '').replace('<', '').replace('>', '').replace('|', '')
+        # KODI-POV-IL - DEPRECATED legacy "GuiFix" quickfix installer.
+        # This was a twin of the old quick_update(): it downloaded the
+        # monolithic `gui` zip from build.txt and extracted it over CONFIG.HOME.
+        # That path is broken/dangerous under the modular architecture (stale
+        # monolithic zip overwriting the live modular build). Its menu item is
+        # already commented out, but router.py still routes action=gui here, so
+        # we redirect it to the safe manifest-based update instead of ever
+        # touching the monolithic zip. RECOMMENDATION: delete gui() and its
+        # router branch once no plugin URLs reference action=gui.
+        return self.quick_update(name, auto_quick_update="false")
 
-            response = tools.open_url(guizip, check=True)
-            if not response:
-                logging.log_notify(CONFIG.ADDONTITLE,
-                                   '[COLOR {0}]לא קיים עדכון![/COLOR]'.format(CONFIG.COLOR2))
-                return
-
-            self.dialogProgress.create(CONFIG.ADDONTITLE, '[COLOR {0}][B]Downloading GuiFix:[/B][/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR2, CONFIG.COLOR1, name))
-
-            lib = os.path.join(CONFIG.PACKAGES, '{0}_guisettings.zip'.format(zipname))
-            
-            try:
-                os.remove(lib)
-            except:
-                pass
-
-            Downloader().download(guizip, lib)
-            xbmc.sleep(500)
-            
-            if os.path.getsize(lib) == 0:
-                try:
-                    os.remove(lib)
-                except:
-                    pass
-                    
-                return
-            
-            title = '[COLOR {0}][B]Installing:[/B][/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR2, CONFIG.COLOR1, name)
-            self.dialogProgress.update(0, title + '\n' + 'Please Wait')
-            extract.all(lib, CONFIG.HOME, title=title)
-            self.dialogProgress.close()
-            skin.skin_to_default('Build Install')
-            skin.look_and_feel_data('save')
-            installed = db.grab_addons(lib)
-            db.addon_database(installed, 1, True)
-
-            self.dialog.ok(CONFIG.ADDONTITLE, "[COLOR {0}]עדכון מהיר הסתיים. לחץ אישור/OK כדי לסגור את קודי. לאחר מכן, הפעל אותו מחדש.[/COLOR]".format(CONFIG.COLOR2))
-            tools.kill_kodi(over=True)
-        else:
-            logging.log_notify(CONFIG.ADDONTITLE,
-                               '[COLOR {0}]עדכון מהיר: בוטל![/COLOR]'.format(CONFIG.COLOR2))
-                               
     #####################################################
     # KODI-RD-IL
     def quick_update(self, name, auto_quick_update="false"):
+        # KODI-POV-IL - "Quick Update" (עדכון מהיר) -- REWIRED for the modular
+        # (manifest.json) architecture.
+        #
+        # LEGACY (removed): this used to read the `gui` field of the old
+        # monolithic build.txt, download a single "quickfix" build zip
+        # (Kodi-POV-IL-FENtastic-quickfix-*.zip) and extract it straight over
+        # CONFIG.HOME with ignore=True. Under the hybrid modular build that zip
+        # is BROKEN and DANGEROUS: it is frozen on the old repo, still carries
+        # the pre-migration monolithic wizard (0.1.30), and extracting it would
+        # OVERWRITE the live modular wizard + addons and undo the whole
+        # migration on the user's device.
+        #
+        # NOW: "Quick Update" is a thin, safe wrapper around ModularUpdater. It
+        # diffs the live manifest.json and updates ONLY the addons whose version
+        # actually moved -- no monolithic zip, no full reinstall, no wipe.
+        # ModularUpdater.execute_updates handles any required restart / skin
+        # reload itself, so we deliberately do NOT force-close Kodi here.
+        auto = True if auto_quick_update == "true" else False
 
-        auto_quick_update = True if auto_quick_update=="true" else False
-        
-        if name == CONFIG.get_setting('buildname'):
-            if auto_quick_update:
-                yes_pressed = 1
-            else:
-                yes_pressed = self.dialog.yesno(CONFIG.ADDONTITLE,
-                                   '[COLOR {0}]האם ברצונך לבצע עדכון מהיר עבור:'.format(CONFIG.COLOR2) + '\n' + '[COLOR {0}]{1}[/COLOR]?[/COLOR]'.format(CONFIG.COLOR1, name),
-                                   nolabel='[B][COLOR red]ביטול[/COLOR][/B]',
-                                   yeslabel='[B][COLOR springgreen]עדכון מהיר[/COLOR][/B]')
-        else:
-            yes_pressed = self.dialog.yesno("{0} - [COLOR red]!שים לב[/COLOR]".format(CONFIG.ADDONTITLE),
-                               "[COLOR {0}][COLOR {1}]{2}[/COLOR] - הבילד עדיין לא מותקן".format(CONFIG.COLOR2, CONFIG.COLOR1, name) + '\n' + "יש קודם כל לבצע התקנה מלאה של הבילד![/COLOR]",
-                               nolabel='[B][COLOR red]ביטול[/COLOR][/B]',
-                               yeslabel='[B][COLOR springgreen]המשך בכל זאת[/COLOR][/B]')
-        if yes_pressed:
-            guizip = check.check_build(name, 'gui')
-            zipname = name.replace('\\', '').replace('/', '').replace(':', '').replace('*', '').replace('?', '').replace('"', '').replace('<', '').replace('>', '').replace('|', '')
+        try:
+            from resources.libs.modular_updater import ModularUpdater
+        except Exception as err:
+            logging.log("[quick_update] ModularUpdater import failed: {0}".format(err),
+                        level=xbmc.LOGERROR)
+            return False
 
-            response = tools.open_url(guizip, check=True)
-            if not response:
-                logging.log_notify(CONFIG.ADDONTITLE,
-                                   '[COLOR {0}]לא קיים עדכון מהיר![/COLOR]'.format(CONFIG.COLOR2))
-                return False
-
-            self.dialogProgress.create(CONFIG.ADDONTITLE, '[COLOR {0}][B]מוריד עדכון מהיר עבור:[/B][/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR2, CONFIG.COLOR1, name))
-            xbmc.sleep(2500)
-            self.dialogProgress.close()
-
-            lib = os.path.join(CONFIG.PACKAGES, '{0}_quick_update.zip'.format(zipname))
-            
-            try:
-                os.remove(lib)
-            except:
-                pass
-
-            Downloader().download(guizip, lib)
-            xbmc.sleep(500)
-            
-            if os.path.getsize(lib) == 0:
-                try:
-                    os.remove(lib)
-                except:
-                    pass
-                    
-                return False
-            
-            title = '[COLOR {0}][B]Installing:[/B][/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR2, CONFIG.COLOR1, name)
-            # ignore=True bypasses extract.all's self-skip of any file
-            # whose path contains CONFIG.ADDON_ID (the wizard's own id).
-            # Without this, every wizard-addon file inside the quickfix
-            # zip is silently skipped, so wizard updates shipped via
-            # quick_update never reach disk -- Switch Skin keeps showing
-            # the pre-update list, the addon DB lies about the version,
-            # etc. The user-triggered manual install still has its own
-            # safety prompt; this code path is the auto/manual quickfix.
-            extract.all(lib, CONFIG.HOME, ignore=True, title=title)
-            # skin.skin_to_default('Build Install')
-            # skin.look_and_feel_data('save')
-            installed = db.grab_addons(lib)
-            db.addon_database(installed, 1, True)
-
-            latest_version = check.check_build(name, 'version')
-            if latest_version:
-                CONFIG.set_setting('buildversion', latest_version)
-                CONFIG.set_setting('latestversion', latest_version)
-                CONFIG.BUILDVERSION = latest_version
-                CONFIG.BUILDLATEST = latest_version
-                               
-            if not auto_quick_update:
-                CONFIG.set_setting('quick_update_notedismiss', 'false')
-                self.force_close_kodi_in_5_seconds(dialog_header="עדכון מהיר הסתיים בהצלחה")
-                
-            return True
-
-            # self.dialog.ok(CONFIG.ADDONTITLE, "[COLOR {0}]עדכון מהיר הסתיים. לחץ אישור/OK כדי לסגור את קודי. לאחר מכן, הפעל אותו מחדש.[/COLOR]".format(CONFIG.COLOR2))
-        else:
-            logging.log_notify(CONFIG.ADDONTITLE,
-                               '[COLOR {0}]עדכון מהיר: בוטל![/COLOR]'.format(CONFIG.COLOR2))
+        logging.log("[quick_update] Running modular update check (auto={0})".format(auto),
+                    level=xbmc.LOGINFO)
+        try:
+            # auto path -> silent background pass; manual menu click -> foreground
+            # (shows the install-manager progress UI + an "up to date" dialog).
+            result = ModularUpdater(background=auto).run_update_check()
+            return bool(result)
+        except Exception as err:
+            logging.log("[quick_update] Modular update failed: {0}".format(err),
+                        level=xbmc.LOGERROR)
             return False
     #####################################################
 
