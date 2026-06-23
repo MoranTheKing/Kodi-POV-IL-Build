@@ -2936,7 +2936,7 @@
 <height>130</height>
 <visible>!String.IsEmpty($PARAM[visible])</visible>
 	<control type="image">
-		<texture colordiffuse="red" border="5">masks/menumain.png</texture>
+		<texture colordiffuse="$VAR[SetDefaultColorpretttyosd]" border="5">masks/menumain.png</texture>
 		<bordertexture colordiffuse="black" border="5">masks/menumain.png</bordertexture>
 		<bordersize>5</bordersize>
 	</control>
@@ -2985,7 +2985,7 @@
 	<control type="progress">
 		<top>$PARAM[progresstop]</top>
 		<texturebg />
-		<midtexture colordiffuse="$PARAM[progressmidcolor]" border="10.8">$PARAM[texture]</midtexture>
+		<midtexture colordiffuse="$VAR[SetDefaultColorpretttyosd]" border="10.8">$PARAM[texture]</midtexture>
 		<info>Player.Progress</info>
 	</control>
 	<control type="ranges">
@@ -3019,21 +3019,29 @@
 </include>
 
 <include name="__OsdEpisodesSeasons__">
-<control type="list" id="500323">
+<control type="fixedlist" id="500323">
 <height>500</height>
 <width>80%</width>
-<top>770</top>
-<left>400</left>
+<top>750</top>
+<left>360</left>
 <onback>202</onback>
 <onleft>false</onleft>
 <onright>false</onright>
+<movement>2</movement>
 <orientation>horizontal</orientation>
 <include>Animation_BottomSlide</include>
 <scrolltime tween="cubic">550</scrolltime>
 <visible>Container(202).HasFocus(470) + Control.HasFocus(202) | [Control.HasFocus(500323)]</visible>
 <animation effect="fade" start="0" end="100" time="500" delay="500">Visible</animation>
 <animation effect="fade" start="0" end="100" time="0">Hidden</animation>
-<include>__OsdEpisodeslayout</include>
+<include content="OsdNetflixEpisodesInSeasonsLayout">
+<param name="layoutwidth">515</param>
+<param name="layoutheight">300</param>
+<param name="groupwidth">500</param>
+<param name="plotbottom">25</param>
+<param name="infoleft">20</param>
+<param name="id">500323</param>
+</include>
 <content target="videos">$VAR[build_Episodes_Url_OSD]</content>
 </control>
 </include>

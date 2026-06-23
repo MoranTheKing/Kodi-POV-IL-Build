@@ -118,10 +118,15 @@
 </include>
 
 <include name="OsdNetflixEpisodesInSeasonsLayout">
+<param name="layoutwidth">640</param>
+<param name="layoutheight">350</param>
+<param name="groupwidth">600</param>
+<param name="id">200323</param>
+<param name="plotbottom">20</param>
 <definition>
-<itemlayout width="640" height="350">
+<itemlayout width="$PARAM[layoutwidth]" height="$PARAM[layoutheight]">
 <control type="group">
-<width>600</width>
+<width>$PARAM[groupwidth]</width>
 <include content="BasedResizedWidgetFrame">
 	<include content="BasedResizedWidgetImage">
 		<param name="resize">0</param>
@@ -144,9 +149,9 @@
 </include>
 </control>
 </itemlayout>
-<focusedlayout width="640" height="350">
+<focusedlayout width="$PARAM[layoutwidth]" height="$PARAM[layoutheight]">
 <control type="group">
-<width>600</width>
+<width>$PARAM[groupwidth]</width>
 <include content="BasedResizedWidgetFrame">
 	<include content="BasedResizedWidgetImage">
 		<param name="resize">0</param>
@@ -175,11 +180,13 @@
 	<animation condition="true" effect="fade" start="100" end="88" time="0">Conditional</animation>
 	<texture border="16">icons/box.png</texture>
 	<colordiffuse>black</colordiffuse>
-	<visible>control.hasfocus(200323)</visible>
+	<visible>control.hasfocus($PARAM[id])</visible>
 </control>
 </control>
 <control type="group">
-<width>600</width>
+<visible>control.hasfocus($PARAM[id])</visible>
+<width>$PARAM[groupwidth]</width>
+<left>$PARAM[infoleft]</left>
 <centerleft>50%</centerleft>
 <control type="label">
 	<right>40</right>
@@ -204,10 +211,11 @@
 </control>
 <control type="textbox">
 	<right>40</right>
-	<bottom>20</bottom>
+	<bottom>$PARAM[plotbottom]</bottom>
 	<top>155</top>
 	<align>center</align>
 	<label>$INFO[ListItem.Plot]</label>
+	<autoscroll fade="3500" time="3500" repeat="3500">control.hasfocus($PARAM[id])</autoscroll>
 </control>
 </control>
 </focusedlayout>

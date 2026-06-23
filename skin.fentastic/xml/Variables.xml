@@ -176,17 +176,17 @@
 	</variable>
 	
 	<variable name="__Osdprettyplayerlabel">
-	<value condition="$EXP[__Movies_OSD]">[B]שנה: [COLOR red]$INFO[VideoPlayer.Year][/COLOR][/B] [B]סגנון: [COLOR red]$INFO[VideoPlayer.Genre][/COLOR][/B]</value>
-	<value condition="$EXP[__episode_OSD]">[B]שנה: [COLOR red]$INFO[VideoPlayer.Year][/COLOR][/B] [B]סגנון: [COLOR red]$INFO[VideoPlayer.Genre][/COLOR][/B] [B]תאריך יציאת הפרק: [COLOR red]$INFO[VideoPlayer.Premiered][/COLOR][/B]</value>
-	<value conditon="$EXP[__livetv_OSD]">[B]מתחיל: [COLOR red]$INFO[VideoPlayer.StartTime][/COLOR][/B] [B]מסתיים: [COLOR red]$INFO[VideoPlayer.EndTime][/COLOR][/B]</value>
+	<value condition="$EXP[__Movies_OSD]">[B]שנה: [COLOR $INFO[Skin.String(osdprettychangecolortext)]]$INFO[VideoPlayer.Year][/COLOR][/B] [B]סגנון: [COLOR $INFO[Skin.String(osdprettychangecolortext)]]$INFO[VideoPlayer.Genre][/COLOR][/B]</value>
+	<value condition="$EXP[__episode_OSD]">[B]שנה: [COLOR $INFO[Skin.String(osdprettychangecolortext)]]$INFO[VideoPlayer.Year][/COLOR][/B] [B]סגנון: [COLOR $INFO[Skin.String(osdprettychangecolortext)]]$INFO[VideoPlayer.Genre][/COLOR][/B] [B]תאריך יציאת הפרק: [COLOR $INFO[Skin.String(osdprettychangecolortext)]]$INFO[VideoPlayer.Premiered][/COLOR][/B]</value>
+	<value conditon="$EXP[__livetv_OSD]">[B]מתחיל: [COLOR $INFO[Skin.String(osdprettychangecolortext)]]$INFO[VideoPlayer.StartTime][/COLOR][/B] [B]מסתיים: [COLOR $INFO[Skin.String(osdprettychangecolortext)]]$INFO[VideoPlayer.EndTime][/COLOR][/B]</value>
 	</variable>
 
 	<variable name="__Osdprettyplayerlabeltime">
-	<value condition="$EXP[__episode_OSD] | $EXP[__Movies_OSD]">[B]נשאר עד סוף הצפיה: [COLOR red]$INFO[Player.TimeRemaining][/COLOR][/B] [B]מסתיים: [COLOR red]$INFO[Player.FinishTime][/COLOR][/B] [B]:אחוזי צפיה עד כה [COLOR red]$INFO[Player.Progress]% אחוז[/COLOR][/B] $VAR[__Osdprettyplayerlabelepisode]</value>
+	<value condition="$EXP[__episode_OSD] | $EXP[__Movies_OSD]">[B]נשאר עד סוף הצפיה: [COLOR $INFO[Skin.String(osdprettychangecolortext)]]$INFO[Player.TimeRemaining][/COLOR][/B] [B]מסתיים: [COLOR $INFO[Skin.String(osdprettychangecolortext)]]$INFO[Player.FinishTime][/COLOR][/B] [B]:אחוזי צפיה עד כה [COLOR $INFO[Skin.String(osdprettychangecolortext)]]$INFO[Player.Progress]% אחוז[/COLOR][/B] $VAR[__Osdprettyplayerlabelepisode]</value>
 	</variable>	
 	
 	<variable name="__Osdprettyplayerlabelepisode">
-	<value condition="$EXP[__episode_OSD]">[B]עונה: [COLOR red]$INFO[VideoPlayer.Season,(,)][/COLOR][/B] [B]פרק: [COLOR red]$INFO[VideoPlayer.Episode,(,)][/COLOR][/B]</value>
+	<value condition="$EXP[__episode_OSD]">[B]עונה: [COLOR $INFO[Skin.String(osdprettychangecolortext)]]$INFO[VideoPlayer.Season,(,)][/COLOR][/B] [B]פרק: [COLOR $INFO[Skin.String(osdprettychangecolortext)]]$INFO[VideoPlayer.Episode,(,)][/COLOR][/B]</value>
 	</variable>
 
 	<variable name="_FixsublanguageOsd">
@@ -194,6 +194,11 @@
 		<value condition="String.IsEqual(VideoPlayer.SubtitlesLanguage,heb)">עברית</value>
 		<value condition="String.IsEqual(VideoPlayer.SubtitlesLanguage,ita)">איטלקית</value>
 		<value>$INFO[VideoPlayer.AudioLanguage]</value>
+	</variable>
+	
+	<variable name="SetDefaultColorpretttyosd">
+	<value condition="!String.IsEmpty(Skin.String(osdprettychangecolor))">$INFO[Skin.String(osdprettychangecolor)]</value>
+	<value>FFE74F00</value>
 	</variable>
 	
 	<variable name="LeftCornerFixTitle_osd">

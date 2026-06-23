@@ -60,7 +60,7 @@
 			<aligny>center</aligny>
 			<font>font20</font>
 			<label>$INFO[ListItem.Label]</label>
-			<autoscroll>true</autoscroll>
+			<autoscroll fade="3000" time="3000" repeat="3000">true</autoscroll>
 		</control>
 	</control>
 	</focusedlayout>

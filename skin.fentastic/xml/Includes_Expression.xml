@@ -45,4 +45,5 @@
 	<expression name="groupcontrol7">![ControlGroup(201).HasFocus() | Control.HasFocus(202) | Control.HasFocus(15000) | Control.HasFocus(500323)]</expression>
 	<expression name="groupcontrol8">![ControlGroup(201).HasFocus() | Control.HasFocus(202) | Control.HasFocus(15000) | Control.HasFocus(500323)]</expression>
 	<expression name="groupcontrol9">Control.HasFocus(202) + Container(202).HasFocus(470) + Container(500323).IsUpdating</expression>
+	<expression name="groupcontrol10">[Container(202).HasFocus(120) | Container(202).HasFocus(121) | Container(202).HasFocus(122) | Container(202).HasFocus(123)]</expression>
 </includes>
