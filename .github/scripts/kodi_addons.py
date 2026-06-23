@@ -13,6 +13,7 @@ two tools can never disagree about what an addon "is".
 from __future__ import annotations
 
 import os
+import sys
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 
@@ -82,14 +83,22 @@ def parse_addon_xml(addon_dir: str) -> Addon | None:
         return None
     try:
         root = ET.parse(xml_path).getroot()
-    except ET.ParseError as exc:  # malformed xml -> skip, don't crash the build
-        print(f"  !! could not parse {xml_path}: {exc}")
+    except ET.ParseError as exc:  # malformed xml -> skip, but say exactly why
+        print(f"  !! MALFORMED addon.xml at {xml_path}: {exc}", file=sys.stderr)
+        return None
+    except OSError as exc:
+        print(f"  !! could not read {xml_path}: {exc}", file=sys.stderr)
         return None
     if root.tag != "addon":
+        print(f"  !! {xml_path}: root element is <{root.tag}>, expected <addon>", file=sys.stderr)
         return None
     addon_id = root.get("id")
     version = root.get("version")
-    if not addon_id or not version:
+    if not addon_id:
+        print(f"  !! {xml_path}: <addon> is missing the required id attribute", file=sys.stderr)
+        return None
+    if not version:
+        print(f"  !! {xml_path}: <addon id=\"{addon_id}\"> is missing the required version attribute", file=sys.stderr)
         return None
     return Addon(
         id=addon_id,

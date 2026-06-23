@@ -50,16 +50,29 @@ REPLACES = (('//.+?:.+?@', '//USER:PASSWORD@'), ('<user>.+?</user>', '<user>USER
                                                                                             '<pass>PASSWORD</pass>'),)
 
 
-def log(msg, level=xbmc.LOGDEBUG):
-    if CONFIG.DEBUGLEVEL == '0':  # No Logging
-        return False
-    if CONFIG.DEBUGLEVEL == '1':  # Normal Logging
-        pass
-    if CONFIG.DEBUGLEVEL == '2':  # Full Logging
-        level = xbmc.LOGINFO
-    
-    xbmc.log('{0}: {1}'.format(CONFIG.ADDONTITLE, msg), level)
-    if CONFIG.ENABLEWIZLOG == 'true':
+def log(msg, level=xbmc.LOGINFO):
+    # Always route to Kodi's native log (kodi.log) so the wizard is observable,
+    # regardless of its own DEBUGLEVEL setting. The previous version did an
+    # early `return False` when DEBUGLEVEL == '0', which swallowed EVERYTHING --
+    # even LOGINFO/LOGWARNING/LOGERROR -- and was the "logging black hole":
+    # nothing the installer/watchdog logged ever reached kodi.log. DEBUGLEVEL
+    # now only gates the optional separate wizard logfile below. Default level
+    # is LOGINFO so plain log("...") calls actually show in kodi.log (LOGINFO+
+    # is written by default; LOGDEBUG only when Kodi debug logging is on).
+    try:
+        title = getattr(CONFIG, 'ADDONTITLE', 'Kodi POV IL Wizard')
+        xbmc.log('{0}: {1}'.format(title, msg), level)
+    except Exception:
+        try:
+            xbmc.log('Kodi POV IL Wizard: {0}'.format(msg), xbmc.LOGINFO)
+        except Exception:
+            pass
+
+    # Optional wizard-owned logfile -- fully guarded so a logging failure can
+    # never break a caller (e.g. the provisioning watchdog thread).
+    try:
+        if getattr(CONFIG, 'DEBUGLEVEL', '0') == '0' or getattr(CONFIG, 'ENABLEWIZLOG', 'false') != 'true':
+            return
         if not os.path.exists(CONFIG.WIZLOG):
             with open(CONFIG.WIZLOG, 'w+') as f:
                 f.close()
@@ -71,6 +84,8 @@ def log(msg, level=xbmc.LOGDEBUG):
         line = "[{0}] {1}".format(tools.get_date(formatted=True), msg)
         line = line.rstrip('\r\n') + '\n'
         tools.write_to_file(CONFIG.WIZLOG, line, mode='a')
+    except Exception:
+        pass
 
 
 def check_log():

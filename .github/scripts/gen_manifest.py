@@ -144,6 +144,32 @@ def main() -> int:
 
         entries[addon.id] = entry
 
+    # REFUSE TO OUTPUT NULL. An entry with a null size/sha256 means we have
+    # neither a freshly built zip NOR a matching previous entry to carry over --
+    # i.e. the addon's addon.xml version was bumped but that version's zip was
+    # never published. The manifest's `zip` URL for it would 404 and the wizard
+    # install would fail (this is exactly what happened to
+    # service.subtitles.kodipovilai 0.2.262). Rather than silently ship a broken
+    # manifest, fail loudly with the exact cause and DON'T overwrite the last
+    # good manifest.
+    broken = {
+        aid: e for aid, e in entries.items()
+        if e.get("size") is None or e.get("sha256") is None
+    }
+    if broken:
+        print("ERROR: refusing to write manifest.json -- the following addons "
+              "have no published zip (null size/sha256):", file=sys.stderr)
+        for aid, e in sorted(broken.items()):
+            built = os.path.isfile(os.path.join(DIST_DIR, e["filename"]))
+            print(
+                f"  !! {aid} v{e['version']}: expected '{e['filename']}' "
+                f"but it was {'built but unreadable' if built else 'NOT built this run'} "
+                f"and no previous manifest entry matched that version. "
+                f"-> rebuild this addon (touch/bump its folder so CI repackages it).",
+                file=sys.stderr,
+            )
+        return 1
+
     manifest = {
         "manifest_version": MANIFEST_VERSION,
         "name": "Kodi POV IL Build",
