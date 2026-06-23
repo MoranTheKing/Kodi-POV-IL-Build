@@ -256,11 +256,6 @@ class ModularUpdater:
         """Download, extract, and register the queued modules."""
         tools.ensure_folders(CONFIG.PACKAGES)
 
-        if self.background:
-            self.progress.create(CONFIG.ADDONTITLE, "מבצע עדכון רקע מודולרי...")
-        else:
-            self.progress.create(CONFIG.ADDONTITLE, "מבצע עדכון מודולרי...")
-
         # FIX #3 (Phase 3): a forced restart is "critical" only for the
         # Wizard itself or for the *currently active* skin (its live files
         # cannot be swapped under a running session). Updating an inactive
@@ -269,6 +264,30 @@ class ModularUpdater:
         active_skin = xbmc.getSkinDir()
         requires_restart = False
         extracted_addons = []
+
+        # Foreground installs use the rich modular install manager: downloads
+        # run in parallel, installs run one-at-a-time, and each addon shows its
+        # own live state + progress bar. Background checks -- and any UI-load
+        # failure -- fall through to the classic sequential DialogProgress loop.
+        if queue and not self.background:
+            try:
+                from resources.libs.gui.install_manager import run_install_manager
+                extracted_addons = run_install_manager(queue)
+                for _aid in extracted_addons:
+                    if _aid == 'plugin.program.kodipovilwizard' or _aid == active_skin:
+                        requires_restart = True
+                queue = []  # consumed by the UI -> skip the classic loop below
+            except Exception as _ui_err:
+                logging.log("[ModularUpdater] install-manager UI failed ({0}); "
+                            "falling back to classic installer".format(_ui_err),
+                            level=xbmc.LOGERROR)
+                extracted_addons = []
+
+        if queue:
+            if self.background:
+                self.progress.create(CONFIG.ADDONTITLE, "מבצע עדכון רקע מודולרי...")
+            else:
+                self.progress.create(CONFIG.ADDONTITLE, "מבצע עדכון מודולרי...")
 
         for i, mod in enumerate(queue, start=1):
             addon_id = mod.get('id')
