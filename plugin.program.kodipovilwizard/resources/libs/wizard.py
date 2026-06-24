@@ -375,104 +375,36 @@ def update_favourites_xml_file(gotoskin):
     
 
 #####################################################
-# KODI-POV-IL - ARCTIC FUSE 3 SUPPLEMENTAL INSTALL
-# AF3 + its 6 deps are too big to bundle inside the
-# regular build zip (font + studio assets push the
-# total past GitHub's 100 MB single-file limit). So
-# we ship them as 3 separate "pack" zips in dist/
-# and download+extract them on demand when the user
-# picks AF3 from Switch Skin. Idempotent: skips any
-# pack whose payload is already present on disk.
+# KODI-POV-IL - ON-DEMAND SKIN INSTALL
+# Two of the build's selectable skins are installed ONLY when the user picks
+# them from Switch Skin, so they never bloat the base build and are NEVER
+# force-pushed to every device during fresh installs or background OTA:
+#
+#   * Arctic Fuse 3 (skin.arctic.fuse.3) -- installed NATIVELY via Kodi's
+#     InstallAddon from repository.jurialmunkey (shipped in our manifest, so it
+#     lands on every device for dependency resolution). Kodi pulls the skin +
+#     ALL its dependencies (tmdbhelper, skinvariables, texturemaker,
+#     script.module.jurialmunkey, fonts, studio/weather icons...) from upstream
+#     at mutually-compatible versions, and they keep updating from their own
+#     repos. This replaces the old four static "pack" zips (deps/skin/fonts/
+#     studios) -- no hardcoded dist links, no version-pinned bundles.
+#
+#   * NOX (skin.povil.nox) -- a rebranded + scrubbed Estuary MOD that is NOT on
+#     any public repo, so it is still shipped as a single on-demand pack zip in
+#     dist/ and downloaded+extracted on first switch (see _ensure_packs_installed).
 
-# Per-pack URL + sentinel file. Sentinel is something
-# inside the pack that proves the pack was extracted.
-# If the sentinel exists, we skip the download.
-AF3_PACK_BASE_URL = "https://github.com/MoranTheKing/Kodi-POV-IL/raw/main/dist"
-AF3_CE_SKIN_VERSION = '6.3.2.9'
-# 'addon_ids' lists every addon folder the pack ships. We register
-# these in Kodi's Addons DB (enabled) whether the pack is freshly
-# extracted OR already on disk from a previous switch attempt --
-# this is what makes the fix retroactive for users who already
-# "installed" AF3 with the old (DB-less) code and got the silent
-# Estuary fallback.
-AF3_PACKS = [
-    {
-        'name': 'Arctic Fuse 3 - מודולי קוד נדרשים',
-        'url': '{0}/Kodi-POV-IL-AF3-deps-pack.zip'.format(AF3_PACK_BASE_URL),
-        'filename': 'af3_deps_pack.zip',
-        'sentinel': 'special://home/addons/script.module.jurialmunkey/addon.xml',
-        # Force a re-extract when the installed jurialmunkey is OLDER than
-        # what the pack ships. Without a version gate, _af3_pack_current()
-        # returned True as soon as the addon.xml merely EXISTED -- so a user
-        # who already had an old jurialmunkey (e.g. 0.2.28 from their base
-        # build) was never upgraded. But the bundled TMDbHelper 6.15.6
-        # requires jurialmunkey >= 0.2.35 (it imports jurialmunkey.ftools,
-        # which only exists from 0.2.35), so TMDbHelper's whole service
-        # crashed on startup -> AF3 widgets/ratings broke. Gating on the
-        # jurialmunkey version forces the deps pack to re-extract and
-        # overwrite the stale copy. Keep this in sync with the version
-        # bundled in dist/Kodi-POV-IL-AF3-deps-pack.zip.
-        'expected_version': '0.2.35',
-        # script.skinvariables, script.texturemaker, and
-        # plugin.video.themoviedb.helper all transitively depend on
-        # these. Without them AF3 hangs forever on "Initialising
-        # Skin..." -- skinvariables' generator fails to import
-        # jurialmunkey, so the dynamically-built includes file
-        # (script-skinvariables-generator-includes-.xml) never lands,
-        # and AF3's Startup.xml has nothing to populate the home with.
-        # First version of the AF3 install path missed these because
-        # they aren't direct requires of the SKIN itself -- they're
-        # only declared inside the SCRIPT dependencies' addon.xmls.
-        # 139 KB total, so it's a tiny extra download.
-        'addon_ids': [
-            'script.module.jurialmunkey',
-            'script.module.infotagger',
-            'script.module.addon.signals',
-            'script.module.qrcode',
-        ],
-    },
-    {
-        'name': 'Arctic Fuse 3 - סקין + תוספים נדרשים',
-        'url': '{0}/Kodi-POV-IL-AF3-skin-pack.zip'.format(AF3_PACK_BASE_URL),
-        'filename': 'af3_skin_pack.zip',
-        'sentinel': 'special://home/addons/skin.arctic.fuse.3/addon.xml',
-        'expected_version': AF3_CE_SKIN_VERSION,
-        'addon_ids': [
-            'skin.arctic.fuse.3',
-            'script.skinvariables',
-            'script.texturemaker',
-            'plugin.video.themoviedb.helper',
-            'resource.images.weathericons.white',
-        ],
-    },
-    {
-        'name': 'Arctic Fuse 3 - פונטים',
-        'url': '{0}/Kodi-POV-IL-AF3-fonts-pack.zip'.format(AF3_PACK_BASE_URL),
-        'filename': 'af3_fonts_pack.zip',
-        'sentinel': 'special://home/addons/resource.font.robotocjksc/addon.xml',
-        'addon_ids': ['resource.font.robotocjksc'],
-    },
-    {
-        'name': 'Arctic Fuse 3 - אייקוני סטודיו',
-        'url': '{0}/Kodi-POV-IL-AF3-studios-pack.zip'.format(AF3_PACK_BASE_URL),
-        'filename': 'af3_studios_pack.zip',
-        'sentinel': ('special://home/addons/'
-                     'resource.images.studios.coloured/addon.xml'),
-        'addon_ids': ['resource.images.studios.coloured'],
-    },
-]
-
-# KODI-POV-IL - NOX skin, same on-demand pattern as AF3. The NOX skin is a
-# rebranded + scrubbed Estuary MOD (~24 MB) whose home menu was remapped to
-# our POV / idanplus / otaku addons. It is downloaded only when the user
-# picks it from Switch Skin so it never bloats the base build. Single pack
-# (fits under GitHub's 100 MB limit), unlike AF3's four. Its only hard
-# dependency, script.fentastic.helper, already ships in the build.
+# KODI-POV-IL - NOX skin. A rebranded + scrubbed Estuary MOD (~24 MB) whose home
+# menu was remapped to our POV / idanplus / otaku addons. It is NOT on any public
+# repo, so (unlike AF3) it cannot be resolved natively -- it is shipped as a
+# single on-demand pack zip in dist/ and downloaded only when the user picks it
+# from Switch Skin, so it never bloats the base build. Its only hard dependency,
+# script.fentastic.helper, already ships in the build.
+NOX_PACK_BASE_URL = "https://github.com/MoranTheKing/Kodi-POV-IL/raw/main/dist"
 NOX_SKIN_VERSION = '1.0.10'
 NOX_PACKS = [
     {
         'name': 'סקין NOX',
-        'url': '{0}/Kodi-POV-IL-NOX-skin-pack.zip'.format(AF3_PACK_BASE_URL),
+        'url': '{0}/Kodi-POV-IL-NOX-skin-pack.zip'.format(NOX_PACK_BASE_URL),
         'filename': 'nox_skin_pack.zip',
         'sentinel': 'special://home/addons/skin.povil.nox/addon.xml',
         'expected_version': NOX_SKIN_VERSION,
@@ -491,12 +423,12 @@ def _af3_register_pack_in_db(pack):
     try:
         db.addon_database(pack['addon_ids'], 1, True)
         logging.log(
-            'DEBUG | ensure_arctic_fuse_3_installed | '
+            'DEBUG | _ensure_packs_installed | '
             'DB enabled (static list): {0}'.format(pack['addon_ids']))
         return True
     except Exception as e:
         logging.log(
-            'DEBUG | ensure_arctic_fuse_3_installed | '
+            'DEBUG | _ensure_packs_installed | '
             'DB enable failed for {0}: {1}'.format(
                 pack['name'], str(e)))
         return False
@@ -559,20 +491,41 @@ def _af3_pack_current(pack):
         if current == expected:
             return True
     logging.log(
-        'AF3 pack version too old, forcing reinstall: {0} '
+        'skin pack version too old, forcing reinstall: {0} '
         'current={1} expected>={2}'.format(
             pack['name'], current or 'missing', expected))
     return False
 
 
+AF3_SKIN_ID = 'skin.arctic.fuse.3'
+
+
 def ensure_arctic_fuse_3_installed():
-    """Download + extract the AF3 packs on demand (see _ensure_packs_installed)."""
-    return _ensure_packs_installed(
-        AF3_PACKS,
-        '[COLOR {0}][B]מוריד את Arctic Fuse 3 ותלויות[/B][/COLOR]'.format(
-            CONFIG.COLOR2),
-        '[COLOR {0}][B]Arctic Fuse 3 מוכן לשימוש[/B][/COLOR]'.format(
-            CONFIG.COLOR1))
+    """Install Arctic Fuse 3 ON DEMAND via Kodi's native InstallAddon.
+
+    Replaces the old four static "pack" zips. The AF3 skin and ALL of its
+    dependencies (script.module.jurialmunkey, plugin.video.themoviedb.helper,
+    script.skinvariables, script.texturemaker, the fonts / studio / weather
+    resource addons, ...) are resolved natively from repository.jurialmunkey
+    (shipped in our manifest, so it is already on the device) plus the official
+    Kodi repo, at mutually-compatible upstream versions. They then keep updating
+    from their own repos -- no version-pinned bundle to maintain.
+
+    Reuses the provisioning watchdog (auto-confirms the native dependency
+    Yes/No dialog, closes stray first-run popups) so the install is hands-off.
+    Returns True once AF3 is present. Idempotent: a no-op if already installed.
+    """
+    if xbmc.getCondVisibility('System.HasAddon({0})'.format(AF3_SKIN_ID)):
+        return True
+    try:
+        from resources.libs.modular_updater import ModularUpdater
+        # Longer timeout than the content-addon default: the AF3 skin + tmdbhelper
+        # + font/studio resources are a sizeable native download.
+        ModularUpdater(background=False).post_install_provisioning(
+            per_addon_timeout=240, ids=[AF3_SKIN_ID])
+    except Exception as err:
+        logging.log('[AF3] native install failed: {0}'.format(err), level=xbmc.LOGERROR)
+    return xbmc.getCondVisibility('System.HasAddon({0})'.format(AF3_SKIN_ID))
 
 
 def ensure_nox_installed():
@@ -625,7 +578,7 @@ def _ensure_packs_installed(packs, downloading_label, ready_label):
     Reuses the wizard's existing Downloader + extract.all machinery
     -- the same code that powers quick_update and Fresh Install --
     so progress / cancel / error reporting all behave the same way.
-    Generic over a packs list so AF3 and NOX (and any future on-demand
+    Generic over a packs list so NOX (and any future on-demand
     skin) share one battle-tested install path, including the critical
     Addons-DB register step that prevents the silent Estuary fallback."""
     try:
@@ -651,7 +604,7 @@ def _ensure_packs_installed(packs, downloading_label, ready_label):
                 # the path that heals everyone already stuck on the
                 # Estuary fallback.
                 logging.log(
-                    'AF3 pack files present, skipping download but '
+                    'skin pack files present, skipping download but '
                     're-registering in DB: {0}'.format(pack['name']))
                 if not _af3_register_pack_in_db(pack):
                     all_ok = False
@@ -669,10 +622,10 @@ def _ensure_packs_installed(packs, downloading_label, ready_label):
                 dialog_progress.close()
                 logging.log_notify(
                     CONFIG.ADDONTITLE,
-                    '[COLOR {0}]חבילת AF3 לא זמינה: {1}[/COLOR]'.format(
+                    '[COLOR {0}]חבילת הסקין לא זמינה: {1}[/COLOR]'.format(
                         CONFIG.COLOR2, pack['name']))
                 logging.log(
-                    'DEBUG | ensure_arctic_fuse_3_installed | '
+                    'DEBUG | _ensure_packs_installed | '
                     '{0} not reachable: {1}'.format(
                         pack['name'], pack['url']))
                 return False
@@ -682,12 +635,12 @@ def _ensure_packs_installed(packs, downloading_label, ready_label):
             except Exception as e:
                 dialog_progress.close()
                 logging.log(
-                    'DEBUG | ensure_arctic_fuse_3_installed | '
+                    'DEBUG | _ensure_packs_installed | '
                     'download failed for {0}: {1}'.format(
                         pack['name'], str(e)))
                 logging.log_notify(
                     CONFIG.ADDONTITLE,
-                    '[COLOR {0}]כשל בהורדת חבילת AF3![/COLOR]'.format(
+                    '[COLOR {0}]כשל בהורדת חבילת הסקין![/COLOR]'.format(
                         CONFIG.COLOR2))
                 return False
 
@@ -696,7 +649,7 @@ def _ensure_packs_installed(packs, downloading_label, ready_label):
                 dialog_progress.close()
                 logging.log_notify(
                     CONFIG.ADDONTITLE,
-                    '[COLOR {0}]חבילת AF3 ריקה: {1}[/COLOR]'.format(
+                    '[COLOR {0}]חבילת הסקין ריקה: {1}[/COLOR]'.format(
                         CONFIG.COLOR2, pack['name']))
                 return False
 
@@ -708,12 +661,12 @@ def _ensure_packs_installed(packs, downloading_label, ready_label):
             except Exception as e:
                 dialog_progress.close()
                 logging.log(
-                    'DEBUG | ensure_arctic_fuse_3_installed | '
+                    'DEBUG | _ensure_packs_installed | '
                     'extract failed for {0}: {1}'.format(
                         pack['name'], str(e)))
                 logging.log_notify(
                     CONFIG.ADDONTITLE,
-                    '[COLOR {0}]כשל בחילוץ חבילת AF3![/COLOR]'.format(
+                    '[COLOR {0}]כשל בחילוץ חבילת הסקין![/COLOR]'.format(
                         CONFIG.COLOR2))
                 all_ok = False
 
@@ -947,11 +900,9 @@ def build_switch_skin():
                        yeslabel='[B][COLOR springgreen]החלף סקין[/COLOR][/B]')
 
     if yes_pressed:
-        # Arctic Fuse 3 is too big to bundle in the regular build
-        # zip (font + studio asset packs blow past GitHub's 100 MB
-        # per-file limit). Download + extract the supplemental packs
-        # on first switch to AF3. Idempotent: skips packs already on
-        # disk so re-switching is fast.
+        # Arctic Fuse 3 is installed ON DEMAND, natively, from
+        # repository.jurialmunkey (Kodi resolves the skin + all its deps) the
+        # first time the user switches to it. Idempotent: a no-op once present.
         if gotoskin == 'skin.arctic.fuse.3':
             if not ensure_arctic_fuse_3_installed():
                 logging.log_notify(

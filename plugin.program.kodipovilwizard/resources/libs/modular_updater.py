@@ -254,10 +254,16 @@ class ModularUpdater:
         'resource.language.he_il',          # <- Kodi official repo (Hebrew language pack)
     ]
 
-    def post_install_provisioning(self, per_addon_timeout=60):
-        """Silently install the third-party content addons via Kodi's native
-        InstallAddon (so Kodi resolves the script.module.* / context.* deps and
-        they keep getting OTA updates from their own repos).
+    def post_install_provisioning(self, per_addon_timeout=60, ids=None):
+        """Silently install addons via Kodi's native InstallAddon (so Kodi
+        resolves the script.module.* / context.* / skin deps natively and they
+        keep getting OTA updates from their own repos).
+
+        ``ids`` defaults to PROVISION_IDS (the build's third-party content
+        addons). It can be overridden to install ANY addon(s) on demand through
+        the same battle-tested path -- e.g. the Arctic Fuse 3 skin, which is
+        pulled from repository.jurialmunkey with all its dependencies resolved
+        natively instead of from a static zip pack.
 
         Silent: InstallAddon raises a native Yes/No confirm ("install the
         following add-ons / dependencies?"). That dialog is CGUIDialogYesNo
@@ -274,8 +280,10 @@ class ModularUpdater:
         import xbmc
         monitor = xbmc.Monitor()
 
+        provision_ids = list(ids) if ids is not None else list(self.PROVISION_IDS)
+
         logging.log("[Provisioning] Starting SILENT provisioning of {0} addons".format(
-            len(self.PROVISION_IDS)), level=xbmc.LOGINFO)
+            len(provision_ids)), level=xbmc.LOGINFO)
 
         # The repositories were just extracted to disk. Force Kodi to load them
         # and refresh their addons.xml index, otherwise the first InstallAddon
@@ -386,7 +394,7 @@ class ModularUpdater:
         watcher.start()
 
         try:
-            for addon_id in self.PROVISION_IDS:
+            for addon_id in provision_ids:
                 if monitor.abortRequested():
                     break
                 if xbmc.getCondVisibility('System.HasAddon({0})'.format(addon_id)):
@@ -437,6 +445,13 @@ class ModularUpdater:
                 logging.log("[Provisioning][watchdog] stopped", level=xbmc.LOGINFO)
 
         logging.log("[Provisioning] Silent provisioning finished", level=xbmc.LOGINFO)
+
+        # Report whether every requested addon is now present, so on-demand
+        # callers (e.g. the AF3 Switch-Skin flow) can tell success from failure.
+        all_present = all(
+            xbmc.getCondVisibility('System.HasAddon({0})'.format(a)) for a in provision_ids
+        )
+        return all_present
 
     def _config_pending(self, manifest):
         """True when the manifest's config version is ahead of what we last

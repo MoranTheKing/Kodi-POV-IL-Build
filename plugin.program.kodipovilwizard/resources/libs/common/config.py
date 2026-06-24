@@ -119,8 +119,6 @@ class Config:
         #########################################################################################################
         # KODI-RD-IL - BUILD SKIN SWITCH
         self.BUILD_SKIN_SWITCH_IMAGE_URL = uservar.BUILD_SKIN_SWITCH_IMAGE_URL
-        # KODI-RD-IL - AUTO QUICK UPDATES
-        self.QUICK_UPDATE_NOTIFICATION_URL = uservar.QUICK_UPDATE_NOTIFICATION_URL
         # KODI-POV-IL - MODULAR UPDATER (manifest-based). getattr keeps an old
         # uservar.py (without MANIFEST_URL) from crashing config init.
         self.MANIFEST_URL = getattr(uservar, 'MANIFEST_URL', 'http://')
@@ -277,12 +275,6 @@ class Config:
         self.NOTIFY = self.get_setting('notify')
         self.NOTEID = self.get_setting('noteid')
         self.NOTEDISMISS = self.get_setting('notedismiss')
-        
-        #########################################################################################################
-        # KODI-RD-IL - AUTO QUICK UPDATES
-        self.QUICK_UPDATE_NOTEID = self.get_setting('quick_update_noteid')
-        self.QUICK_UPDATE_NOTEDISMISS = self.get_setting('quick_update_notedismiss')
-        #########################################################################################################
         
         # Save Data variables
         # self.USE_GITHUB_CUSTOM_SAVE_DATA_CONFIG = self.get_setting('use_github_custom_save_data_config')
