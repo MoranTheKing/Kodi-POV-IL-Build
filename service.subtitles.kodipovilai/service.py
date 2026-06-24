@@ -165,7 +165,6 @@ def _run_build_startup_repairs():
         _maybe_patch_pov_genre_menu_icons,
         _maybe_patch_pov_combined_discover,
         _maybe_patch_af3_home,
-        _maybe_cleanup_wizard,
         _maybe_patch_pov_repeat_timer,
         _maybe_patch_pov_favorites_refresh,
         _maybe_run_fav_diagnostic,
@@ -1086,23 +1085,6 @@ def _maybe_patch_pov_services():
                 level='WARNING')
         except Exception:
             pass
-
-
-def _maybe_cleanup_wizard():
-    """Clean up the (incorrect) wizard "Connect Services" injection
-    that v0.1.5-v0.1.7 of this addon shipped. The right menu was
-    plugin.video.pov's My Services (handled separately by
-    pov_services_patcher); the wizard injection was misplaced and
-    we don't want stale rows lingering in the wizard's login_menu
-    UI after the user upgrades."""
-    try:
-        from resources.lib import wizard_patcher
-    except Exception:
-        return
-    try:
-        wizard_patcher.ensure_unpatched()
-    except Exception:
-        pass
 
 
 def _maybe_patch_darksubs():
@@ -2266,42 +2248,6 @@ def _maybe_patch_skin_dialog_subtitles_rows():
             pass
 
 
-def _maybe_heal_wizard():
-    """One-shot recovery for users stuck on a pre-0.1.10 wizard.
-    The wizard's quick_update extract.all silently skips the wizard's
-    own files, so wizard updates shipped via quickfix never reached
-    disk. Users who already received the broken quick_update (PR #161
-    AF3 ship + PR #162 wizard-bundle ship) are stranded on the old
-    wizard.py. This rides the AI subs quickfix path (different addon
-    id, not skipped), detects the stuck wizard via a sentinel check,
-    downloads the latest wizard zip from GitHub, and writes it over
-    the installed wizard's addon dir. Toasts the user to restart.
-    Self-disarms via a marker once the installed wizard.py is on
-    0.1.10+ -- after that the normal quick_update flow takes over."""
-    try:
-        from resources.lib import wizard_self_healer, kodi_utils
-    except Exception:
-        return
-    try:
-        status = wizard_self_healer.ensure_healed()
-        # v3: always log the return code (was 'quiet steady-state'
-        # in v2, which made remote diagnosis impossible -- a real
-        # user log showed zero healer traces and we had to deduce
-        # 'no_wizard' from absence-of-logs alone).
-        kodi_utils.log(
-            'wizard_self_healer status: ' + status,
-            level=('WARNING' if status in (
-                'no_staged_zip', 'bad_zip', 'write_failed') else 'INFO'),
-        )
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'wizard_self_healer failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_patch_af3_dialog_subtitles():
     """Self-healing patch of Arctic Fuse 3's Dialog_DialogSubtitles.xml
     so the subtitle picker dialog HEADER prefers our window property
@@ -3235,13 +3181,6 @@ def main():
         _ensure_build_marker()
     else:
         _maybe_cleanup_standalone_build_patches()
-
-    # Recover users stuck on a pre-0.1.10 wizard (see function
-    # docstring for the extract.all self-skip bug). Runs before
-    # the other patchers because if the heal succeeds the user
-    # will restart Kodi anyway, and we don't want to spend cycles
-    # patching things they'll re-run on the next boot.
-    _maybe_heal_wizard()
 
     # Enable "remember picked source" by default (one-shot) BEFORE the POV
     # patcher runs, so the patcher sees it on and reloads POV this session.
