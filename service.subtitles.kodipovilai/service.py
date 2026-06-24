@@ -103,8 +103,8 @@ def _is_kodi_pov_il_build():
         if 'Kodi POV IL' in uservar_text or 'FENtastic' in uservar_text:
             detected = True
 
-        build_icons = _translate_path('special://home/media/build_icons')
-        if _safe_exists(os.path.join(build_icons, 'Twilight')):
+        povil_icons = _translate_path('special://home/media/povil_icons')
+        if _safe_exists(os.path.join(povil_icons, 'Connect_Services.png')):
             detected = True
     except Exception:
         detected = False
@@ -609,8 +609,8 @@ def _maybe_patch_fentastic_search():
 
 
 def _maybe_install_build_icons():
-    """Install the bundled TMDB-branded home-tile icons under
-    media/build_icons/ so the favourites_xml_patcher can point at
+    """Install the bundled TMDB-branded home-tile icons (flattened) under
+    media/povil_icons/ so the favourites_xml_patcher can point at
     them. Idempotent -- skips files that already exist."""
     try:
         from resources.lib import build_icons_patcher, kodi_utils
@@ -701,8 +701,8 @@ def _maybe_patch_hebrew_build_ui():
 
 
 def _maybe_patch_pov_genre_icons():
-    """Re-icon POV's genre navigator rows to the stable
-    media/build_icons/Genres/ set we ship (AF3 cached shortcut rows)."""
+    """Re-icon POV's genre navigator rows to the stable genre icon
+    set we ship (AF3 cached shortcut rows)."""
     try:
         from resources.lib import af3_home_patcher, kodi_utils
     except Exception:
