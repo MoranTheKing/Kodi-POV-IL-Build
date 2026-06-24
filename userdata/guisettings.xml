@@ -37,8 +37,8 @@
     <setting id="subtitles.marginvertical">3.3</setting>
     <setting id="subtitles.charset">CP1255</setting>
     <setting id="subtitles.languages">Hebrew</setting>
-    <setting id="subtitles.tv">service.subtitles.All_Subs</setting>
-    <setting id="subtitles.movie">service.subtitles.All_Subs</setting>
+    <setting id="subtitles.tv">service.subtitles.kodipovilai</setting>
+    <setting id="subtitles.movie">service.subtitles.kodipovilai</setting>
     <setting id="services.webserverauthentication">false</setting>
     <setting id="services.esallinterfaces">true</setting>
     <setting id="filecache.buffermode">0</setting>

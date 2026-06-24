@@ -29,11 +29,6 @@
             <allowsharing>true</allowsharing>
         </source>
         <source>
-            <name>repository.peno64</name>
-            <path pathversion="1">https://peno64.github.io/repository.peno64/</path>
-            <allowsharing>true</allowsharing>
-        </source>
-        <source>
             <name>repository.CocoScrapers</name>
             <path pathversion="1">https://not-coco-joe.github.io/</path>
             <allowsharing>true</allowsharing>

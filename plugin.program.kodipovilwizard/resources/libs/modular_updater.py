@@ -250,7 +250,6 @@ class ModularUpdater:
         'plugin.video.idanplus',            # <- repository.Fishenzon
         'plugin.video.otaku',               # <- repository.otaku (+ context.otaku)
         'plugin.video.youtube',             # <- Kodi official repo
-        'service.subtitles.localsubtitle',  # <- repository.peno64
         'resource.language.he_il',          # <- Kodi official repo (Hebrew language pack)
     ]
 

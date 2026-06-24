@@ -25,7 +25,7 @@ its sha256, and applies each file per `config_policy.json`.
 | `guisettings.xml` | Curated build-identity Kodi settings (active skin, Hebrew locale, subtitle config, player/cache). **Not** a full dump — only the settings the build changes, minus machine-specific ones. | `merge_id` | `merge_id` |
 | `addon_data/skin.fentastic/settings.xml` | The FENtastic ("Twilight") look + Hebrew menu labels. | `replace` | `merge_id` |
 | `favourites.xml` | Build's default favourites / home shortcuts. | `replace` | `seed_if_absent` |
-| `sources.xml` | Build's repository file-sources (kodifitzwell, Fishenzon, Otaku, peno64, CocoScrapers) — cleaned to match the hybrid provisioning repos. | `replace` | `merge_name` |
+| `sources.xml` | Build's repository file-sources (kodifitzwell, Fishenzon, Otaku, CocoScrapers) — cleaned to match the hybrid provisioning repos. | `replace` | `merge_name` |
 | `advancedsettings.xml` | Cache/network performance tuning. | `replace` | `replace` |
 | `config_policy.json` | Declarative apply policy (modes, `exclude_ids`, cleanup). | — | — |
 

@@ -751,9 +751,11 @@ def yandex_machine_translate(text, encoding):
 
 #################### BING API #########################################################
 def bing_c_get_keys():
-    import requests
-    x=requests.get('https://kodi7rd.github.io/repository/other/DarkSubs_Bing/darksubs_bing_api.json', timeout=DEFAULT_REQUEST_TIMEOUT).json()
-    return x
+    # KODI-POV-IL: kodi7rd.github.io no longer exists. This Bing-API key feed is
+    # retired -- its only consumer (bing_api_machine_translate) is disabled and
+    # the active translation path is bing_web_machine_translate. Return empty so
+    # nothing ever fetches the dead URL.
+    return []
     
 def bing_get_last_key():
     try:
