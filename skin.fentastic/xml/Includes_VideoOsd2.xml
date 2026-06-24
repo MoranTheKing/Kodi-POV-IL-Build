@@ -675,7 +675,7 @@
 	<animation type="Hidden">
 		<effect type="fade" start="100" end="0" time="250" tween="sine" easing="inout"/>
 	</animation>
-	<visible>String.IsEqual(Container(201).ListItem.Property(id),forward) + Control.HasFocus(201)</visible>
+	<visible>String.IsEqual(Container(201).ListItem.Property(id),forward) | !Control.HasFocus(202)</visible>
 	<itemlayout width="145">
 	<control type="group">
 	<width>175</width>
