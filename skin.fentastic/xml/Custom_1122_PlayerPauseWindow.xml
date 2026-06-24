@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <window type="dialog" id="12209">
-		<visible>Window.IsActive(fullscreenvideo) + ![Window.IsActive(videoosd) | Window.IsActive(1125)] + !System.HasActiveModalDialog</visible>
+		<visible>Window.IsActive(fullscreenvideo) + ![Window.IsActive(videoosd) | Window.IsActive(1125)] + !System.HasActiveModalDialog + String.IsEmpty(Window(home).Property(MoranSubsChooserOpen))</visible>
 		<include>top2bottomslideanimation</include>
 	<controls>
 		
