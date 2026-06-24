@@ -16,19 +16,16 @@ CUSTOM_ART = os.path.join(PATH, 'resources', 'kodi_rd_israel_art')
 #########################################################
 ADDONTITLE = '[COLOR yellow]Kodi POV IL Wizard[/COLOR]'
 BUILDERNAME = '[COLOR yellow]Kodi POV IL[/COLOR]'
-# KODI-RD-IL - Fallback build name. Used by startup.py to populate the
-# 'buildname' setting on APK installs where the user never went through
-# a wizard-driven Fresh Install (so the setting is empty and the whole
-# auto_quick_update path was getting silently no-op'd). Must match the
-# name="..." value in build.txt.
+# KODI-POV-IL - Canonical build NAME. Used by startup.py to populate the
+# 'buildname' setting on APK installs where the user never went through a
+# wizard-driven Fresh Install (so the setting is empty), and as the single build
+# label shown in the Builds menu. Must match the manifest's build name.
 BUILDNAME_DEFAULT = 'Kodi POV IL - FENtastic'
-# KODI-RD-IL - Fallback build VERSION. Used by startup.py to populate
-# the 'buildversion' setting at the same time we populate 'buildname'.
-# Without this, the wizard's build_update_check sees an empty
-# buildversion and thinks every published version is newer ->
-# triggers a destructive full-build-install dialog that wipes the
-# user's connected services. Should be kept aligned with the version
-# we ship in dist/Kodi-POV-IL-FENtastic-test-*.zip.
+# KODI-POV-IL - Canonical build VERSION. This is the single source of truth for
+# the build version under the modular architecture: it is what check.check_build
+# reports, what Fresh Install / the .provisioned marker pin into the
+# 'buildversion' setting, and what the Builds menu displays. (It no longer has
+# anything to do with a monolithic build zip -- those are gone.)
 BUILDVERSION_DEFAULT = '0.1.45'
 EXCLUDES = [ADDON_ID]
 # KODI-POV-IL - build.txt / BUILDFILE has been DELETED. The build is now
@@ -44,13 +41,6 @@ APKFILE = 'http://'
 #########################################################
 # KODI-RD-IL - BUILD SKIN SWITCH
 BUILD_SKIN_SWITCH_IMAGE_URL = 'https://github.com/MoranTheKing/Kodi-POV-IL/raw/main/wizard/assets/build_menu_screenshots/pov_il_splash.jpg'
-# KODI-POV-IL - DEPRECATED. Legacy text-file notification feed that drove the
-# old monolithic auto_quick_update() loop (now dead code in startup.py).
-# Replaced by the modular updater (MANIFEST_URL). Still referenced read-only by
-# a couple of legacy call-sites that pin the note id to suppress re-notifying
-# the user. RECOMMENDATION: delete together with auto_quick_update() and the
-# quick_update_note* settings.
-QUICK_UPDATE_NOTIFICATION_URL = 'https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL/main/wizard/assets/notification_files/quick_update.txt'
 # KODI-POV-IL - MODULAR UPDATER (Phase 2/3, manifest-based; replaces the
 # legacy text-file quick_update). Raw manifest.json produced by the new
 # Monorepo CI pipeline. The wizard polls this on startup and updates only
