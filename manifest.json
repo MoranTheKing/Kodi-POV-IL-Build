@@ -3,7 +3,7 @@
   "name": "Kodi POV IL Build",
   "repo": "MoranTheKing/Kodi-POV-IL-Build",
   "release_tag": "addons-latest",
-  "generated": "2026-06-24T13:43:36Z",
+  "generated": "2026-06-24T14:56:22Z",
   "manifest_url": "https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL-Build/main/manifest.json",
   "config": {
     "config_version": "1.1.0",
@@ -28,13 +28,13 @@
     "plugin.program.kodipovilwizard": {
       "id": "plugin.program.kodipovilwizard",
       "name": "[COLOR yellow]Kodi POV IL Wizard[/COLOR]",
-      "version": "0.1.41",
+      "version": "0.1.42",
       "type": "plugin",
-      "filename": "plugin.program.kodipovilwizard-0.1.41.zip",
-      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.kodipovilwizard-0.1.41.zip",
-      "size": 4555469,
-      "sha256": "9d713d40384344a2e307d120392e8888bf8a010a1cdb1e37af8a0b98a09ef2fc",
-      "updated": "2026-06-24T13:43:36Z"
+      "filename": "plugin.program.kodipovilwizard-0.1.42.zip",
+      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.kodipovilwizard-0.1.42.zip",
+      "size": 4554455,
+      "sha256": "77c343b84e47e5a6e14c74fb8ef934a1ca7830c7d83860839f754918bba32311",
+      "updated": "2026-06-24T14:56:22Z"
     },
     "plugin.program.orderfavourites-hebrew": {
       "id": "plugin.program.orderfavourites-hebrew",
@@ -57,6 +57,17 @@
       "size": 19175,
       "sha256": "18a47fdc9cc7ef3b13f40d99e607a93ef4d57a46198e0d6c6091bd77c401e244",
       "updated": "2026-06-23T15:45:10Z"
+    },
+    "repository.jurialmunkey": {
+      "id": "repository.jurialmunkey",
+      "name": "jurialmunkey Alpha Repository",
+      "version": "3.4",
+      "type": "repository",
+      "filename": "repository.jurialmunkey-3.4.zip",
+      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/repository.jurialmunkey-3.4.zip",
+      "size": 7217,
+      "sha256": "88af3e286666e1a15e435cc5e3b7fe2dc8ca5455690e20693f46aba74207f31a",
+      "updated": "2026-06-24T14:56:22Z"
     },
     "repository.kodifitzwell": {
       "id": "repository.kodifitzwell",
@@ -127,13 +138,13 @@
     "service.subtitles.kodipovilai": {
       "id": "service.subtitles.kodipovilai",
       "name": "MoranSubs",
-      "version": "0.2.263",
+      "version": "0.2.264",
       "type": "subtitle",
-      "filename": "service.subtitles.kodipovilai-0.2.263.zip",
-      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/service.subtitles.kodipovilai-0.2.263.zip",
-      "size": 7331291,
-      "sha256": "ed8c7457d7c953af2e95cb46344224627a0cb3e2128b14bb1dc51857dba0e0ff",
-      "updated": "2026-06-23T19:58:31Z"
+      "filename": "service.subtitles.kodipovilai-0.2.264.zip",
+      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/service.subtitles.kodipovilai-0.2.264.zip",
+      "size": 7330639,
+      "sha256": "1dbed2042d23acf3f9429a5c459e07a9c417511576d1938079df2e255112a62c",
+      "updated": "2026-06-24T14:56:22Z"
     },
     "skin.estuary": {
       "id": "skin.estuary",
