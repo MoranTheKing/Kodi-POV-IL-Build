@@ -15,16 +15,16 @@ FAVOURITES_REL = 'favourites.xml'
 
 REPLACEMENTS = (
     (
-        'special://home/media/build_icons/POV/Logo_POV.png',
-        'special://home/media/build_icons/POV/Logo_POV_IL.png',
+        'special://home/media/povil_icons/Logo_POV.png',
+        'special://home/media/povil_icons/Logo_POV_IL.png',
     ),
     (
-        'special://home/media/build_icons/Wizard/wizard.png',
-        'special://home/media/build_icons/Wizard/wizard_pov_il.png',
+        'special://home/media/povil_icons/wizard.png',
+        'special://home/media/povil_icons/wizard_pov_il.png',
     ),
     (
-        'special://home/media/build_icons/Wizard/fast_update.png',
-        'special://home/media/build_icons/Wizard/fast_update_pov_il.png',
+        'special://home/media/povil_icons/fast_update.png',
+        'special://home/media/povil_icons/fast_update_pov_il.png',
     ),
 )
 

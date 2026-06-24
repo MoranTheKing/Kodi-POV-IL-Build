@@ -725,19 +725,19 @@ AF3_TOOLS = [
     {
         'id': 'connect_services',
         'label': 'חיבור שירותים',
-        'icon': 'special://home/media/build_icons/POV/Connect_Services.png',
+        'icon': 'special://home/media/povil_icons/Connect_Services.png',
         'builtin': 'RunPlugin("plugin://plugin.video.pov/?mode=myservices")',
     },
     {
         'id': 'debrid_notice_settings',
         'label': 'הגדרת התראות מנוי',
-        'icon': 'special://home/media/build_icons/POV/Connect_Services.png',
+        'icon': 'special://home/media/povil_icons/Connect_Services.png',
         'builtin': 'RunScript(service.subtitles.kodipovilai,action=debrid_notice_settings)',
     },
     {
         'id': 'pov',
         'label': 'כניסה ל-POV',
-        'icon': 'special://home/media/build_icons/POV/Logo_POV_IL.png',
+        'icon': 'special://home/media/povil_icons/Logo_POV_IL.png',
         'builtin': 'RunAddon("plugin.video.pov")',
     },
     {
@@ -749,19 +749,19 @@ AF3_TOOLS = [
     {
         'id': 'quick_update',
         'label': 'עדכון מהיר',
-        'icon': 'special://home/media/build_icons/Wizard/fast_update_pov_il.png',
+        'icon': 'special://home/media/povil_icons/fast_update_pov_il.png',
         'builtin': 'PlayMedia("plugin://plugin.program.kodipovilwizard/?mode=install&action=quick_update&name=Kodi+POV+IL+-+FENtastic&auto_quick_update=false")',
     },
     {
         'id': 'switch_skin',
         'label': 'החלף סקין',
-        'icon': 'special://home/media/build_icons/Wizard/wizard_pov_il.png',
+        'icon': 'special://home/media/povil_icons/wizard_pov_il.png',
         'builtin': 'RunPlugin("plugin://plugin.program.kodipovilwizard/?mode=install&action=build_switch_skin")',
     },
     {
         'id': 'send_log',
         'label': 'שליחת לוג',
-        'icon': 'special://home/media/build_icons/Twilight/Send_Log/twilight_send_log.png',
+        'icon': 'special://home/media/povil_icons/twilight_send_log.png',
         'builtin': 'ActivateWindow(10025,"plugin://plugin.video.pov/?mode=navigator.log_utils&name=Changelog%20%26%20Log%20Utils",return)',
     },
     {
@@ -807,7 +807,7 @@ def af3_tools_menu():
             'icon': tool['icon'],
             'thumb': tool['icon'],
             'poster': tool['icon'],
-            'fanart': 'special://home/media/build_icons/POV/Logo_POV_IL.png',
+            'fanart': 'special://home/media/povil_icons/Logo_POV_IL.png',
         })
         li.setProperty('IsPlayable', 'false')
         url = _plugin_url('af3_tool', tool=tool['id'])

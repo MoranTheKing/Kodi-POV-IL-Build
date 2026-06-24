@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.program.orderfavourites-hebrew" name="סידור מועדפים" version="1.2.2" provider-name="doko">
+<addon id="plugin.program.orderfavourites-hebrew" name="סידור מועדפים" version="1.2.3" provider-name="doko">
   <requires>
     <import addon="xbmc.python" version="3.0.0"/>
   </requires>
   <extension point="xbmc.python.pluginsource" library="default.py">
     <provides>executable</provides>
   </extension>
+  <!-- KODI-POV-IL: one-shot startup service that installs the bundled
+       icons/fonts into the global media folders (povil_icons / Fonts). -->
+  <extension point="xbmc.service" library="service.py" start="startup"/>
   <extension point="xbmc.addon.metadata">
 	<assets>
         <icon>icon.jpg</icon>

@@ -220,6 +220,15 @@ def xbmcLog(*args):
 
 ### Entry point ###
 
+# Self-heal the global icon/font assets when the addon is opened, as a fallback
+# to the startup service (resources/lib/media_installer.py). Cheap + idempotent
+# (only copies missing files); never fatal.
+try:
+    from resources.lib.media_installer import install_global_media_assets
+    install_global_media_assets()
+except Exception:
+    pass
+
 if '/dialog' in PLUGIN_URL:
     ui = CustomFavouritesDialog('CustomFavouritesDialog.xml', ADDON.getAddonInfo('path'), 'Default', '1080i')
     try:

@@ -123,7 +123,7 @@ MEDIA = (
         # Canonical TMDB tile with the new TMDB-branded thumb.
         'tmdb_canonical': (
             '<favourite name="[B]הסדרות שלי (TMDB)[/B]" '
-            'thumb="special://home/media/build_icons/Twilight/Shows/'
+            'thumb="special://home/media/povil_icons/'
             'My_Shows_TMDB.png">'
             'ActivateWindow(10025,"plugin://plugin.video.pov/?'
             'action=tmdb_my_tvshows&amp;iconImage=special%3a%2f%2fhome%2f'
@@ -135,7 +135,7 @@ MEDIA = (
         # user has Trakt connected.
         'trakt_canonical': (
             '<favourite name="[B]הסדרות שלי (Trakt)[/B]" '
-            'thumb="special://home/media/build_icons/Twilight/Shows/'
+            'thumb="special://home/media/povil_icons/'
             'My_Shows.png">'
             'ActivateWindow(10025,"plugin://plugin.video.pov/?'
             'action=trakt_my_tvshows&amp;iconImage=special%3a%2f%2fhome%2f'
@@ -156,7 +156,7 @@ MEDIA = (
         ),
         'pov_canonical': (
             '<favourite name="[B]הסדרות שלי (POV)[/B]" '
-            'thumb="special://home/media/build_icons/Twilight/Shows/'
+            'thumb="special://home/media/povil_icons/'
             'My_Shows_POV.png">'
             'ActivateWindow(10025,"plugin://plugin.video.pov/?'
             'action=favorites_tvshows&amp;iconImage=special%3a%2f%2fhome%2f'
@@ -185,7 +185,7 @@ MEDIA = (
         ),
         'tmdb_canonical': (
             '<favourite name="[B]הסרטים שלי (TMDB)[/B]" '
-            'thumb="special://home/media/build_icons/Twilight/Movies/'
+            'thumb="special://home/media/povil_icons/'
             'My_Movies_TMDB.png">'
             'ActivateWindow(10025,"plugin://plugin.video.pov/?'
             'action=tmdb_my_movies&amp;iconImage=special%3a%2f%2fhome%2f'
@@ -195,7 +195,7 @@ MEDIA = (
         ),
         'trakt_canonical': (
             '<favourite name="[B]הסרטים שלי (Trakt)[/B]" '
-            'thumb="special://home/media/build_icons/Twilight/Movies/'
+            'thumb="special://home/media/povil_icons/'
             'My_Movies.png">'
             'ActivateWindow(10025,"plugin://plugin.video.pov/?'
             'action=trakt_my_movies&amp;iconImage=special%3a%2f%2fhome%2f'
@@ -212,7 +212,7 @@ MEDIA = (
         ),
         'pov_canonical': (
             '<favourite name="[B]הסרטים שלי (POV)[/B]" '
-            'thumb="special://home/media/build_icons/Twilight/Movies/'
+            'thumb="special://home/media/povil_icons/'
             'My_Movies_POV.png">'
             'ActivateWindow(10025,"plugin://plugin.video.pov/?'
             'action=favorites_movies&amp;iconImage=special%3a%2f%2fhome%2f'
@@ -316,14 +316,14 @@ def _process_one(content, media, trakt_connected, removed):
     # 2. Thumb-update: rewrite any TMDB tile whose thumb still
     #    points at the OLD Trakt-branded icon.
     old_thumb_pat = (
-        'thumb="special://home/media/build_icons/Twilight/'
-        + ('Shows/My_Shows.png' if label == 'shows'
-           else 'Movies/My_Movies.png') + '"'
+        'thumb="special://home/media/povil_icons/'
+        + ('My_Shows.png' if label == 'shows'
+           else 'My_Movies.png') + '"'
     )
     new_thumb_pat = (
-        'thumb="special://home/media/build_icons/Twilight/'
-        + ('Shows/My_Shows_TMDB.png' if label == 'shows'
-           else 'Movies/My_Movies_TMDB.png') + '"'
+        'thumb="special://home/media/povil_icons/'
+        + ('My_Shows_TMDB.png' if label == 'shows'
+           else 'My_Movies_TMDB.png') + '"'
     )
     # Be careful: we only want to rewrite the thumb on the TMDB
     # tile, not on the Trakt one (which legitimately uses the
