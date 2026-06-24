@@ -7,7 +7,7 @@
 # (name, AuthClass) pairs in modules.myservices.authorize() -- there
 # is no public registration API for adding new services. To get our
 # entries in there we patch the file on disk and re-inject on every
-# Kodi startup, same pattern as darksubs_patcher and wizard_patcher.
+# Kodi startup, same pattern as darksubs_patcher.
 #
 # The injected service classes are dead simple: they read the
 # matching key (api_key for Gemini, wyzie_api_key for Wyzie) from
