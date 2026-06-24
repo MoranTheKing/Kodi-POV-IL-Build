@@ -2,7 +2,7 @@
 #
 # The FENtastic build's home-screen tiles (in userdata/favourites.xml)
 # reference icons by absolute special:// paths -- e.g.
-#   special://home/media/build_icons/Twilight/Shows/My_Shows.png
+#   special://home/media/povil_icons/My_Shows.png
 # When we migrate the Trakt-collection home tiles to TMDB favourites,
 # the existing icons are Trakt-branded (red TRAKT badge in the
 # upper-right of the folder graphic). Pointing the TMDB tiles at
@@ -30,13 +30,16 @@ try:
 except Exception:
     kodi_utils = None
 
+# The live destination is now the FLAT special://home/media/povil_icons/
+# folder, so the build-branding assets that must replace legacy artwork on
+# existing installs are matched by BASENAME (no subfolders any more).
 FORCE_SYNC = set([
-    'POV/Logo_POV_IL.png',
-    'POV/Logo_POV.png',
-    'Wizard/fast_update_pov_il.png',
-    'Wizard/fast_update.png',
-    'Wizard/wizard_pov_il.png',
-    'Wizard/wizard.png',
+    'Logo_POV_IL.png',
+    'Logo_POV.png',
+    'fast_update_pov_il.png',
+    'fast_update.png',
+    'wizard_pov_il.png',
+    'wizard.png',
 ])
 
 
@@ -56,13 +59,13 @@ def _bundled_root():
 
 
 def _target_root():
-    """The live media/build_icons/ directory under the user's Kodi
+    """The live media/povil_icons/ directory under the user's Kodi
     home. Returns '' when Kodi APIs aren't available."""
     if xbmcvfs is None:
         return ''
     try:
         return xbmcvfs.translatePath(
-            'special://home/media/build_icons/')
+            'special://home/media/povil_icons/')
     except Exception:
         return ''
 
@@ -91,7 +94,8 @@ def _same_file(src, dst):
 
 
 def ensure_installed():
-    """Copy each bundled PNG into the live media/build_icons/
+    """Copy each bundled PNG (flattened, by basename) into the live
+    media/povil_icons/
     subtree, skipping files that already exist there. Returns
     {'installed': [...], 'skipped': [...]} or {'_status': '...'}.
     """
@@ -105,9 +109,12 @@ def ensure_installed():
 
     installed, updated, skipped = [], [], []
     for src, rel in _walk_pngs(src_root):
-        rel_key = rel.replace(os.sep, '/')
-        dst = os.path.join(dst_root, rel)
-        force = rel_key in FORCE_SYNC
+        # FLATTEN: the live destination (special://home/media/povil_icons/) is a
+        # single flat folder, so every bundled PNG is copied by basename only --
+        # dropping the legacy nested subfolders (POV/, Twilight/Shows/, ...).
+        base = os.path.basename(rel)
+        dst = os.path.join(dst_root, base)
+        force = base in FORCE_SYNC
         existed = os.path.isfile(dst)
         if existed and (not force or _same_file(src, dst)):
             skipped.append(rel)

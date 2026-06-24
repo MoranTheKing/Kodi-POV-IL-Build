@@ -161,7 +161,7 @@ _NETWORKS = (
 )
 
 def _net_widget(name, net_id, icon_file):
-    icon_path = ('special://home/media/build_icons/Twilight/Shows/Networks/'
+    icon_path = ('special://home/media/povil_icons/'
                  + icon_file)
     # _pov() does NOT url-encode its args (the existing tiles pass a
     # pre-encoded iconImage and %20-escaped name), so encode here: the
@@ -188,7 +188,7 @@ STREAMING_NETWORK_WIDGETS = [
 HOME_WIDGETS = [
     {
         'label': 'כלים וחיבורים',
-        'icon': 'special://home/media/build_icons/POV/Connect_Services.png',
+        'icon': 'special://home/media/povil_icons/Connect_Services.png',
         'path': 'plugin://plugin.program.kodipovilwizard/?mode=install&action=af3_tools',
         'target': 'programs',
         'widget_style': 'Landscape',
@@ -196,7 +196,7 @@ HOME_WIDGETS = [
     },
     {
         'label': 'סרטים חדשים',
-        'icon': 'special://home/media/build_icons/Twilight/Movies/Movies_Popular.png',
+        'icon': 'special://home/media/povil_icons/Movies_Popular.png',
         'path': _pov('tmdb_movies_latest_releases', 'build_movie_list', '32461', 'dvd.png'),
         'target': 'videos',
         'widget_style': 'Poster',
@@ -204,7 +204,7 @@ HOME_WIDGETS = [
     },
     {
         'label': 'סדרות פופולריות',
-        'icon': 'special://home/media/build_icons/Twilight/Shows/Shows_Popular.png',
+        'icon': 'special://home/media/povil_icons/Shows_Popular.png',
         'path': _pov('trakt_tv_trending', 'build_tvshow_list', '32458', 'trending.png'),
         'target': 'videos',
         'widget_style': 'Poster',
@@ -212,7 +212,7 @@ HOME_WIDGETS = [
     },
     {
         'label': 'פרקים להמשך צפייה',
-        'icon': 'special://home/media/build_icons/Twilight/Shows/Episodes_In_Progress.png',
+        'icon': 'special://home/media/povil_icons/Episodes_In_Progress.png',
         'path': _pov('', 'build_next_episode', '32483', 'next_episodes.png'),
         'target': 'videos',
         'widget_style': 'Landscape',
@@ -220,7 +220,7 @@ HOME_WIDGETS = [
     },
     {
         'label': 'סרטים להמשך צפייה',
-        'icon': 'special://home/media/build_icons/Twilight/Movies/Movies_In_Progress.png',
+        'icon': 'special://home/media/povil_icons/Movies_In_Progress.png',
         'path': _pov('in_progress_movies', 'build_movie_list', '32476', 'player.png'),
         'target': 'videos',
         'widget_style': 'Poster',
@@ -232,7 +232,7 @@ HOME_WIDGETS = [
         # what populates immediately when the user adds a movie, with no
         # dependency on the online TMDB.org account list.
         'label': 'הסרטים שלי',
-        'icon': 'special://home/media/build_icons/Twilight/Movies/My_Movies_TMDB.png',
+        'icon': 'special://home/media/povil_icons/My_Movies_TMDB.png',
         'path': _pov('favorites_movies', 'build_movie_list', 'Movie%20Favorites',
                      'special%3a%2f%2fhome%2faddons%2fplugin.video.pov%2fresources%2fskins%2fDefault%2fmedia%2ftmdb.png'),
         'target': 'videos',
@@ -243,7 +243,7 @@ HOME_WIDGETS = [
         # TMDB.org account favorites (the online list, synced across
         # devices). Kept alongside the local one so the user has both.
         'label': 'הסרטים שלי (TMDB)',
-        'icon': 'special://home/media/build_icons/Twilight/Movies/My_Movies_TMDB.png',
+        'icon': 'special://home/media/povil_icons/My_Movies_TMDB.png',
         'path': _pov('tmdb_my_movies', 'build_movie_list', 'Movie%20Favorites%20(TMDB)',
                      'special%3a%2f%2fhome%2faddons%2fplugin.video.pov%2fresources%2fskins%2fDefault%2fmedia%2ftmdb.png'),
         'target': 'videos',
@@ -254,7 +254,7 @@ HOME_WIDGETS = [
         # Trakt collection -- movies. Grouped with the other movie tiles:
         # right after 'הסרטים שלי (TMDB)' and above the shows.
         'label': 'הסרטים שלי (Trakt)',
-        'icon': 'special://home/media/build_icons/Twilight/Movies/My_Movies.png',
+        'icon': 'special://home/media/povil_icons/My_Movies.png',
         'path': _pov('trakt_my_movies', 'build_movie_list', 'Movies',
                      'special%3a%2f%2fhome%2faddons%2fplugin.video.pov%2fresources%2fskins%2fDefault%2fmedia%2ftrakt.png'),
         'target': 'videos',
@@ -264,7 +264,7 @@ HOME_WIDGETS = [
     {
         # POV-LOCAL show favorites (watched.db -> favorites).
         'label': 'הסדרות שלי',
-        'icon': 'special://home/media/build_icons/Twilight/Shows/My_Shows_TMDB.png',
+        'icon': 'special://home/media/povil_icons/My_Shows_TMDB.png',
         'path': _pov('favorites_tvshows', 'build_tvshow_list', 'TV%20Show%20Favorites',
                      'special%3a%2f%2fhome%2faddons%2fplugin.video.pov%2fresources%2fskins%2fDefault%2fmedia%2ftmdb.png'),
         'target': 'videos',
@@ -274,7 +274,7 @@ HOME_WIDGETS = [
     {
         # TMDB.org account show favorites (online list).
         'label': 'הסדרות שלי (TMDB)',
-        'icon': 'special://home/media/build_icons/Twilight/Shows/My_Shows_TMDB.png',
+        'icon': 'special://home/media/povil_icons/My_Shows_TMDB.png',
         'path': _pov('tmdb_my_tvshows', 'build_tvshow_list', 'TV%20Show%20Favorites%20(TMDB)',
                      'special%3a%2f%2fhome%2faddons%2fplugin.video.pov%2fresources%2fskins%2fDefault%2fmedia%2ftmdb.png'),
         'target': 'videos',
@@ -284,7 +284,7 @@ HOME_WIDGETS = [
     {
         # Trakt collection -- shows. Grouped after 'הסדרות שלי (TMDB)'.
         'label': 'הסדרות שלי (Trakt)',
-        'icon': 'special://home/media/build_icons/Twilight/Shows/My_Shows.png',
+        'icon': 'special://home/media/povil_icons/My_Shows.png',
         'path': _pov('trakt_my_tvshows', 'build_tvshow_list', 'TV%20Shows',
                      'special%3a%2f%2fhome%2faddons%2fplugin.video.pov%2fresources%2fskins%2fDefault%2fmedia%2ftrakt.png'),
         'target': 'videos',
@@ -293,18 +293,18 @@ HOME_WIDGETS = [
     },
     {
         'label': 'סרטים לפי ז׳אנר',
-        'icon': 'special://home/media/build_icons/Twilight/Movies/Movies_Genres.png',
+        'icon': 'special://home/media/povil_icons/Movies_Genres.png',
         'path': _shortcut_folder('FENtastic - סרטים - זאנרים',
-                                 'special://home/media/build_icons/Twilight/Movies/Movies_Genres.png'),
+                                 'special://home/media/povil_icons/Movies_Genres.png'),
         'target': 'videos',
         'widget_style': 'Landscape',
         'widget_limit': '7',
     },
     {
         'label': 'סדרות לפי ז׳אנר',
-        'icon': 'special://home/media/build_icons/Twilight/Shows/Shows_Genres.png',
+        'icon': 'special://home/media/povil_icons/Shows_Genres.png',
         'path': _shortcut_folder('FENtastic - סדרות - זאנרים',
-                                 'special://home/media/build_icons/Twilight/Shows/Shows_Genres.png'),
+                                 'special://home/media/povil_icons/Shows_Genres.png'),
         'target': 'videos',
         'widget_style': 'Landscape',
         'widget_limit': '7',
@@ -316,7 +316,7 @@ HOME_WIDGETS = [
         # plugin://plugin.video.idanplus/ lists idanplus's own category
         # menu, so the row shows its categories and clicking browses in.
         'label': 'עידן פלוס',
-        'icon': 'special://home/media/build_icons/Idan_Plus/idan_plus.png',
+        'icon': 'special://home/media/povil_icons/idan_plus.png',
         'path': 'plugin://plugin.video.idanplus/',
         'target': 'videos',
         'widget_style': 'Landscape',
@@ -328,19 +328,19 @@ HOME_WIDGETS = [
 HOME_SUBMENU = [
     {
         'label': 'POV',
-        'icon': 'special://home/media/build_icons/POV/Logo_POV_IL.png',
+        'icon': 'special://home/media/povil_icons/Logo_POV_IL.png',
         'path': 'RunAddon("plugin.video.pov")',
         'target': '',
     },
     {
         'label': 'חיבור שירותים',
-        'icon': 'special://home/media/build_icons/POV/Connect_Services.png',
+        'icon': 'special://home/media/povil_icons/Connect_Services.png',
         'path': 'RunPlugin("plugin://plugin.video.pov/?mode=myservices")',
         'target': '',
     },
     {
         'label': 'הגדרת התראות מנוי',
-        'icon': 'special://home/media/build_icons/POV/Connect_Services.png',
+        'icon': 'special://home/media/povil_icons/Connect_Services.png',
         'path': 'RunScript(service.subtitles.kodipovilai,action=debrid_notice_settings)',
         'target': '',
     },
@@ -352,7 +352,7 @@ HOME_SUBMENU = [
     },
     {
         'label': 'החלף סקין',
-        'icon': 'special://home/media/build_icons/Wizard/wizard_pov_il.png',
+        'icon': 'special://home/media/povil_icons/wizard_pov_il.png',
         'path': 'RunPlugin("plugin://plugin.program.kodipovilwizard/?mode=install&action=build_switch_skin")',
         'target': '',
     },
@@ -362,19 +362,19 @@ HOME_SUBMENU = [
 POWER_MENU = [
     {
         'label': 'POV',
-        'icon': 'special://home/media/build_icons/POV/Logo_POV_IL.png',
+        'icon': 'special://home/media/povil_icons/Logo_POV_IL.png',
         'path': 'RunAddon("plugin.video.pov")',
         'target': '',
     },
     {
         'label': 'חיבור שירותים',
-        'icon': 'special://home/media/build_icons/POV/Connect_Services.png',
+        'icon': 'special://home/media/povil_icons/Connect_Services.png',
         'path': 'RunPlugin("plugin://plugin.video.pov/?mode=myservices")',
         'target': '',
     },
     {
         'label': 'הגדרת התראות מנוי',
-        'icon': 'special://home/media/build_icons/POV/Connect_Services.png',
+        'icon': 'special://home/media/povil_icons/Connect_Services.png',
         'path': 'RunScript(service.subtitles.kodipovilai,action=debrid_notice_settings)',
         'target': '',
     },
@@ -386,19 +386,19 @@ POWER_MENU = [
     },
     {
         'label': 'שליחת לוג',
-        'icon': 'special://home/media/build_icons/Twilight/Send_Log/twilight_send_log.png',
+        'icon': 'special://home/media/povil_icons/twilight_send_log.png',
         'path': 'ActivateWindow(10025,"plugin://plugin.video.pov/?mode=navigator.log_utils&name=Changelog%20%26%20Log%20Utils",return)',
         'target': '',
     },
     {
         'label': 'החלף סקין',
-        'icon': 'special://home/media/build_icons/Wizard/wizard_pov_il.png',
+        'icon': 'special://home/media/povil_icons/wizard_pov_il.png',
         'path': 'RunPlugin("plugin://plugin.program.kodipovilwizard/?mode=install&action=build_switch_skin")',
         'target': '',
     },
     {
         'label': 'עדכון מהיר',
-        'icon': 'special://home/media/build_icons/Wizard/fast_update_pov_il.png',
+        'icon': 'special://home/media/povil_icons/fast_update_pov_il.png',
         'path': 'PlayMedia("plugin://plugin.program.kodipovilwizard/?mode=install&action=quick_update&name=Kodi+POV+IL+-+FENtastic&auto_quick_update=false")',
         'target': '',
     },
@@ -446,7 +446,7 @@ SEARCH_WIDGETS = [
     {
         'guid': 'pov-search-movies',
         'label': 'סרטים',
-        'icon': 'special://home/media/build_icons/Twilight/Movies/Movies_Popular.png',
+        'icon': 'special://home/media/povil_icons/Movies_Popular.png',
         'path': 'DefaultSearch-POVMovies',
         'target': 'videos',
         'widget_style': 'Poster',
@@ -454,7 +454,7 @@ SEARCH_WIDGETS = [
     {
         'guid': 'pov-search-tv',
         'label': 'סדרות',
-        'icon': 'special://home/media/build_icons/Twilight/Shows/Shows_Popular.png',
+        'icon': 'special://home/media/povil_icons/Shows_Popular.png',
         'path': 'DefaultSearch-POVTv',
         'target': 'videos',
         'widget_style': 'Poster',
@@ -750,7 +750,7 @@ GENRE_NAME_TO_ICON = {
 
 
 # NOTE: the old _genre_icon_for()/GENRE_ICON_BASE helpers (which returned
-# an ABSOLUTE special://home/media/build_icons/Genres/... path) were
+# an ABSOLUTE special://home/media/povil_icons/... path) were
 # REMOVED in v0.2.85. They were the bug: POV's build_shortcut_folder_list
 # prepends media_path() to a non-network iconImage, so an absolute value
 # got doubled into a broken '.../media/special://...' path -> POV-logo
@@ -766,7 +766,7 @@ def _heal_genre_icon(item):
     iconImage, so the value MUST be a bare relative path like
     'genres/genre_action.png' -- POV ships those icons in its media dir.
     An earlier version of this patcher wrongly stored an ABSOLUTE
-    'special://home/media/build_icons/Genres/...' path, which POV then
+    'special://home/media/povil_icons/...' path, which POV then
     doubled into a broken '.../media/special://home/...' -> POV-logo
     fallback. This heals that: any absolute special:// value (or a
     bare filename without the 'genres/' dir) is mapped back to
