@@ -1085,241 +1085,6 @@ def _maybe_patch_pov_services():
                 level='WARNING')
         except Exception:
             pass
-
-
-def _maybe_patch_darksubs():
-    """Self-healing patch of DarkSubs's machine_translate_subs so
-    that when a user with a Gemini key picks a non-Hebrew subtitle
-    from DarkSubs, the translation goes through our AI instead of
-    Google/Bing/Yandex. Idempotent, safe to re-run on every Kodi
-    startup -- if upstream DarkSubs updates and overwrites the
-    injected hook, this puts it back."""
-    try:
-        from resources.lib import dark_subs_integration, kodi_utils
-    except Exception:
-        return
-    try:
-        status = dark_subs_integration.maybe_patch_darksubs()
-        if status == 'patched':
-            kodi_utils.log('DarkSubs hook (re)injected on startup',
-                           level='INFO')
-        elif status in ('unmatched', 'write_failed', 'read_failed',
-                        'failed'):
-            kodi_utils.log(
-                'DarkSubs hook injection skipped: ' + status,
-                level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log('DarkSubs patch run failed: {0}'.format(e),
-                           level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_darksubs_download_sub():
-    """Self-healing patch of DarkSubs's download_sub() elif so the
-    AI hook (in machine_translate_subs, see _maybe_patch_darksubs)
-    also fires when the user has DarkSubs's `auto_translate` setting
-    turned OFF. Without this, picking a non-Hebrew subtitle manually
-    leaves the original English on screen -- the AI hook never gets
-    a chance to run because machine_translate_subs is never called.
-    User-reported on CoreELEC: explicitly turned auto_translate off
-    because they didn't want DarkSubs's Google fallback, expected
-    AI to still pick up manual selections."""
-    try:
-        from resources.lib import darksubs_download_sub_patcher, \
-            kodi_utils
-    except Exception:
-        return
-    try:
-        status = darksubs_download_sub_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'darksubs_download_sub_patcher: rewrote elif so AI '
-                'fires with auto_translate=OFF', level='INFO')
-        elif status in ('unmatched', 'write_failed', 'read_failed'):
-            kodi_utils.log(
-                'darksubs_download_sub_patcher: ' + status,
-                level='WARNING')
-    except Exception as e:
-        try:
-            from resources.lib import kodi_utils
-            kodi_utils.log(
-                'darksubs_download_sub_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_darksubs_opensubtitles():
-    """Self-healing OpenSubtitles provider fix for DarkSubs.
-
-    This runs in both build and standalone AI-addon installs. It only
-    copies DarkSubs's OpenSubtitles provider + local API-key fallback, so
-    standalone installs do not receive build UI/menu/list changes.
-    """
-    try:
-        from resources.lib import darksubs_opensubtitles_patcher, \
-            kodi_utils
-    except Exception:
-        return
-    try:
-        status = darksubs_opensubtitles_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'darksubs_opensubtitles_patcher: OpenSubtitles provider '
-                'updated', level='INFO')
-        elif status == 'failed':
-            kodi_utils.log(
-                'darksubs_opensubtitles_patcher: failed',
-                level='WARNING')
-    except Exception as e:
-        try:
-            from resources.lib import kodi_utils
-            kodi_utils.log(
-                'darksubs_opensubtitles_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_darksubs_embedded_demote():
-    """Self-healing patch of DarkSubs's engine.py so embedded ('[LOC]')
-    subtitle entries sink to the BOTTOM of their language group instead
-    of floating to the top on their hard-coded 101% sync. On this
-    streaming build the embedded track can't be AI-translated (DarkSubs
-    short-circuits embedded picks with setSubtitleStream before our
-    hook runs), so demoting it makes an external, AI-translatable
-    English source the natural first pick."""
-    try:
-        from resources.lib import darksubs_embedded_demote_patcher, \
-            kodi_utils
-    except Exception:
-        return
-    try:
-        status = darksubs_embedded_demote_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'darksubs_embedded_demote_patcher: [LOC] embedded '
-                'entries now sort to the bottom of their group',
-                level='INFO')
-            try:
-                from resources.lib import darksubs_reload
-                darksubs_reload.note_patched()
-            except Exception:
-                pass
-        elif status in ('unmatched', 'write_failed', 'read_failed'):
-            kodi_utils.log(
-                'darksubs_embedded_demote_patcher: ' + status,
-                level='WARNING')
-    except Exception as e:
-        try:
-            from resources.lib import kodi_utils
-            kodi_utils.log(
-                'darksubs_embedded_demote_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_darksubs_embedded_insert():
-    """THE root-cause fix for embedded English on top. DarkSubs's
-    autosub.py inserts the embedded English entry at "right after the
-    last Hebrew subtitle", i.e. ABOVE the real English subs -- and it
-    does this AFTER engine.sort_subtitles, which is why the engine/picker
-    demotes never moved it. This patches autosub.py to insert embedded
-    English at the END of the list instead."""
-    try:
-        from resources.lib import darksubs_embedded_insert_patcher, \
-            kodi_utils
-    except Exception:
-        return
-    try:
-        status = darksubs_embedded_insert_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'darksubs_embedded_insert_patcher: embedded English now '
-                'inserted at the bottom of the list', level='INFO')
-            try:
-                from resources.lib import darksubs_reload
-                darksubs_reload.note_patched()
-            except Exception:
-                pass
-        elif status in ('unmatched', 'write_failed', 'read_failed'):
-            kodi_utils.log(
-                'darksubs_embedded_insert_patcher: ' + status,
-                level='WARNING')
-    except Exception as e:
-        try:
-            from resources.lib import kodi_utils
-            kodi_utils.log(
-                'darksubs_embedded_insert_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_darksubs_subwindow_demote():
-    """Final-point embedded-English demote: patch DarkSubs's picker
-    dialog sub_window.py so the embedded 'תרגום מובנה אנגלית' ([LOC])
-    row sinks to the bottom of the list right before it's drawn --
-    independent of engine.sort_subtitles ordering (which didn't move it
-    on the user's device). Reorders the display list and the parallel
-    download list in lockstep so picking still downloads the right sub;
-    a genuine embedded Hebrew track stays on top."""
-    try:
-        from resources.lib import darksubs_subwindow_demote_patcher, \
-            kodi_utils
-    except Exception:
-        return
-    try:
-        status = darksubs_subwindow_demote_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'darksubs_subwindow_demote_patcher: embedded English now '
-                'sinks to the bottom of the picker', level='INFO')
-            try:
-                from resources.lib import darksubs_reload
-                darksubs_reload.note_patched()
-            except Exception:
-                pass
-        elif status in ('unmatched', 'write_failed', 'read_failed'):
-            kodi_utils.log(
-                'darksubs_subwindow_demote_patcher: ' + status,
-                level='WARNING')
-    except Exception as e:
-        try:
-            from resources.lib import kodi_utils
-            kodi_utils.log(
-                'darksubs_subwindow_demote_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_surface_darksubs_status():
-    """Run the DarkSubs hook diagnostic at startup. If the integration
-    has an actionable problem (e.g. signature mismatch, read-only
-    filesystem -- CoreELEC has shown up in user reports), pop a
-    Hebrew toast pointing the user at the settings 'Test DarkSubs
-    integration' entry. Only once per failure-class-version so we
-    don't spam on every boot."""
-    try:
-        from resources.lib import darksubs_hook_diagnostics
-    except Exception:
-        return
-    try:
-        darksubs_hook_diagnostics.surface_status_if_problem()
-    except Exception as e:
-        try:
-            from resources.lib import kodi_utils
-            kodi_utils.log(
-                'darksubs_hook_diagnostics.surface_status_if_problem '
-                'failed: {0}'.format(e), level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_patch_pov_debrid_resolve():
     """Harden plugin.video.pov's debrid.resolve_external_sources() so an early
     failure can't raise an UnboundLocalError ('torrent_id') from its own except
@@ -1860,42 +1625,6 @@ def _maybe_patch_pov_source_name():
                 level='WARNING')
         except Exception:
             pass
-
-
-def _maybe_patch_darksubs_filename():
-    """Self-healing patch of DarkSubs's get_playing_filename so that
-    when the played URL has an opaque hash basename (TorBox CDN
-    behaviour: https://store-N.torbox.app/<uuid>?token=...), DarkSubs
-    falls back to a synthetic release-name-style filename built from
-    VideoPlayer/ListItem info-labels. Without this, DarkSubs's
-    percentage matcher tokenises the UUID, gets 0% overlap with every
-    subtitle in the list, and the user picks subtitles blind. Real
-    Debrid / AllDebrid URLs already include the release filename in
-    the path so they are unaffected. Idempotent + defensive."""
-    try:
-        from resources.lib import darksubs_filename_fallback_patcher, \
-            kodi_utils
-    except Exception:
-        return
-    try:
-        status = darksubs_filename_fallback_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'darksubs_filename_fallback_patcher: applied '
-                'hash-filename fallback', level='INFO')
-        elif status in ('unmatched', 'write_failed', 'read_failed'):
-            kodi_utils.log(
-                'darksubs_filename_fallback_patcher: ' + status,
-                level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'darksubs_filename_fallback_patcher failed: '
-                '{0}'.format(e), level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_patch_skin_dialog_subtitles():
     """Self-healing patch of the ACTIVE skin's DialogSubtitles.xml
     so the subtitle-picker dialog HEADER prefers our window property
@@ -2168,51 +1897,6 @@ def _maybe_reload_estuary_skin():
         xbmc.executebuiltin('ReloadSkin()')
     except Exception:
         pass
-
-
-def _maybe_patch_darksubs_picker_label():
-    """Self-healing patch of DarkSubs's custom picker dialog XML so
-    long release-name labels in each row marquee-scroll horizontally
-    instead of getting cut off mid-wrap. Idempotent via marker; only
-    touches `<control type="label">` blocks that reference
-    ListItem.Label / ListItem.Label2 (the per-row provider + release
-    name).
-
-    NOTE (post-#157 retrospective): DarkSubs ships no
-    resources/skins/ folder at all -- the picker is a pyxbmct dialog
-    built in Python (resources/modules/sub_window.py). This patcher
-    is kept around for self-healing (no-op when there's no skins
-    folder) and to cover any future DarkSubs version that does add
-    skin XMLs. The actual fix for the wrap-clip issue lives in
-    _maybe_patch_darksubs_picker_height() below."""
-    try:
-        from resources.lib import darksubs_picker_label_patcher, \
-            kodi_utils
-    except Exception:
-        return
-    try:
-        status = darksubs_picker_label_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'darksubs_picker_label_patcher: row labels now '
-                'marquee-scroll instead of truncating',
-                level='INFO')
-        elif status in ('no_darksubs', 'already_patched',
-                        'nothing_to_patch'):
-            pass  # quiet steady-state
-        else:
-            kodi_utils.log(
-                'darksubs_picker_label_patcher: ' + status,
-                level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'darksubs_picker_label_patcher failed: '
-                '{0}'.format(e), level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_patch_skin_dialog_subtitles_rows():
     """Self-healing patch of the ACTIVE skin's DialogSubtitles.xml
     so the per-row layout in the subtitle picker is tall enough for
@@ -2284,47 +1968,6 @@ def _maybe_patch_af3_dialog_subtitles():
                 '{0}'.format(e), level='WARNING')
         except Exception:
             pass
-
-
-def _maybe_patch_all_subs_samefile():
-    """Self-healing patch of service.subtitles.all_subs_plus/service.py
-    so that setLanguageSettings() can survive shutil.SameFileError on
-    Windows (NTFS junction / hardlink). The unpatched AllSubs raises
-    SameFileError at module-load time, which kills autosub.py before
-    Kodi even shows the home screen -- user-visible Python error every
-    boot, AllSubs functionality fully broken. We wrap each of the six
-    shutil.copy(src, dst) call sites inside setLanguageSettings in a
-    try/except shutil.SameFileError that silently absorbs the error
-    (intended behaviour: the destination is byte-identical to the
-    source already, so the copy is a no-op). Marker-gated, idempotent,
-    no-op on platforms where AllSubs isn't installed."""
-    try:
-        from resources.lib import (
-            all_subs_samefile_patcher, kodi_utils)
-    except Exception:
-        return
-    try:
-        status = all_subs_samefile_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'all_subs_samefile_patcher: setLanguageSettings '
-                'now absorbs SameFileError on Windows', level='INFO')
-        elif status in ('no_addon', 'no_file', 'already_patched'):
-            pass  # quiet steady-state -- AllSubs not installed or
-                  # patch already in place
-        else:
-            kodi_utils.log(
-                'all_subs_samefile_patcher: ' + status,
-                level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'all_subs_samefile_patcher failed: '
-                '{0}'.format(e), level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_patch_af3_home():
     """Seed Arctic Fuse 3 with POV/FENtastic-style home widgets.
 
@@ -2356,42 +1999,6 @@ def _maybe_patch_af3_home():
                            level='WARNING')
         except Exception:
             pass
-
-
-def _maybe_patch_darksubs_picker_height():
-    """Self-healing patch of DarkSubs's sub_window.py so the picker's
-    per-row height is doubled. The default pyxbmct.List _itemHeight
-    of 27 px fits only one line; long release names wrap to a second
-    line that the row clips, hiding the release group at the end
-    (the part the user actually needs to identify the file). 60 px
-    fits both lines cleanly."""
-    try:
-        from resources.lib import darksubs_picker_height_patcher, \
-            kodi_utils
-    except Exception:
-        return
-    try:
-        status = darksubs_picker_height_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'darksubs_picker_height_patcher: row height bumped '
-                'so wrapped release names display fully',
-                level='INFO')
-        elif status in ('no_darksubs', 'already_patched'):
-            pass  # quiet steady-state
-        else:
-            kodi_utils.log(
-                'darksubs_picker_height_patcher: ' + status,
-                level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'darksubs_picker_height_patcher failed: '
-                '{0}'.format(e), level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_purge_temp_once():
     try:
         from resources.lib import local_subs, kodi_utils
@@ -2824,10 +2431,9 @@ def _maybe_default_builtin_engine():
     later manual opt-out STICKS -- if the user turns the engine (or autosub) off
     afterwards we never force it back on, on this or any future startup.
 
-    Must run BEFORE _ensure_darksubs_enabled() / _maybe_set_default_subtitle_
-    service() and the _engine_on read in main(), so the rest of THIS startup
-    already treats the engine as on (DarkSubs disabled, MoranSubs default, the
-    DarkSubs patchers skipped).
+    Must run BEFORE _maybe_set_default_subtitle_service() and the _engine_on
+    read in main(), so the rest of THIS startup already treats the engine as on
+    (MoranSubs default).
 
     Build-edition only: the standalone repo-channel addon ships SLIM_SERVICE
     (no engine code), so it never runs this and stays on the OFF default."""
@@ -2857,64 +2463,6 @@ def _maybe_default_builtin_engine():
                            level='WARNING')
         except Exception:
             pass
-
-
-def _ensure_darksubs_enabled():
-    """Sync DarkSubs (service.subtitles.All_Subs) enabled-state to the inverse
-    of the built-in engine toggle (Phase C):
-
-      * use_builtin_engine OFF (default) -> ensure DarkSubs ENABLED. The whole
-        subtitle flow + AI-translation hook depends on it, so an installed-but-
-        disabled DarkSubs means no subtitles at all -- recover it.
-      * use_builtin_engine ON -> ensure DarkSubs DISABLED, so only MoranSubs
-        runs (no double search, no competing results -- this is what makes the
-        engine as fast as DarkSubs is on its own). MoranSubs then provides the
-        sourcing, the auto-on-play, and the AI translation itself.
-        EXCEPTION: if the user turned on `keep_darksubs`, leave DarkSubs ENABLED
-        even with the engine on, so they keep "regular" Hebrew subtitle search
-        alongside the AI -- and it stays enabled across restarts/updates.
-
-    Cheap, idempotent, runs early every startup; only writes on a mismatch."""
-    if xbmc is None:
-        return
-    try:
-        from resources.lib import kodi_utils
-        engine_on = kodi_utils.get_bool('use_builtin_engine', False)
-        keep = kodi_utils.get_bool('keep_darksubs', False)
-    except Exception:
-        engine_on = False
-        keep = False
-    desired = (not engine_on) or keep
-    # Both competing Hebrew subtitle add-ons get the same treatment: enabled
-    # when the engine is off (default), disabled when the engine is on (so only
-    # MoranSubs runs -- no duplicate/competing searches).
-    for addon_id in ('service.subtitles.All_Subs',
-                     'service.subtitles.all_subs_plus'):
-        try:
-            import json as _json
-            get = _json.dumps({
-                'jsonrpc': '2.0', 'id': 1,
-                'method': 'Addons.GetAddonDetails',
-                'params': {'addonid': addon_id, 'properties': ['enabled']},
-            })
-            data = _json.loads(xbmc.executeJSONRPC(get) or '{}')
-            addon = (data.get('result') or {}).get('addon') or {}
-            if 'enabled' not in addon:
-                continue  # not installed / unknown -> leave alone
-            if bool(addon.get('enabled')) == desired:
-                continue  # already in the desired state
-            en = _json.dumps({
-                'jsonrpc': '2.0', 'id': 1,
-                'method': 'Addons.SetAddonEnabled',
-                'params': {'addonid': addon_id, 'enabled': desired},
-            })
-            xbmc.executeJSONRPC(en)
-            xbmc.log('[{0}] {1} set enabled={2} (engine_on={3})'.format(
-                ADDON_ID, addon_id, desired, engine_on), level=xbmc.LOGINFO)
-        except Exception:
-            pass
-
-
 def _point_subtitle_button(engine_on):
     """Make the skins' player "Choose subtitles" button open the right thing.
 
@@ -3192,19 +2740,12 @@ def main():
     _maybe_force_pool_share()
 
     # ROLLOUT: switch everyone to MoranSubs's built-in engine (one-shot, marker-
-    # gated). Must run before _ensure_darksubs_enabled() so that when it flips
-    # the engine on, DarkSubs is disabled THIS startup. A later manual opt-out
-    # sticks (marker prevents re-forcing).
+    # gated). A later manual opt-out sticks (marker prevents re-forcing).
     _maybe_default_builtin_engine()
 
     # Ktuvit is back -> re-enable the source for everyone once (a later manual
     # opt-out sticks).
     _maybe_reenable_ktuvit()
-
-    # Recover DarkSubs first if a previous reload cycle left it disabled after
-    # a quick update -- otherwise no subtitles and no AI translation fire at
-    # all. Runs before the patchers (which patch its files on disk regardless).
-    _ensure_darksubs_enabled()
 
     # When the engine is on, make MoranSubs the default subtitle service so it
     # opens/searches first in the dialog.
@@ -3243,26 +2784,6 @@ def main():
     # engine is off. Affects the active skin (Estuary / FENtastic).
     _point_subtitle_button(_engine_on)
 
-    if not _engine_on:
-        # Self-healing DarkSubs hook injection. Runs every startup so
-        # if upstream DarkSubs updates and overwrites our hook, it
-        # comes back automatically on next Kodi launch.
-        _maybe_patch_darksubs()
-        # Companion patch: extends download_sub's elif so the hook above
-        # ALSO gets a chance to run when DarkSubs's auto_translate
-        # setting is OFF (user manually picks a non-Hebrew sub).
-        _maybe_patch_darksubs_download_sub()
-        # OpenSubtitles provider/key-list fix (DarkSubs's OS source file).
-        _maybe_patch_darksubs_opensubtitles()
-        # Push embedded ('[LOC]') subtitle entries to the bottom of their
-        # language group so the external, translatable English source is the
-        # first pick.
-        _maybe_patch_darksubs_embedded_demote()
-        _maybe_patch_darksubs_embedded_insert()
-        _maybe_patch_darksubs_subwindow_demote()
-        # Structural health check + toast if the hook is broken.
-        _maybe_surface_darksubs_status()
-
     # Stash POV's picked release name (from the source-select dialog)
     # in a Window(10000) property before play() so DarkSubs can use
     # it as the filename for subtitle matching. Solves both the
@@ -3290,24 +2811,12 @@ def main():
     # the first subtitle search doesn't pay the heavy import cost inline.
     _maybe_prewarm_engine()
 
-    # Self-healing DarkSubs get_playing_filename() patch. Prefers
-    # the picked release name set by the pov_source_name_patcher
-    # above. (Skipped when the engine is on -- DarkSubs is disabled.)
-    if not _engine_on:
-        _maybe_patch_darksubs_filename()
-
     # Fix the subtitle-picker dialog HEADER (rendered by Kodi from
     # the skin's DialogSubtitles.xml) to prefer our subs.player_filename
     # property over the built-in Player.Filename. Without this, even
     # if our other patchers set the property, the dialog title still
     # shows the URL basename / UUID.
     _maybe_patch_skin_dialog_subtitles()
-
-    # Patch DarkSubs's custom picker XML (label marquee + row height).
-    # Skipped when the engine is on -- DarkSubs is disabled.
-    if not _engine_on:
-        _maybe_patch_darksubs_picker_label()
-        _maybe_patch_darksubs_picker_height()
 
     # The picker users actually see when they hit "Choose subtitles"
     # is Kodi's NATIVE DialogSubtitles, rendered by the active skin
@@ -3357,30 +2866,6 @@ def main():
     # playing through in the background). Runs AFTER the change-source button
     # patchers above so Estuary's inserted button is present to patch.
     _maybe_patch_change_source_pause()
-
-    # AllSubs Plus crashes at import on Windows when shutil.copy hits a
-    # NTFS junction/hardlink (SameFileError). Patch its 6 copy lines in
-    # setLanguageSettings to absorb that specific exception. Skipped when the
-    # engine is on -- All Subs Plus is disabled then (we don't touch it).
-    if not _engine_on:
-        _maybe_patch_all_subs_samefile()
-
-    # DarkSubs has reuselanguageinvoker=true and runs autosub.py as a
-    # persistent xbmc.service, so editing its .py files on disk does NOT
-    # take effect until its interpreter is torn down. If any DarkSubs
-    # source patch changed a file this run, cycle the addon (disable+
-    # enable) so it re-imports the patched source -- otherwise the
-    # embedded-subtitle ordering (and every other DarkSubs source patch)
-    # stays stale for the whole session.
-    # Cycle DarkSubs (disable+enable) to re-import patched source -- ONLY when
-    # the engine is off. When the engine is on DarkSubs is deliberately
-    # disabled, and this cycle would re-enable it (and error while disabled).
-    if not _engine_on:
-        try:
-            from resources.lib import darksubs_reload
-            darksubs_reload.reload_if_patched()
-        except Exception:
-            pass
 
     # Same idea for POV: if we patched its sources.py and the user opted into
     # remember-source, cycle POV (deferred, idle-only) so it re-imports the

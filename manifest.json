@@ -91,17 +91,6 @@
       "sha256": "ae9ffdb5dc44ce540b75ddf0f40ef6bf9079c0b8cae61060152261b5e652262f",
       "updated": "2026-06-23T15:45:10Z"
     },
-    "repository.peno64": {
-      "id": "repository.peno64",
-      "name": "peno64 repository",
-      "version": "1.5",
-      "type": "repository",
-      "filename": "repository.peno64-1.5.zip",
-      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/repository.peno64-1.5.zip",
-      "size": 305544,
-      "sha256": "e40b170c3940a7c62a41c6f620aea2a094edbbd1abceaab2a6729a25b9ff2a64",
-      "updated": "2026-06-23T15:45:10Z"
-    },
     "script.fentastic.helper": {
       "id": "script.fentastic.helper",
       "name": "FENtastic Helper",
@@ -123,17 +112,6 @@
       "size": 175596,
       "sha256": "2dc8cf82a006546f30fd87d7a41bd1a7a293a2481da769a03ac43936701cec1b",
       "updated": "2026-06-23T15:45:10Z"
-    },
-    "service.subtitles.All_Subs": {
-      "id": "service.subtitles.All_Subs",
-      "name": "DarkSubs",
-      "version": "4.7.7",
-      "type": "subtitle",
-      "filename": "service.subtitles.All_Subs-4.7.7.zip",
-      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/service.subtitles.All_Subs-4.7.7.zip",
-      "size": 3084101,
-      "sha256": "a28401c9b6aa192952a3b897b5cda30abf32e4956ae6cf3deedd1dd5b2d5b7d4",
-      "updated": "2026-06-21T19:06:04Z"
     },
     "service.subtitles.kodipovilai": {
       "id": "service.subtitles.kodipovilai",
