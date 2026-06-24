@@ -347,32 +347,55 @@ def wizard(action, name, url):
 #########################################################################################################
 # KODI-RD-IL - BUILD SKIN SWITCH
 def update_favourites_xml_file(gotoskin):
+    """Regenerate userdata/favourites.xml for the target skin.
+
+    KODI-POV-IL: replaces the old static copy of
+    media/builds_favourites_xml/<skin>/favourites.xml with a dynamic,
+    JSON-driven generation. We load favourites_generator from the
+    plugin.program.orderfavourites-hebrew add-on (by file path, so there are no
+    cross-add-on package-name clashes) and call generate_favourites_xml(skin),
+    which builds the skin's canonical tile set from favourites_config.json AND
+    merges in any custom favourites the user added.
+
+    Graceful by design: if the generator add-on is missing or anything goes
+    wrong, we log it and leave the existing favourites.xml untouched. We always
+    return True so a generation hiccup never aborts the skin switch itself.
+    """
     try:
         import os as _os
+        import xbmcaddon
         import xbmcvfs
-        source_favourites_xml = xbmcvfs.translatePath(f"special://home/media/builds_favourites_xml/{gotoskin}/favourites.xml")
-        destination_favourites_xml = xbmcvfs.translatePath("special://userdata/favourites.xml")
-        # Some skins (e.g. skin.arctic.fuse.3) drive their home menu via
-        # script.skinvariables, not Kodi's favourites.xml. If we don't
-        # have a favourites.xml seed for the target skin, don't fail
-        # the switch -- the Kodi Favourites window will simply show
-        # whatever was last there. Skin switching itself should still
-        # succeed.
-        if not _os.path.isfile(source_favourites_xml):
-            logging.log(
-                f"DEBUG | update_favourites_xml_file | "
-                f"no seed at {source_favourites_xml}, leaving existing "
-                f"favourites.xml in place")
+
+        try:
+            addon_path = xbmcvfs.translatePath(
+                xbmcaddon.Addon('plugin.program.orderfavourites-hebrew')
+                .getAddonInfo('path'))
+        except Exception as _addon_err:
+            logging.log("DEBUG | update_favourites_xml_file | orderfavourites "
+                        "add-on unavailable ({0}); leaving favourites untouched"
+                        .format(_addon_err))
             return True
-        from shutil import copyfile
-        copyfile(source_favourites_xml,destination_favourites_xml)
+
+        module_file = _os.path.join(addon_path, 'favourites_generator.py')
+        if not _os.path.isfile(module_file):
+            logging.log("DEBUG | update_favourites_xml_file | generator not found "
+                        "at {0}; leaving favourites untouched".format(module_file))
+            return True
+
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            'povil_favourites_generator', module_file)
+        generator = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(generator)
+        generator.generate_favourites_xml(gotoskin)
+        logging.log("DEBUG | update_favourites_xml_file | regenerated favourites "
+                    "for skin {0}".format(gotoskin))
         return True
     except Exception as e:
-        logging.log_notify(CONFIG.ADDONTITLE,
-                           '[COLOR {0}]שגיאה בהגדרת מסך הבית![/COLOR]'.format(CONFIG.COLOR2))
-        logging.log(f"DEBUG | update_favourites_xml_file | Exception: {str(e)}")
-        return False
-    
+        logging.log("DEBUG | update_favourites_xml_file | generation failed ({0}); "
+                    "leaving existing favourites.xml untouched".format(e))
+        return True
+
 
 #####################################################
 # KODI-POV-IL - ON-DEMAND SKIN INSTALL
