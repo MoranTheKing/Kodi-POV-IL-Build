@@ -633,7 +633,7 @@
 		<onclick>ActivateWindow(osdaudiosettings)</onclick>
 	</item>
 	<item>
-		<label>$VAR[__PlayerChoose]</label>
+		<label>לחץ להחלפת נגן</label>
 		<icon>osd/fullscreen/buttons/guide.png</icon>
 		<!-- <include>__GlobalPlayerReplacment__OSD</include> -->
 		<onclick>ActivateWindow(1130)</onclick>

@@ -4,8 +4,8 @@
 	<zorder>4</zorder>
 	<controls>
 	
-	
-		<include content="BaseMainMenu">
+	<!-- LOCK PLAYERS -->
+	<include content="BaseMainMenu">
 		<param name="id" value="9001"/>
 		<param name="basedmenuleft">650</param>
 		<param name="basedmenuheight">400</param>
@@ -24,5 +24,6 @@
 		<param name="items" value="PlayerLockItems"/>
 		<param name="layout" value="PlayerLockedLayout"/>
 	</include>
+	
 	</controls>
 </window>

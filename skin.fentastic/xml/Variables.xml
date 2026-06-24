@@ -22,6 +22,10 @@
 	<value>osd/fullscreen/buttons</value>
 	</variable>
 	
+	<variable name="StudioStatustvshow">
+	<value condition="!String.IsEmpty(ListItem.Studio) + $EXP[__tvshow] | $EXP[__season] | $EXP[__episode] | $EXP[__Movies]">[COLOR red]רשת:[/COLOR] $INFO[ListItem.Studio]</value>
+	</variable>
+	
 	<variable name="LockedPlayerOSd">
 	<value condition="$EXP[__SimplePlayerVisiblity]">https://www.iconsdb.com/icons/preview/white/lock-7-xxl.png</value>
 	<value condition="$EXP[__AdvancedPlayerVisiblity]">https://www.iconsdb.com/icons/preview/white/lock-7-xxl.png</value>
@@ -30,7 +34,7 @@
 	</variable>
 	
 	<variable name="LockedPlayerLabelOSd">
-	<value condition="EXP[__SimplePlayerVisiblity]">הנגן נעול על נגן פשוט</value>
+	<value condition="$EXP[__SimplePlayerVisiblity]">הנגן נעול על נגן פשוט</value>
 	<value condition="$EXP[__AdvancedPlayerVisiblity]">הנגן נעול על נגן מתקדם</value>
 	<value condition="$EXP[__NetflixPlayerVisiblity]">הנגן נעול על נגן נטפליקס</value>
 	<value condition="$EXP[__PrettyplayerPlayerVisiblity]">הנגן נעול על נגן למבוגרים</value>
@@ -101,7 +105,15 @@
 	<value condition="$EXP[__Movies_OSD] | $EXP[__episode_OSD]">$INFO[VideoPlayer.Genre]</value>
 	<value condition="VideoPlayer.Content(LiveTv) + VideoPlayer.HasEpg">$INFO[VideoPlayer.StartTime,מתחיל (,)] •  $INFO[VideoPlayer.EndTime,מסתיים (,)]</value>
 	<value>$INFO[VideoPlayer.Genre]</value>
-	</variable>	
+	</variable>
+	
+	
+	<variable name="translatestatus">
+	<value condition="String.IsEqual(ListItem.Status,returning series)">[COLOR red]מצב הסדרה:[/COLOR] סדרה חוזרת | </value>
+	<value condition="String.IsEqual(ListItem.Status,in production)">[COLOR red]מצב הסדרה:[/COLOR] הסדרה בהפקה | </value>
+	<value condition="String.IsEqual(ListItem.Status,planned)">[COLOR red]מצב הסדרה:[/COLOR] הסדרה בתכנון | </value>
+	<value condition="String.IsEqual(ListItem.Status,ended)">[COLOR red]מצב הסדרה:[/COLOR] הסדרה הסתיימה | </value>
+	</variable>
 	
 	<variable name="osd_middle_info_next_var">
 	<value condition="$EXP[__Movies_OSD] | $EXP[__episode_OSD]">$INFO[VideoPlayer.offset(1).Genre]</value>
@@ -120,6 +132,33 @@
 	<value condition="$EXP[__episode_OSD]">$INFO[VideoPlayer.TvShowTitle] $INFO[VideoPlayer.Year,(,)]</value>
 	<value condition="$EXP[__livetv_OSD] + VideoPlayer.HasEpg">$INFO[VideoPlayer.StartTime,מתחיל(,)] $INFO[VideoPlayer.EndTime,מסתיים(,)]</value>
 	<value>$INFO[VideoPlayer.Title]</value>
+	</variable>
+	
+	<variable name="globalviewtypeinfo">
+	<value>$VAR[globalviewtimegenre]$VAR[globalviewtimeyear]$VAR[GetDurationTime]$VAR[checktplayeditemEndtimePlayed]$VAR[checktimeplayeditem]$VAR[translatestatus]$VAR[StudioStatustvshow]</value>
+	</variable>
+	
+	<variable name="globalviewtimegenre">
+	<value condition="!String.IsEmpty(ListItem.Genre)">[COLOR red]ז'אנר:[/COLOR] $INFO[ListItem.Genre] | </value>
+	</variable>	
+	<variable name="globalviewtimeyear">
+	<value condition="!String.IsEmpty(ListItem.Year)">[COLOR red]שנה:[/COLOR] $INFO[ListItem.Year] | </value>
+	</variable>
+	
+	
+	<variable name="checktplayeditemEndtimePlayed">
+	<value condition="!String.IsEmpty(ListItem.EndTime) + Integer.IsGreater(ListItem.PercentPlayed,5) + $EXP[__Movies] | $EXP[__episode]">[COLOR red]בהמשך מאותה נקודת צפיה יסתיים בשעה:[/COLOR] $INFO[ListItem.EndTime] | </value>
+	</variable>
+	<variable name="checktimeplayeditem">
+	<value condition="!String.IsEmpty(ListItem.EndTime) + Integer.IsEqual(ListItem.PercentPlayed,0) + $EXP[__Movies] | $EXP[__episode]">[COLOR red]יסתיים בשעה:[/COLOR] $INFO[ListItem.EndTime] </value>
+	</variable>
+	
+	<variable name="GetDurationTime">
+	<value condition="String.IsEqual(ListItem.Duration(hh),00) + $EXP[__Movies] | $EXP[__episode]">[COLOR red]אורך:[/COLOR] $INFO[ListItem.Duration(mm)] דקות | </value>
+	<value condition="String.IsEqual(ListItem.Duration(hh),01) + $EXP[__Movies] | $EXP[__episode]">[COLOR red]אורך:[/COLOR] שעה ו $INFO[ListItem.Duration(mm)] דקות | </value>
+	<value condition="String.IsEqual(ListItem.Duration(hh),02) + $EXP[__Movies] | $EXP[__episode]">[COLOR red]אורך:[/COLOR] שעתיים ו $INFO[ListItem.Duration(mm)] דקות | </value>
+	<value condition="String.IsEqual(ListItem.Duration(hh),03) + $EXP[__Movies] | $EXP[__episode]">[COLOR red]אורך:[/COLOR] שלוש שעות ו $INFO[ListItem.Duration(mm)] דקות | </value>
+	<value condition="String.IsEqual(ListItem.Duration(hh),04) + $EXP[__Movies] | $EXP[__episode]">[COLOR red]אורך:[/COLOR] ארבע שעות ו $INFO[ListItem.Duration(mm)] דקות | </value>
 	</variable>
 	
 	<variable name="netflix_playerpaused_label">
@@ -1441,6 +1480,19 @@
 		<value condition="!String.IsEmpty(Player.Icon)">$INFO[Player.Icon]</value>
 		<value condition="!String.IsEmpty(Player.Icon)">$INFO[Player.Icon]</value>
 		<value>DefaultNoPreview.png</value>
+	</variable>
+	
+	<variable name="viewtypefanartview">
+	<value condition="$EXP[__Movies] | $EXP[__tvshow] | $EXP[__season] + !String.IsEmpty(ListItem.Art(fanart)">$INFO[ListItem.Art(fanart)]</value>
+	<value condition="$EXP[__Movies] | $EXP[__tvshow] | $EXP[__season] + !String.IsEmpty(ListItem.Art(landscape)">$INFO[ListItem.Art(landscape)]</value>
+	<value condition="$EXP[__episode]">$INFO[ListItem.Icon]</value>
+	<value>$INFO[ListItem.Icon]</value>
+	</variable>
+	
+	<variable name="generalviewtypefanartview">
+	<value condition="!String.IsEmpty(ListItem.Art(fanart)">$INFO[ListItem.Art(fanart)]</value>
+	<value condition="!String.IsEmpty(ListItem.Art(landscape)">$INFO[ListItem.Art(landscape)]</value>
+	<value>$INFO[ListItem.Icon]</value>
 	</variable>
 	
 	  <!--set your label flag -->

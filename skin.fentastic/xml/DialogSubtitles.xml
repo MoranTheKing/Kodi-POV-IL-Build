@@ -9,7 +9,7 @@
 			<texture colordiffuse="black">colors/white.png</texture>
 		</control>
 		<include content="AdvancedGlobalViewBackGround">
-		<param name="fanart">$INFO[Player.Art(fanart)]</param>
+		<param name="fanart">$VAR[viewtypefanartview]</param>
 		</include>
 		<control type="image">
 		<height>2000</height>

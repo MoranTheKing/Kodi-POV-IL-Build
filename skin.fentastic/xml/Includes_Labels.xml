@@ -46,7 +46,6 @@
 		<height>45</height>
 		<font>font13</font>
 		<shadowcolor>black</shadowcolor>	
-		
 		<label>$VAR[LockedPlayerLabelOSd]</label>
 	</control>
 </include>

@@ -243,63 +243,15 @@
 				<control type="grouplist">
 					<left>30</left>
 					<width>540</width>
-					<top>105</top>
+					<top>list_top_offset</top>
+					<bottom>list_bottom_offset</bottom>
 					<orientation>vertical</orientation>
 					<itemgap>13</itemgap>
 					<visible>!String.IsEmpty(Skin.String(mdblist_api_key))</visible>
-					<control type="textbox">
-						<aligny>center</aligny>
-						<height>110</height>
-						<font>font36_title</font>
-						<label>$INFO[ListItem.Label]</label>
-						
-						<!-- KODI-RD-IL ADDITION -->
-						<textcolor>yellow</textcolor>
-						<align>right</align>
-						<!-- ##################### -->
-						
-						<visible>[String.IsEqual(ListItem.DbType,movie) | String.IsEqual(ListItem.DbType,tvshow) | String.IsEqual(ListItem.DbType,season)] + !String.IsEqual(ListItem.DBType,song) + !Container.Content(addons) + String.IsEmpty(ListItem.Art(clearlogo))</visible>
-					</control>
 					<control type="image">
-						<width>540</width>
-						<height>320</height>
-						<aspectratio aligny="top">keep</aspectratio>
+						<height>280</height>
 						<fadetime>300</fadetime>
-						<texture diffuse="masks/landscape.png" fallback="$PARAM[fallback_image]" background="true">$VAR[IconWallThumbVar]</texture>
-						<visible>!String.IsEqual(ListItem.DbType,episode) + !String.IsEqual(ListItem.DBType,song) + !Container.Content(addons) + Skin.HasSetting(UseLandscape) + !String.IsEmpty(ListItem.Art(clearlogo))</visible>
-					</control>
-					<!-- <control type="image">
-						<width>540</width>
-						<height>320</height>
-						<aspectratio aligny="top">keep</aspectratio>
-						<fadetime>300</fadetime>
-						<texture diffuse="masks/addons.png" fallback="$PARAM[fallback_image]" background="true">$VAR[IconWallThumbVar]</texture>
-						<visible>!Skin.HasSetting(UseLandscape) + ![String.IsEqual(ListItem.DbType,movie) | String.IsEqual(ListItem.DbType,tvshow) | String.IsEqual(ListItem.DbType,season) | String.IsEqual(ListItem.DbType,episode)] + !String.IsEmpty(ListItem.Art(clearlogo))</visible>
-					</control> -->
-					<control type="image">
-						<left>30</left>
-						<top>110</top>
-						<width>540</width>
-						<height>470</height>
-						<aspectratio aligny="top">keep</aspectratio>
-						<fadetime>300</fadetime>
-						<texture diffuse="masks/landscape.png" fallback="$PARAM[fallback_image]" background="true">$VAR[IconWallThumbVar]</texture>
-						<visible>!Skin.HasSetting(UseLandscape) + ![String.IsEqual(ListItem.DbType,movie) | String.IsEqual(ListItem.DbType,tvshow) | String.IsEqual(ListItem.DbType,season) | String.IsEqual(ListItem.DbType,episode)]</visible>
-					</control>
-					<control type="image">
-						<width>515</width>
-						<height>200</height>
-						<texture background="true">$VAR[ClearlogoVar]</texture>
-						<aspectratio align="center">keep</aspectratio>
-						<visible>[String.IsEqual(ListItem.DbType,movie) | String.IsEqual(ListItem.DbType,tvshow) | String.IsEqual(ListItem.DbType,season)] + !String.IsEqual(ListItem.DBType,song) + !Container.Content(addons) + !Skin.HasSetting(UseLandscape) + !String.IsEmpty(ListItem.Art(clearlogo))</visible>
-					</control>
-					<control type="image">
-						<width>540</width>
-						<height>303</height>
-						<!-- <aspectratio aligny="top">scale</aspectratio> -->
-						<fadetime>300</fadetime>
-						<texture diffuse="masks/landscape.png">$INFO[ListItem.Icon]</texture>
-						<visible>String.IsEqual(ListItem.DbType,episode)</visible>
+						<texture diffuse="masks/landscape-502.png">$VAR[viewtypefanartview]</texture>
 					</control>
 					<control type="textbox">
 						<height>auto</height>
@@ -562,6 +514,7 @@
 					<control type="textbox">
 						<height max="290">auto</height>
 						<bottom>70</bottom>
+						<align>right</align>
 						<label>$VAR[InfoPanelBottom]</label>
 						<textcolor>unfocused_text</textcolor>
 						<autoscroll delay="5000" time="2000" repeat="5000">Skin.HasSetting(autoscroll)</autoscroll>

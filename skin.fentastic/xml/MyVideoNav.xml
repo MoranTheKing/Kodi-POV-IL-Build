@@ -5,7 +5,9 @@
 	<views>50,51,52,53,54,55,56,500,501,502,504</views>
 	<menucontrol>9000</menucontrol>
 	<controls>
-		<include>DefaultBackground</include>
+		<include content="AdvancedGlobalViewBackGround">
+		<param name="fanart">$VAR[generalviewtypefanartview]</param>
+		</include>
 		<control type="group">
 			<animation effect="fade" start="100" end="0" time="200" tween="sine" condition="$EXP[infodialog_active]">Conditional</animation>
 			<include>View_50_List</include>
@@ -144,6 +146,22 @@
 					</control>
 				</control>
 			</control>
+			
+			<control type="list" id="59632">
+				<visible>String.IsEqual(ListItem.DBTYPE,tvshow) | Container.Content(tvshows)</visible>
+				<content sortby="year" sortorder="ascending">$INFO[ListItem.FolderPath]</content>
+				<itemlayout/>
+				<focusedlayout/>
+			</control>
+		
+			<control type="label" id="55005">
+				<visible allowhiddenfocus="true">false</visible>
+				<left>550</left>
+				<width>1000</width>
+				<height>50</height>
+				<label>$INFO[Container(59632).ListItem(0).Year]$INFO[Container(59632).ListItem(-1).Year, - ]</label>
+			</control>
+					
 			<include content="TopBar">
 				<param name="breadcrumbs_label" value="$VAR[BreadcrumbsVideoVar]" />
 			</include>
