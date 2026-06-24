@@ -2061,24 +2061,15 @@ def _maybe_patch_nox_osd_collision():
 
 def _maybe_reload_nox_skin():
     """Skin XML is read at skin load, so a freshly-applied NOX OSD patch only
-    shows after a reload. Reload once -- but only when NOX is the active skin
-    AND the wizard's quick-update notice isn't on screen (reloading would close
-    it). Otherwise the button simply appears on the next Kodi restart."""
+    shows after a reload. Reload once when NOX is the active skin. Otherwise the
+    button simply appears on the next Kodi restart."""
     try:
         import xbmc
-        import xbmcaddon
     except Exception:
         return
     try:
         if xbmc.getSkinDir() != 'skin.povil.nox':
             return
-        try:
-            wiz = xbmcaddon.Addon('plugin.program.kodipovilwizard')
-            if (wiz.getSetting('quick_update_notedismiss') == 'false'
-                    and wiz.getSetting('quick_update_noteid')):
-                return
-        except Exception:
-            pass
         xbmc.executebuiltin('ReloadSkin()')
     except Exception:
         pass
@@ -2221,23 +2212,15 @@ def _maybe_patch_change_source_pause():
 
 def _maybe_reload_estuary_skin():
     """Reload once so a freshly-applied Estuary OSD patch shows this session --
-    only when Estuary is the active skin AND the wizard's quick-update notice
-    isn't on screen. Otherwise the button appears on the next Kodi restart."""
+    only when Estuary is the active skin. Otherwise the button appears on the
+    next Kodi restart."""
     try:
         import xbmc
-        import xbmcaddon
     except Exception:
         return
     try:
         if xbmc.getSkinDir() != 'skin.estuary':
             return
-        try:
-            wiz = xbmcaddon.Addon('plugin.program.kodipovilwizard')
-            if (wiz.getSetting('quick_update_notedismiss') == 'false'
-                    and wiz.getSetting('quick_update_noteid')):
-                return
-        except Exception:
-            pass
         xbmc.executebuiltin('ReloadSkin()')
     except Exception:
         pass

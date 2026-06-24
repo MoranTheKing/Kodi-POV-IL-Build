@@ -477,7 +477,7 @@ def split_notify(notify):
         return False, False
 
 
-def show_notification(msg, test=False, source="notification"):
+def show_notification(msg, test=False):
     class Notification(xbmcgui.WindowXMLDialog):
 
         def __init__(self, *args, **kwargs):
@@ -513,15 +513,9 @@ def show_notification(msg, test=False, source="notification"):
             # self.close()
 
         def do_dismiss(self):
-            # KODI-RD-IL
-            noteid_setting = 'quick_update_noteid' if source == "quick_update_notification" else 'noteid'
-            notedismiss_setting = 'quick_update_notedismiss' if source == "quick_update_notification" else 'notedismiss'
-            ###################
             if not test:
-                # CONFIG.set_setting('notedismiss', 'true')
-                CONFIG.set_setting(notedismiss_setting, 'true')
-            # logging.log('[Notifications] Notification {0} Dismissed'.format(CONFIG.get_setting('noteid')))
-            logging.log('[Notifications] Notification {0} Dismissed'.format(CONFIG.get_setting(noteid_setting)))
+                CONFIG.set_setting('notedismiss', 'true')
+            logging.log('[Notifications] Notification {0} Dismissed'.format(CONFIG.get_setting('noteid')))
             self.close()
 
         def onAction(self, action):

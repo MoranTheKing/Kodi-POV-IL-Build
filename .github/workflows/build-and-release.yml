@@ -19,6 +19,7 @@ on:
     # any future one) while ignoring manifest.json, README, .github, etc.
     paths:
       - "plugin.*/**"
+      - "repository.*/**"
       - "script.*/**"
       - "service.*/**"
       - "skin.*/**"

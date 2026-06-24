@@ -31,14 +31,10 @@ except ImportError:
 
 AF3_SKIN_ID = 'skin.arctic.fuse.3'
 PATCH_VERSION = '2026-06-01-pov-home-v20'
-AF3_CE_VERSION = '6.3.2.9'
-# AF3's bundled TMDbHelper 6.15.6 imports jurialmunkey.ftools, which only
-# exists from script.module.jurialmunkey 0.2.35. Users who switched to AF3
-# while an older jurialmunkey (e.g. 0.2.28) was on disk get a TMDbHelper that
-# crash-loops its service on every startup -> AF3 widgets/ratings break. If we
-# detect an older jurialmunkey we re-trigger the deps-pack install (which now
-# has a version gate and overwrites the stale copy).
-JURIALMUNKEY_MIN_VERSION = '0.2.35'
+# NOTE: AF3 + script.module.jurialmunkey + TMDbHelper are now installed and
+# version-managed NATIVELY from repository.jurialmunkey (Kodi resolves a
+# mutually-compatible set), so the old skin/jurialmunkey version pins that this
+# patcher used to enforce against the static zip packs are gone.
 
 BASE_NODES = 'special://profile/addon_data/script.skinvariables/nodes/'
 AF3_NODES = BASE_NODES + AF3_SKIN_ID + '/'
@@ -532,67 +528,21 @@ def _copy(src, dst):
         fh.write(data)
 
 
-def _version_tuple(ver):
-    parts = []
-    for chunk in str(ver).split('.'):
-        num = ''.join(ch for ch in chunk if ch.isdigit())
-        parts.append(int(num) if num else 0)
-    return tuple(parts)
-
-
-def _read_addon_version(addon_id):
-    addon_xml = 'special://home/addons/' + addon_id + '/addon.xml'
-    if not _exists(addon_xml):
-        return ''
-    try:
-        text = _read(addon_xml)[:600]
-    except Exception:
-        return ''
-    # jurialmunkey declares version= on the <addon> tag, but the file also
-    # opens with <?xml version="1.0"?>. Find the addon-tag version, not the
-    # XML-decl one, by searching after the addon id.
-    anchor = text.find(addon_id)
-    search_from = anchor if anchor >= 0 else 0
-    marker = 'version="'
-    pos = text.find(marker, search_from)
-    if pos < 0:
-        return ''
-    start = pos + len(marker)
-    end = text.find('"', start)
-    return text[start:end] if end > start else ''
-
-
-def _read_af3_version():
-    return _read_addon_version(AF3_SKIN_ID)
-
-
-def _jurialmunkey_too_old():
-    """True only when jurialmunkey is installed AND older than the minimum
-    TMDbHelper needs. Missing entirely -> not our problem to detect here
-    (the normal deps-pack install handles a fresh switch)."""
-    current = _read_addon_version('script.module.jurialmunkey')
-    if not current:
-        return False
-    try:
-        return _version_tuple(current) < _version_tuple(JURIALMUNKEY_MIN_VERSION)
-    except Exception:
-        return False
-
-
 def _request_ce_skin_upgrade():
-    if xbmc is None:
-        return False
-    # Re-run the AF3 deps/skin install when EITHER the skin is on an older
-    # version OR jurialmunkey is too old for the bundled TMDbHelper.
-    if _read_af3_version() == AF3_CE_VERSION and not _jurialmunkey_too_old():
-        return False
-    try:
-        xbmc.executebuiltin(
-            'RunPlugin("plugin://plugin.program.kodipovilwizard/'
-            '?mode=install&action=install_af3_ce")')
-        return True
-    except Exception:
-        return False
+    # KODI-POV-IL - NO-OP under the modular architecture.
+    #
+    # AF3 used to be installed from four static "pack" zips that bundled a
+    # specific skin version (6.3.2.9) and a specific script.module.jurialmunkey
+    # (>= 0.2.35). This function force-reinstalled those packs whenever the
+    # on-disk versions didn't match the bundled ones. AF3 is now installed
+    # NATIVELY from repository.jurialmunkey: the skin and all its dependencies
+    # are resolved at mutually-compatible upstream versions and keep updating
+    # from their own repos via Kodi's normal addon updater. There is no bundled
+    # version to pin to and nothing for the wizard to force, so this is a no-op.
+    # (ensure_patched() already returns 'no_af3' earlier when the skin is truly
+    # missing.) The manual re-install path -- action=install_af3_ce -> native
+    # InstallAddon -- is still available if ever needed.
+    return False
 
 
 def _json(data):
@@ -1081,40 +1031,13 @@ def _is_af3_active():
         return False
 
 
-def _quick_update_notice_pending():
-    """Avoid AF3 rebuild/reload while the wizard's quick-update
-    changelog is waiting to be read.
-
-    Other skins do not run our skinvariables rebuild path, so the issue
-    is AF3-specific: ReloadSkin()/script.skinvariables can close or cover
-    the wizard's notification immediately after an update. If the wizard
-    says the quick-update notice is still not dismissed, defer this AF3
-    rebuild. The marker is written only after a successful rebuild, so the
-    next startup retries normally after the user closes the notice.
-    """
-    if xbmcaddon is None:
-        return False
-    try:
-        wizard = xbmcaddon.Addon('plugin.program.kodipovilwizard')
-        return (wizard.getSetting('quick_update_notedismiss') == 'false'
-                and bool(wizard.getSetting('quick_update_noteid')))
-    except Exception:
-        return False
-
-
 def _wait_for_quick_update_notice(max_seconds=180):
-    if xbmc is None:
-        return False
-    if not _quick_update_notice_pending():
-        return False
-    monitor = xbmc.Monitor()
-    deadline = time.time() + max_seconds
-    while time.time() < deadline:
-        if monitor.waitForAbort(1):
-            return True
-        if not _quick_update_notice_pending():
-            return False
-    return _quick_update_notice_pending()
+    # KODI-POV-IL - NO-OP. This used to defer the AF3 skinvariables rebuild while
+    # the wizard's legacy "quick-update" changelog notification was on screen (so
+    # ReloadSkin() wouldn't close it). That whole text-file notification system
+    # has been removed with the modular migration, so there is nothing to wait
+    # for -- the rebuild proceeds immediately.
+    return False
 
 
 def _rebuild_af3_shortcuts():
