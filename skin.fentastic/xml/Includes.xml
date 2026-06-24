@@ -114,6 +114,44 @@
 		<label></label>
 		<font></font>
 	</include>
+	
+	
+	<include name="AdvancedGlobalViewBackGround">
+	<control type="group">
+		<top>-10</top>
+		<bottom>-10</bottom>
+		<control type="image">
+		<texture>colors/white.png</texture>
+		<colordiffuse>black</colordiffuse>
+		</control>
+		<control type="image">
+			<fadetime>450</fadetime>
+			<texture>$PARAM[fanart]</texture>
+		</control>
+		<control type="image">
+			<fadetime>450</fadetime>
+			<texture>$PARAM[fanart2]</texture>
+			<visible>$PARAM[fanart2visible]</visible>
+		</control>
+		<control type="image">
+			<texture>colors/white.png</texture>
+			<colordiffuse>FF181818</colordiffuse>
+			<animation condition="true" effect="fade" start="100" end="70" time="0">Conditional</animation>
+		</control>	
+		<control type="image">
+			<texture colordiffuse="black" background="true">common/trailerwindow.png</texture>
+			<animation condition="true" effect="fade" start="100" end="58" time="0">Conditional</animation>
+		</control>
+		<control type="image">
+			<include>__backgroundconfiganim__</include>
+			<animation condition="true" effect="fade" start="100" end="82" time="0">Conditional</animation>
+			<texture flipx="true" background="true">shadows/shadow_mask.png</texture>
+			<colordiffuse>black</colordiffuse>
+		</control>
+		</control>
+	</include>
+	
+	
 	<include name="RatingCircle">
 		<param name="animation">False</param>
 		<definition>
@@ -288,8 +326,8 @@
 					<top>0</top>
 					<right>25</right>
 					<bottom>0</bottom>
-					<texture colordiffuse="button_focus">$PARAM[diffuse]</texture>
-					<visible>Control.HasFocus($PARAM[list_id])</visible>
+					<texture border="16" colordiffuse="white">$PARAM[diffuse]</texture>
+					<animation condition="!Control.HasFocus($PARAM[list_id])" effect="fade" start="100" end="20" time="150">Conditional</animation>
 				</control>
 				<control type="group">
 					<visible>ListItem.Property(PVR.IsRecordingTimer) | ListItem.Property(PVR.IsRemindingTimer)</visible>

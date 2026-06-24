@@ -85,4 +85,45 @@
 		<bordertexture border="16">masks/categorywidget-unfocused.png</bordertexture>
 	</control>
 </include>
+
+<include name="IconSizedBackGround">
+<param name="width" value="$PARAM[width]" default="$PARAM[width]"/>
+<param name="height" value="$PARAM[height]" default="$PARAM[height]"/>
+<param name="SizedBgAnim" value="$PARAM[SizedBgAnim]" default="$PARAM[SizedBgAnim]"/>
+<param name="visible" value="$PARAM[visible]" default="true"/>
+<definition>
+<control type="group">
+<top>$PARAM[top]</top>
+<left>$PARAM[left]</left>
+<right>$PARAM[right]</right>
+<width>$PARAM[width]</width>
+<height>$PARAM[height]</height>
+<include>$PARAM[SizedBgAnim]</include>
+<visible>$PARAM[visible]</visible>
+<control type="image">
+	<top>2</top>
+	<left>2</left>
+	<right>2</right>
+	<bottom>2</bottom>
+	<animation condition="true" effect="fade" start="100" end="85" time="0">Conditional</animation>
+	<texture border="3" background="true" infill="true" colordiffuse="FF181818">masks/box.png</texture>
+</control>
+<control type="image">
+	<top>0</top>
+	<left>0</left>
+	<right>0</right>
+	<bottom>0</bottom>
+	<texture border="8" background="true" infill="true" colordiffuse="gray">masks/box21.png</texture>
+</control>
+<control type="image" id="$PARAM[id]">
+	<top>5</top>
+	<left>5</left>
+	<right>5</right>
+	<bottom>5</bottom>
+	<texture>$PARAM[icon]</texture>
+</control>
+</control>
+</definition>
+<nested />
+</include>
 </includes>
