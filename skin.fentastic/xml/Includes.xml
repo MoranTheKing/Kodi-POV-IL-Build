@@ -2330,22 +2330,17 @@
 	<param name="top_list">200</param>
 	<param name="list_left">Padxy10</param>
 	<param name="movement">3</param>
+	<param name="topimage">dateandtimebgobj</param>
+	<param name="centertop">50%</param>
 	<definition>
 	<control type="group">
-	<centertop>50%</centertop>
+	<centertop>$PARAM[centertop]</centertop>
 	<left>$PARAM[basedmenuleft]</left>
 	<width>$PARAM[basedmenuwidth]</width>
 	<height>$PARAM[basedmenuheight]</height>
 	<include>$PARAM[animation]</include>
 	<visible allowhiddenfocus="true">$PARAM[visible]</visible>
-	<control type="image">
-		<centerleft>50%</centerleft>
-		<top>$PARAM[headlinebackgroundtop]</top>
-		<width>$PARAM[headlinebackgroundwidth]</width>
-		<height>$PARAM[headlinebackgroundheight]</height>
-		<texture border="16" colordiffuse="98000000">masks/categorywidget.png</texture>
-		<bordertexture border="16">masks/categorywidget-unfocused.png</bordertexture>
-	</control>
+	<include>$PARAM[topimage]</include>
 	<control type="image">
 		<texture colordiffuse="85FFFFFF">masks/poster_w460_h680.png</texture>
 	</control>
@@ -3134,7 +3129,7 @@
 <param name="texture">$VAR[texturecurrentimage]</param>
 <param name="grouplistleft">515</param>
 <param name="grouplistheight">250</param>
-<param name="grouplistwidth">1280</param>
+<param name="grouplistwidth">1380</param>
 <param name="label1">$VAR[OsdTitleLabelVar]</param>
 <param name="label1visible">true</param>
 <param name="label2">$VAR[osd_middle_info_var]</param>
@@ -3146,10 +3141,12 @@
 <param name="itemvisible">String.IsEqual(Container(201).ListItem.Property(id),info)</param>
 <definition>
 <control type="group">
+<include>bottom2topslideanimation</include>
 <!-- <visible>$PARAM[itemvisible]</visible> -->
 <width>$PARAM[groupwidth]</width>
 <height>$PARAM[groupheight]</height>
 <bottom>$PARAM[bottom]</bottom>
+<visible>!Window.IsActive(1125)</visible>
 <control type="image">
 <left>-50</left>
 <top>-40</top>
@@ -3210,10 +3207,11 @@
 <visible>$PARAM[label3visible]</visible>
 </control>
 <control type="textbox">
-<height max="195">auto</height>
+<height max="125">auto</height>
 <align>left</align>
 <label>$PARAM[label4]</label>
 <visible>$PARAM[label4visible]</visible>
+<autoscroll fade="5000" time="3500" repeat="4000">System.IdleTime(2)</autoscroll>
 </control>
 </control>
 </control>

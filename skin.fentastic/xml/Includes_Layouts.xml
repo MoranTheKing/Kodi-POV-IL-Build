@@ -54,6 +54,117 @@
 </include>
 
 
+<include name="PlayerLockedLayout">
+	<itemlayout width="410" height="65">
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture colordiffuse="65000000">colors/white.png</texture>
+	</control>
+	<control type="image">
+		<left>355</left>
+		<top>18</top>
+		<width>35</width>
+		<height>35</height>
+		<aspectratio>keep</aspectratio>
+		<texture>$INFO[ListItem.Property(lock1)]</texture>
+		<visible>String.IsEqual(Skin.String(__chooseplayer),__simpleplayer)</visible>
+	</control>
+	<control type="image">
+		<left>355</left>
+		<top>18</top>
+		<width>35</width>
+		<height>35</height>
+		<aspectratio>keep</aspectratio>
+		<texture>$INFO[ListItem.Property(lock2)]</texture>
+		<visible>String.IsEqual(Skin.String(__chooseplayer),__advancedplayer)</visible>
+	</control>
+	<control type="image">
+		<left>355</left>
+		<top>18</top>
+		<width>35</width>
+		<height>35</height>
+		<aspectratio>keep</aspectratio>
+		<texture>$INFO[ListItem.Property(lock3)]</texture>
+		<visible>String.IsEqual(Skin.String(__chooseplayer),__netflixplayer)</visible>
+	</control>
+	<control type="image">
+		<left>355</left>
+		<top>18</top>
+		<width>35</width>
+		<height>35</height>
+		<aspectratio>keep</aspectratio>
+		<texture>$INFO[ListItem.Property(lock4)]</texture>
+		<visible>String.IsEqual(Skin.String(__chooseplayer),__prettyplayer)</visible>
+	</control>
+	<control type="label">
+		<left>10</left>
+		<top>0</top>
+		<font>font32_title</font>
+		<aligny>center</aligny>
+		<label>$INFO[ListItem.Label]</label>
+	</control>
+	</itemlayout>
+	<focusedlayout width="410" height="65">
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture colordiffuse="65000000">colors/white.png</texture>
+	</control>
+	<control type="image">
+		<left>5</left>
+		<right>5</right>
+		<top>5</top>
+		<texture colordiffuse="button_focus">colors/white.png</texture>
+	</control>
+	<control type="image">
+		<left>355</left>
+		<top>18</top>
+		<width>35</width>
+		<height>35</height>
+		<aspectratio>keep</aspectratio>
+		<texture>$INFO[ListItem.Property(lock1)]</texture>
+		<visible>String.IsEqual(Skin.String(__chooseplayer),__simpleplayer)</visible>
+	</control>
+	<control type="image">
+		<left>355</left>
+		<top>18</top>
+		<width>35</width>
+		<height>35</height>
+		<aspectratio>keep</aspectratio>
+		<texture>$INFO[ListItem.Property(lock2)]</texture>
+		<visible>String.IsEqual(Skin.String(__chooseplayer),__advancedplayer)</visible>
+	</control>
+	<control type="image">
+		<left>355</left>
+		<top>18</top>
+		<width>35</width>
+		<height>35</height>
+		<aspectratio>keep</aspectratio>
+		<texture>$INFO[ListItem.Property(lock3)]</texture>
+		<visible>String.IsEqual(Skin.String(__chooseplayer),__netflixplayer)</visible>
+	</control>
+	<control type="image">
+		<left>355</left>
+		<top>18</top>
+		<width>35</width>
+		<height>35</height>
+		<aspectratio>keep</aspectratio>
+		<texture>$INFO[ListItem.Property(lock4)]</texture>
+		<visible>String.IsEqual(Skin.String(__chooseplayer),__prettyplayer)</visible>
+	</control>
+	<control type="label">
+		<left>10</left>
+		<top>0</top>
+		<font>font32_title</font>
+		<aligny>center</aligny>
+		<label>$INFO[ListItem.Label]</label>
+	</control>
+	</focusedlayout>
+</include>
+
 <include name="SecondOsdSettingBasedMenu">
 	<itemlayout width="415" height="85">
 	<control type="group">
@@ -148,6 +259,31 @@
 	<param name="bottom">5</param>
 </include>
 </include>
+<control type="group">
+<height>25</height>
+<bottom>20</bottom>
+<control type="label">
+	<left>10</left>
+	<align>left</align>
+	<width>350</width>
+	<shadowcolor>black</shadowcolor>
+	<label>$INFO[ListItem.Label]</label>
+</control>
+<control type="label">
+	<right>10</right>
+	<align>right</align>
+	<top>-35</top>
+	<font>font32_title</font>
+	<shadowcolor>black</shadowcolor>
+	<label>$INFO[ListItem.TvShowTitle]</label>
+</control>
+<control type="label">
+	<right>10</right>
+	<align>right</align>
+	<shadowcolor>black</shadowcolor>
+	<label>עונה $INFO[ListItem.Season,(,)] פרק $INFO[ListItem.Episode,(,)]</label>
+</control>
+</control>
 </control>
 </itemlayout>
 <focusedlayout width="$PARAM[layoutwidth]" height="$PARAM[layoutheight]">
@@ -182,6 +318,31 @@
 	<texture border="16">icons/box.png</texture>
 	<colordiffuse>black</colordiffuse>
 	<visible>control.hasfocus($PARAM[id])</visible>
+</control>
+<control type="group">
+<height>25</height>
+<bottom>20</bottom>
+<visible>!Control.HasFocus($PARAM[id])</visible>
+<control type="label">
+	<left>10</left>
+	<align>left</align>
+	<width>350</width>
+	<shadowcolor>black</shadowcolor>
+	<label>$INFO[ListItem.Label]</label>
+</control>
+<control type="label">
+	<right>10</right>
+	<align>right</align>
+	<top>-35</top>
+	<font>font32_title</font>
+	<shadowcolor>black</shadowcolor>
+	<label>$INFO[ListItem.TvShowTitle]</label>
+</control>
+<control type="label">
+	<right>10</right>
+	<align>right</align>
+	<shadowcolor>black</shadowcolor>
+	<label>עונה $INFO[ListItem.Season,(,)] פרק $INFO[ListItem.Episode,(,)]</label>
 </control>
 </control>
 <control type="group">
@@ -247,6 +408,7 @@
 	<align>center</align>
 	<textcolor>yellow</textcolor>
 	<label>עונה [COLOR yellow]$INFO[ListItem.Season,(,)][/COLOR] פרק [COLOR yellow]$INFO[ListItem.Episode,(,)][/COLOR]</label>
+</control>
 </control>
 </control>
 </focusedlayout>

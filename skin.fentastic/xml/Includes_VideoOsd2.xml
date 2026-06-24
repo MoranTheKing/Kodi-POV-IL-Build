@@ -10,7 +10,7 @@
 <bottom>105</bottom>
 <animation condition="Window.IsActive(1126)" effect="slide" start="0,0" end="0,-100" time="250" delay="250">Conditional</animation>
 <animation condition="Window.IsActive(1127)" effect="slide" start="0,0" end="0,-300" time="250">Conditional</animation>
-<include>Animation_BottomSlide</include>
+<visible>!Window.IsActive(1125)</visible>
 	<control type="button" id="52000"> <!-- faked button -->
 		<height>1</height>
 		<width>1</width>
@@ -436,6 +436,7 @@
 		<property name="id">previous</property>
 		<icon>osd/fullscreen/buttons/previous.png</icon>
 		<visible>!String.IsEmpty(VideoPlayer.offset(-1).Title) | Player.Chapter</visible>
+		<visible>!VideoPlayer.Content(LiveTv)</visible>
 		<onclick>SkipPrevious</onclick>
 	</item>	
 	<item>
@@ -513,6 +514,7 @@
 		<icon>osd/fullscreen/buttons/next.png</icon>
 		<onclick>SkipNext</onclick>
 		<visible>!String.IsEmpty(VideoPlayer.offset(1).Title) | Player.Chapter</visible>
+		<visible>!VideoPlayer.Content(LiveTv)</visible>
 	</item>
 	</content>
 	</control>
@@ -633,7 +635,8 @@
 	<item>
 		<label>$VAR[__PlayerChoose]</label>
 		<icon>osd/fullscreen/buttons/guide.png</icon>
-		<include>__GlobalPlayerReplacment__OSD</include>
+		<!-- <include>__GlobalPlayerReplacment__OSD</include> -->
+		<onclick>ActivateWindow(1130)</onclick>
 	</item>
 	<item>
 		<label>החלף מקור</label>
@@ -672,7 +675,7 @@
 	<animation type="Hidden">
 		<effect type="fade" start="100" end="0" time="250" tween="sine" easing="inout"/>
 	</animation>
-	<visible>String.IsEqual(Container(201).ListItem.Property(id),forward)</visible>
+	<visible>String.IsEqual(Container(201).ListItem.Property(id),forward) + Control.HasFocus(201)</visible>
 	<itemlayout width="145">
 	<control type="group">
 	<width>175</width>

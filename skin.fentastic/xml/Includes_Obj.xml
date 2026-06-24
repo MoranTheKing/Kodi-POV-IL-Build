@@ -75,4 +75,14 @@
 </definition>
 </include>
 
+<include name="dateandtimebgobj">
+	<control type="image">
+		<centerleft>50%</centerleft>
+		<top>$PARAM[headlinebackgroundtop]</top>
+		<width>$PARAM[headlinebackgroundwidth]</width>
+		<height>$PARAM[headlinebackgroundheight]</height>
+		<texture border="16" colordiffuse="98000000">masks/categorywidget.png</texture>
+		<bordertexture border="16">masks/categorywidget-unfocused.png</bordertexture>
+	</control>
+</include>
 </includes>

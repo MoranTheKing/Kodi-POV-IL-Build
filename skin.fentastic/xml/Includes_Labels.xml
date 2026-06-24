@@ -35,5 +35,20 @@
 		<label>הגדרות נגן</label>
 	</control>
 </include>
+
+
+<include name="LockedPlayerLabel">
+	<control type="label">
+		<centerleft>50%</centerleft>
+		<centertop>6%</centertop>
+		<aligny>center</aligny>
+		<align>center</align>
+		<height>45</height>
+		<font>font13</font>
+		<shadowcolor>black</shadowcolor>	
+		
+		<label>$VAR[LockedPlayerLabelOSd]</label>
+	</control>
+</include>
 	
 </includes>

@@ -22,6 +22,20 @@
 	<value>osd/fullscreen/buttons</value>
 	</variable>
 	
+	<variable name="LockedPlayerOSd">
+	<value condition="$EXP[__SimplePlayerVisiblity]">https://www.iconsdb.com/icons/preview/white/lock-7-xxl.png</value>
+	<value condition="$EXP[__AdvancedPlayerVisiblity]">https://www.iconsdb.com/icons/preview/white/lock-7-xxl.png</value>
+	<value condition="$EXP[__NetflixPlayerVisiblity]">https://www.iconsdb.com/icons/preview/white/lock-7-xxl.png</value>
+	<value condition="$EXP[__PrettyplayerPlayerVisiblity]">https://www.iconsdb.com/icons/preview/white/lock-7-xxl.png</value>
+	</variable>
+	
+	<variable name="LockedPlayerLabelOSd">
+	<value condition="EXP[__SimplePlayerVisiblity]">הנגן נעול על נגן פשוט</value>
+	<value condition="$EXP[__AdvancedPlayerVisiblity]">הנגן נעול על נגן מתקדם</value>
+	<value condition="$EXP[__NetflixPlayerVisiblity]">הנגן נעול על נגן נטפליקס</value>
+	<value condition="$EXP[__PrettyplayerPlayerVisiblity]">הנגן נעול על נגן למבוגרים</value>
+	</variable>
+	
 	
 	<variable name="__NetflixCheckStatuWindowOpen_Osd__">
 	<value condition="![Window.IsActive(1126) | Window.IsActive(1127)]">הצג Flags</value>

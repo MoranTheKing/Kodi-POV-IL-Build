@@ -3,6 +3,7 @@
 	<zorder>4</zorder>
 	<include>modalDialogInOutVerticalVisible</include>
 	<visible>Player.Seeking | Player.Forwarding | Player.Rewinding | Player.Caching  | Player.Paused | Player.HasPerformedSeek(3)</visible>
+	<visible>!Window.IsActive(subtitlesearch)</visible>
 	<controls>
 	
 	<include>SeekBarEnabled</include>

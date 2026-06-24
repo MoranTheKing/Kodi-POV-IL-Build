@@ -268,10 +268,14 @@
 			<label>פרקי העונה [COLOR yellow]$INFO[VideoPlayer.Season,(,)][/COLOR] $INFO[VideoPlayer.TvShowTitle]</label>
 			<icon>DefaultAddonPVRClient.png</icon>
 			<property name="id">allepisodes</property>
-			<onclick>Control.SetFocus(200323)</onclick>
+			<onclick>Control.SetFocus(200325)</onclick>
 			<visible>$EXP[__episode_OSD]</visible>
 		</item>
-		<include>__GlobalPlayerReplacmentItem__OSD</include>
+		<item>
+			<label>לחץ להחלפת נגן</label>
+			<property name="resizedicon2">icons\infodialogs\update.png</property>
+			<onclick>ActivateWindow(1130)</onclick>
+		</item>
 		</content>
 	</control>
 </control>
@@ -321,48 +325,32 @@
 </include>
 <!-- END OSD PREVIOUS SHOW INFO -->
 
-<control type="group">
-<left>10</left>
-<height>600</height>
-<width>380</width>
-<bottom>osdbottom</bottom>
-<include>bottom2topslideanimation</include>
-<visible>Container(201).HasFocus(610)</visible>
-<include content="BasedResizedWidgetFrame">
-	<include content="BasedResizedWidgetImage">
-		<param name="resize">0</param>
-		<param name="bottom">0</param>
+<control type="fixedlist" id="200325">
+	<height>500</height>
+	<left>10</left>
+	<right>10</right>
+	<onleft>false</onleft>
+	<onright>false</onright>
+	<bottom>60</bottom>
+	<onback>201</onback>
+	<ondown>201</ondown>
+	<movement>4</movement>
+	<pagecontrol>50092</pagecontrol>
+	<visible allowhiddenfocus="true">String.IsEqual(Container(201).ListItem.Property(id),allepisodes)</visible>
+	<orientation>horizontal</orientation>
+	<scrolltime tween="cubic">550</scrolltime>
+	<!-- <include>bottom2topslideanimation</include> -->
+	<animation effect="fade" start="0" end="100" time="500" delay="500">Visible</animation>
+	<animation effect="fade" start="100" end="0" time="500">Hidden</animation>
+	<include content="OsdNetflixEpisodesInSeasonsLayout">
+	<param name="layoutwidth">640</param>
+	<param name="layoutheight">350</param>
+	<param name="groupwidth">600</param>
+	<param name="id">200325</param>
+	<param name="plotbottom">20</param>
+	<param name="infoleft">20</param>
 	</include>
-</include>
-<include content="BasedResizedWidgetFrameBox">
-	<param name="boxcolordiffuse">98181818</param>
-	<include content="BasedResizedWidgetImage">
-		<param name="resize">2</param>
-		<param name="bottom">2</param>
-	</include>
-</include>
-<include content="BasedResizedWidgetTexture">
-	<param name="texture">$INFO[Player.Art(tvshow.poster)]</param>
-<include content="BasedResizedWidgetImage">
-	<param name="resize">5</param>
-	<param name="bottom">5</param>
-</include>
-</include>
-</control>
-<control type="list" id="200323">
-<height>500</height>
-<left>400</left>
-<onleft>false</onleft>
-<onright>false</onright>
-<bottom>-20</bottom>
-<onback>201</onback>
-<ondown>201</ondown>
-<orientation>horizontal</orientation>
-<scrolltime tween="cubic">550</scrolltime>
-<include>bottom2topslideanimation</include>
-<visible>Container(201).HasFocus(610)</visible>
-<include>__OsdEpisodesAdvancedPlayerlayout__</include>
-<content target="videos">$VAR[build_Episodes_Url_OSD]</content>
+	<content target="videos">$VAR[build_Episodes_Url_OSD]</content>
 </control>
 
 

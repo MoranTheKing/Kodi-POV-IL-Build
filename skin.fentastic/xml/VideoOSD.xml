@@ -4,6 +4,7 @@
 	<defaultcontrol always="true">201</defaultcontrol>
 	<depth>DepthOSD</depth>
 	<include>OsdBackWindowInfo</include>
+	<include>bottom2topslideanimation</include>
 	<onload>SetProperty(episodesinseasons,$VAR[build_Episodes_Url_OSD],home)</onload>
 	<controls>
 	

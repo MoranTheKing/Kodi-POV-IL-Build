@@ -40,6 +40,11 @@
 				<textcolor>yellow</textcolor>
 				<label>$INFO[Window(home).Property(getosdgenrevar)]</label>
 				<visible>!String.IsEmpty(Window(home).Property(getosdgenrevar))</visible>
+			</control>		
+			<control type="label">
+				<height max="35">auto</height>
+				<textcolor>yellow</textcolor>
+				<label>$VAR[__Osdprettyplayerlabeltime]</label>
 			</control>
 			<control type="textbox">
 				<height max="350">auto</height>
