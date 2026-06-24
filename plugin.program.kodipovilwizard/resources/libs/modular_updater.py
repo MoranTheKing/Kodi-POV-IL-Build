@@ -469,7 +469,7 @@ class ModularUpdater:
                 from resources.libs.gui.install_manager import run_install_manager
                 extracted_addons = run_install_manager(queue)
                 for _aid in extracted_addons:
-                    if _aid == 'plugin.program.kodipovilwizard' or _aid == active_skin:
+                    if _aid == 'plugin.program.kodipovilwizard':
                         requires_restart = True
                 queue = []  # consumed by the UI -> skip the classic loop below
             except Exception as _ui_err:
@@ -494,8 +494,6 @@ class ModularUpdater:
                 continue
 
             if addon_id == 'plugin.program.kodipovilwizard':
-                requires_restart = True
-            elif addon_type == 'skin' and addon_id == active_skin:
                 requires_restart = True
 
             msg = "מוריד: {0} (גרסה {1})".format(tools.clean_text(name), mod.get('version'))
@@ -620,8 +618,16 @@ class ModularUpdater:
             return True
 
         if requires_restart:
-            from resources.libs.wizard import Wizard
-            Wizard().force_close_kodi_in_5_seconds("עדכון קריטי הסתיים. קודי יופעל מחדש.")
+            if not self.background:
+                choice = self.dialog.yesno(
+                    CONFIG.ADDONTITLE,
+                    "עדכון קריטי בוצע בהצלחה.\nיש להפעיל מחדש את קודי כדי להחיל את השינויים.",
+                    yeslabel="יציאה",
+                    nolabel="מאוחר יותר"
+                )
+                if choice:
+                    from resources.libs.wizard import Wizard
+                    Wizard().force_close_kodi_in_5_seconds("עדכון קריטי הסתיים.")
         elif extracted_addons or config_skin_touched:
             # Standard plugins/services/inactive-skins OR a config change that
             # touched the active skin's look: reload the skin so new
