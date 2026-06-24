@@ -3,7 +3,7 @@
   "name": "Kodi POV IL Build",
   "repo": "MoranTheKing/Kodi-POV-IL-Build",
   "release_tag": "addons-latest",
-  "generated": "2026-06-24T14:56:22Z",
+  "generated": "2026-06-24T17:46:04Z",
   "manifest_url": "https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL-Build/main/manifest.json",
   "config": {
     "config_version": "1.1.0",
@@ -39,13 +39,13 @@
     "plugin.program.orderfavourites-hebrew": {
       "id": "plugin.program.orderfavourites-hebrew",
       "name": "סידור מועדפים",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "type": "plugin",
-      "filename": "plugin.program.orderfavourites-hebrew-1.2.1.zip",
-      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.orderfavourites-hebrew-1.2.1.zip",
-      "size": 359594,
-      "sha256": "ca137af76587725720917a9185349b1932b1029c987fbd29f166b8b28c1e1342",
-      "updated": "2026-06-23T15:45:10Z"
+      "filename": "plugin.program.orderfavourites-hebrew-1.2.2.zip",
+      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.orderfavourites-hebrew-1.2.2.zip",
+      "size": 6094049,
+      "sha256": "a6caf1c0bc55c8c6c34952473fc830008dd5154e0fecd3299a78569f4f6190ae",
+      "updated": "2026-06-24T17:46:04Z"
     },
     "repository.Fishenzon": {
       "id": "repository.Fishenzon",
