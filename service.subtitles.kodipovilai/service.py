@@ -174,7 +174,6 @@ def _run_build_startup_repairs():
         _maybe_patch_pov_personal_area,
         _maybe_patch_fentastic_widgets,
         _maybe_patch_favourites_xml,
-        _maybe_patch_favourites_personal_tiles,
         _maybe_patch_pov_torbox_usage,
         _maybe_patch_pov_cache_empty,
         _maybe_patch_pov_trakt_cache_empty,
@@ -806,43 +805,6 @@ def _maybe_patch_favourites_xml():
             kodi_utils.log(
                 'favourites_xml_patcher failed: {0}'.format(e),
                 level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_favourites_personal_tiles():
-    """Restore the 6 personal home tiles ("הסרטים שלי / הסדרות שלי"
-    in TMDB / Trakt / POV variants) when they're missing from
-    userdata/favourites.xml. Triggered when the user switched skin to
-    AF3 and back to FENtastic, which caused the wizard to overwrite
-    their 32-tile install default with the 11-tile skin seed --
-    wiping the personal tiles. The patcher appends the missing tiles
-    from a bundled canonical fixture so the user gets their tiles
-    back on the next boot."""
-    try:
-        from resources.lib import (
-            favourites_personal_tiles_patcher, kodi_utils)
-    except Exception:
-        return
-    try:
-        status = favourites_personal_tiles_patcher.ensure_patched()
-        if status in ('restored', 'restored_full', 'fixed',
-                      'restored_and_fixed', 'marked', 'marked_and_fixed'):
-            kodi_utils.log(
-                'favourites_personal_tiles_patcher: {0}'.format(status),
-                level='INFO')
-        elif status in ('no_kodi', 'no_favourites', 'no_fixture',
-                        'already_complete', 'user_removed_tiles'):
-            pass  # quiet steady-state
-        else:
-            kodi_utils.log(
-                'favourites_personal_tiles_patcher: ' + status,
-                level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'favourites_personal_tiles_patcher failed: '
-                '{0}'.format(e), level='WARNING')
         except Exception:
             pass
 
