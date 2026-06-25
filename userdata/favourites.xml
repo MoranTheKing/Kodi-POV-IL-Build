@@ -16,8 +16,8 @@
     <favourite name="[B]סרטים להמשך צפייה[/B]" thumb="special://home/media/povil_icons/Movies_In_Progress.png">ActivateWindow(10025,"plugin://plugin.video.pov/?action=in_progress_movies&amp;iconImage=player.png&amp;mode=build_movie_list&amp;name=32476",return)</favourite>
     <favourite name="[B]עידן פלוס[/B]" thumb="special://home/media/povil_icons/idan_plus.png">RunAddon(plugin.video.idanplus)</favourite>
     <favourite name="[B]אנימה[/B]" thumb="special://home/media/povil_icons/Otaku.png">RunAddon("plugin.video.otaku")</favourite>
-    <favourite name="[B]סדרות לפי ז&apos;אנר[/B]" thumb="special://home/media/povil_icons/Shows_Genres.png">ActivateWindow(10025,"plugin://plugin.video.pov/?iconImage=genres.png&amp;menu_type=tvshow&amp;mode=navigator.genres&amp;name=32470",return)</favourite>
-    <favourite name="[B]סרטים לפי ז&apos;אנר[/B]" thumb="special://home/media/povil_icons/Movies_Genres.png">ActivateWindow(10025,"plugin://plugin.video.pov/?iconImage=genres.png&amp;menu_type=movie&amp;mode=navigator.genres&amp;name=32470",return)</favourite>
+    <favourite name="[B]סדרות לפי ז'אנר[/B]" thumb="special://home/media/povil_icons/Shows_Genres.png">ActivateWindow(10025,"plugin://plugin.video.pov/?iconImage=genres.png&amp;menu_type=tvshow&amp;mode=navigator.genres&amp;name=32470",return)</favourite>
+    <favourite name="[B]סרטים לפי ז'אנר[/B]" thumb="special://home/media/povil_icons/Movies_Genres.png">ActivateWindow(10025,"plugin://plugin.video.pov/?iconImage=genres.png&amp;menu_type=movie&amp;mode=navigator.genres&amp;name=32470",return)</favourite>
     <favourite name="[B]Netflix סדרות[/B]" thumb="special://home/media/povil_icons/Shows_Netflix.png">ActivateWindow(10025,"plugin://plugin.video.pov/?action=tmdb_tv_networks&amp;iconImage=https%3a%2f%2fi.imgur.com%2fjI5c3bw.png&amp;mode=build_tvshow_list&amp;name=Netflix&amp;network_id=213",return)</favourite>
     <favourite name="[B]Disney+ סדרות[/B]" thumb="special://home/media/povil_icons/Shows_Disney_Plus.png">ActivateWindow(10025,"plugin://plugin.video.pov/?action=tmdb_tv_networks&amp;iconImage=https%3a%2f%2fi.imgur.com%2fDVrPgbM.png&amp;mode=build_tvshow_list&amp;name=Disney%2b&amp;network_id=2739",return)</favourite>
     <favourite name="[B]Apple TV סדרות[/B]" thumb="special://home/media/povil_icons/Shows_AppleTV.png">ActivateWindow(10025,"plugin://plugin.video.pov/?action=tmdb_tv_networks&amp;iconImage=https%3a%2f%2fi.imgur.com%2ffAQMVNp.png&amp;mode=build_tvshow_list&amp;name=Apple%20TV%20%2b&amp;network_id=2552",return)</favourite>
@@ -35,4 +35,8 @@
     <favourite name="[B]בדיקת מהירות[/B]" thumb="special://home/media/povil_icons/speed_test_icon.png">PlayMedia("plugin://plugin.program.kodipovilwizard/?mode=build_speed_test")</favourite>
     <favourite name="[B]שליחת לוג[/B]" thumb="special://home/media/povil_icons/twilight_send_log.png">ActivateWindow(10025,"plugin://plugin.video.pov/?iconImage=special%3a%2f%2fhome%2faddons%2fplugin.video.pov%2fresources%2fskins%2fDefault%2fmedia%2fsettings.png&amp;mode=navigator.log_utils&amp;name=Changelog%20%26%20Log%20Utils",return)</favourite>
     <favourite name="[B]סידור מועדפים[/B]" thumb="special://home/media/povil_icons/Order_Favorites.png">RunAddon(plugin.program.orderfavourites-hebrew)</favourite>
+    <!-- AI_SUBS_FAVOURITES_DEBRID_NOTICE_SEEN_v1 -->
+    <!-- AI_SUBS_FAVOURITES_PERSONAL_TILES_SEEN_v2 -->
+    <!-- AI_SUBS_FAVOURITES_BUILD_SERVICE_TILES_SEEN_v1 -->
+    <!-- AI_SUBS_FAVOURITES_FULL_BUILD_TILES_SEEN_v2 -->
 </favourites>
