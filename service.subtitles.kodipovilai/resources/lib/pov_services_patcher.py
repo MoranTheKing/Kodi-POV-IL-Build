@@ -37,7 +37,7 @@ ICON_SRC_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'icons')
 ICON_FILENAMES = ('gemini.png',)
 
-INJECT_VERSION = 9
+INJECT_VERSION = 10
 MARKER = '# AI_SUBS_MYSERVICES_INJECT_v{0}'.format(INJECT_VERSION)
 END_MARKER = '# END AI_SUBS_MYSERVICES_INJECT_v{0}'.format(INJECT_VERSION)
 TUPLE_MARKER = "# AI_SUBS_MYSERVICES_TUPLE_v{0}".format(INJECT_VERSION)
@@ -66,6 +66,19 @@ TUPLE_MARKER = "# AI_SUBS_MYSERVICES_TUPLE_v{0}".format(INJECT_VERSION)
 #     "Connect Services" menu died. The wrapper now resolves each
 #     candidate class through globals() at call time and silently
 #     skips names the installed POV doesn't define.
+#   v8 (addon v0.2.269): wrapped the whole body in try/except with a
+#     fallback to POV's untouched authorize() so reconstruction drift
+#     could never leave the menu empty.
+#   v9 (addon v0.2.270): hardened the empty-list case to fall back to
+#     POV's native menu.
+#   v10 (addon v0.2.271): per-ITEM guards. Building a service row
+#     instantiates each POV provider (api().token for its auth label);
+#     under v8/v9 a single provider whose __init__/.token/.icon drifted
+#     threw inside the eager list build and aborted the ENTIRE
+#     reconstruction to the native menu -- silently dropping Gemini.
+#     Now each row is built defensively (a bad provider is rendered
+#     without its auth label, or skipped) and we only fall back when
+#     NOT ONE row could be built, so Gemini reliably appears.
 # Each bump triggers a one-time re-patch on the next Kodi startup;
 # OLD_MARKERS lists every prior version's marker so the legacy
 # blocks get stripped cleanly before the new one is injected.
@@ -78,6 +91,7 @@ OLD_MARKERS = [
     '# AI_SUBS_MYSERVICES_INJECT_v6',
     '# AI_SUBS_MYSERVICES_INJECT_v7',
     '# AI_SUBS_MYSERVICES_INJECT_v8',
+    '# AI_SUBS_MYSERVICES_INJECT_v9',
 ]
 
 # Two service classes plus a hook that monkey-patches authorize()
@@ -183,16 +197,34 @@ def authorize():
             return _ai_orig_authorize()
         services = tuple(_ai_services) + _ai_extra
         icon_path = kodi_utils.media_path()
-        def _builder():
-            for name, api in services:
-                item = kodi_utils.make_listitem()
-                item.setLabel('[B]%s[/B]' % name.upper())
-                item.setLabel2(auth_str if api().token else noauth_str)
-                item.setArt({'icon': '%s%s' % (icon_path, api.icon)})
-                yield(item)
-        service = kodi_utils.dialog.select('My Services', list(_builder()), useDetails=True)
+        # Build each row defensively: instantiating a provider (api().token for
+        # the auth label, api.icon for the art) can throw if THAT provider's
+        # class drifted -- one bad row must not nuke the whole dialog (which
+        # would silently drop Gemini and bounce us to the native menu).
+        rows = []
+        for _ai_n, _ai_api in services:
+            try:
+                _ai_item = kodi_utils.make_listitem()
+                _ai_item.setLabel('[B]%s[/B]' % _ai_n.upper())
+                try:
+                    _ai_authed = bool(_ai_api().token)
+                except Exception:
+                    _ai_authed = False
+                _ai_item.setLabel2(auth_str if _ai_authed else noauth_str)
+                try:
+                    _ai_item.setArt({'icon': '%s%s' % (icon_path, _ai_api.icon)})
+                except Exception:
+                    pass
+                rows.append((_ai_n, _ai_api, _ai_item))
+            except Exception:
+                continue
+        # Nothing rendered at all -> fall back to POV's own menu rather than
+        # popping an empty dialog.
+        if not rows:
+            return _ai_orig_authorize()
+        service = kodi_utils.dialog.select('My Services', [_r[2] for _r in rows], useDetails=True)
         if service < 0: return
-        try: success = services[service][1]().set()
+        try: success = rows[service][1]().set()
         except Exception as e: kodi_utils.logger('myservices error', str(e))
         else: return success
         return notification(32574)
