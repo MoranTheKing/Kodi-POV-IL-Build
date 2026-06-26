@@ -1,19 +1,21 @@
 # -*- coding: utf-8 -*-
-# Global media asset installer for the Kodi POV IL build.
+# Global media + favourites updater for the Kodi POV IL build.
 #
-# This addon bundles the build's flat icon + font set under resources/media/:
-#   resources/media/build_icons/*.png  (flat, no nested subfolders)
-#   resources/media/fonts/*            (.ttf font files)
-# The build's favourites.xml, skins and patchers reference those assets at the
-# GLOBAL Kodi media locations:
-#   icons -> special://home/media/povil_icons/
-#   fonts -> special://home/media/Fonts/
+# This addon is the CENTRAL home of the build's flat icon + font set:
+#   povil_icons/*.png              (flat, no nested subfolders -- the canonical
+#                                    icon dir; favourites.xml references it at
+#                                    special://home/addons/<this addon>/povil_icons/)
+#   resources/media/fonts/*        (.ttf font files)
 #
-# On startup we make sure the bundled assets are present at those global
-# destinations. Lightweight + self-healing: we only copy files that are MISSING
-# at the destination (never overwrite a user/other-plugin file), and we create
-# the destination folders on demand. Every failure is swallowed so this can
-# never break Kodi startup or the addon's normal operation.
+# On startup we (re)install those assets and refresh favourites.xml. Because the
+# build is Trakt/TMDB-driven, the local favourites.xml is used ONLY for internal
+# skin shortcuts (quick access to POV folders, settings, etc.) -- it holds no
+# user movie/show data -- so it is safe AND necessary to OVERWRITE it (and the
+# bundled icons/fonts) on every run, so UI/shortcut + icon updates reach users
+# even when the files already exist. Custom favourites the user added themselves
+# are still preserved (favourites_generator merges them back in).
+#
+# Fully guarded: every failure is swallowed so this can never break Kodi startup.
 
 import os
 
@@ -35,10 +37,13 @@ except Exception:
     xbmc = None
 
 
-# (source subdir under resources/media, destination special:// folder)
+# (source path relative to the addon root, destination special:// folder).
+# Mirrored to the global media folders so skins / patchers that still reference
+# special://home/media/... keep resolving; the canonical copy lives in the addon
+# (povil_icons/) and favourites.xml points there directly.
 _COPY_JOBS = (
-    ('build_icons', 'special://home/media/povil_icons/'),
-    ('fonts', 'special://home/media/Fonts/'),
+    ('povil_icons', 'special://home/media/povil_icons/'),
+    (os.path.join('resources', 'media', 'fonts'), 'special://home/media/Fonts/'),
 )
 
 
@@ -51,20 +56,14 @@ def _log(msg):
         pass
 
 
-def install_global_media_assets():
-    """Copy bundled icons/fonts into the global Kodi media folders if missing.
-
-    Returns the number of files copied (0 when everything is already in place
-    or Kodi APIs are unavailable). Safe to call repeatedly.
-    """
-    if xbmcvfs is None or _ADDON is None:
-        return 0
-    copied = 0
-    try:
-        addon_path = xbmcvfs.translatePath(_ADDON.getAddonInfo('path'))
-        media_root = os.path.join(addon_path, 'resources', 'media')
-        for src_subdir, dst_special in _COPY_JOBS:
-            src_dir = os.path.join(media_root, src_subdir)
+def _install_assets(addon_path):
+    """OVERWRITE-copy the bundled icons/fonts into the global Kodi media folders
+    so updated artwork reaches users even when an older copy already exists.
+    Returns the number of files written."""
+    written = 0
+    for src_rel, dst_special in _COPY_JOBS:
+        try:
+            src_dir = os.path.join(addon_path, src_rel)
             if not os.path.isdir(src_dir):
                 continue
             dst_dir = xbmcvfs.translatePath(dst_special)
@@ -83,15 +82,72 @@ def install_global_media_assets():
                 if not os.path.isfile(src):
                     continue
                 dst = os.path.join(dst_dir, name)
-                if os.path.exists(dst):
-                    continue  # already installed -> never overwrite
                 try:
+                    # Overwrite: remove any stale copy first so xbmcvfs.copy
+                    # (which won't clobber on some platforms) always lands the
+                    # fresh file.
+                    if os.path.exists(dst):
+                        try:
+                            xbmcvfs.delete(os.path.join(dst_special, name))
+                        except Exception:
+                            pass
+                        if os.path.exists(dst):
+                            try:
+                                os.remove(dst)
+                            except Exception:
+                                pass
                     xbmcvfs.copy(src, dst)
-                    copied += 1
+                    written += 1
                 except Exception:
                     pass
-        if copied:
-            _log('installed {0} global media asset(s)'.format(copied))
+        except Exception:
+            pass
+    return written
+
+
+def _refresh_favourites(addon_path):
+    """Regenerate (overwrite) special://userdata/favourites.xml for the active
+    skin from favourites_config.json, pushing the latest internal skin shortcuts
+    + icon paths. The generator preserves any custom favourites the user added.
+    Best-effort and fully guarded."""
+    try:
+        import importlib.util
+        gen_file = os.path.join(addon_path, 'favourites_generator.py')
+        if not os.path.isfile(gen_file):
+            return False
+        spec = importlib.util.spec_from_file_location(
+            'povil_favourites_generator_startup', gen_file)
+        gen = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(gen)
+        skin_id = ''
+        if xbmc is not None:
+            try:
+                skin_id = xbmc.getSkinDir() or ''
+            except Exception:
+                skin_id = ''
+        # merge=True keeps the user's own custom tiles; our canonical tiles are
+        # refreshed (overwritten) so UI/shortcut/icon updates always land.
+        gen.generate_favourites_xml(skin_id, merge=True, write=True)
+        _log('favourites.xml refreshed for skin "{0}"'.format(skin_id or '?'))
+        return True
     except Exception as e:
-        _log('failed: {0}'.format(e))
-    return copied
+        _log('favourites refresh failed: {0}'.format(e))
+        return False
+
+
+def install_global_media_assets():
+    """Install/overwrite the bundled icons + fonts and refresh favourites.xml.
+
+    Safe to call repeatedly; every failure is swallowed.
+    """
+    if xbmcvfs is None or _ADDON is None:
+        return 0
+    try:
+        addon_path = xbmcvfs.translatePath(_ADDON.getAddonInfo('path'))
+    except Exception:
+        return 0
+    written = _install_assets(addon_path)
+    if written:
+        _log('installed/updated {0} global media asset(s)'.format(written))
+    _refresh_favourites(addon_path)
+    return written
