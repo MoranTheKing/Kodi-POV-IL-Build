@@ -379,6 +379,17 @@ class HeadlessInstaller:
                 xbmc.sleep(1500)
             except Exception:
                 pass
+            # The sqlite write does not flip Kodi's in-memory state, so enable
+            # each extracted addon explicitly -- otherwise it stays DISABLED,
+            # System.HasAddon returns false, and the heal/provision pass would
+            # re-extract it forever.
+            for _aid in sorted(installed_ok):
+                try:
+                    q = ('{"jsonrpc":"2.0","id":1,"method":"Addons.SetAddonEnabled",'
+                         '"params":{"addonid":"%s","enabled":true}}' % _aid)
+                    xbmc.executeJSONRPC(q)
+                except Exception:
+                    pass
 
         # A requested id is "missing" if it is still not visible to Kodi.
         missing = [a for a in wanted_ids if not self._installed(a)]

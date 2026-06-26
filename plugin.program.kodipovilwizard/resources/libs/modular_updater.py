@@ -40,6 +40,34 @@ class ModularUpdater:
                 parts.append(ord(suffix[0].lower()) - 96)  # a->1, b->2, ...
         return tuple(parts)
 
+    @staticmethod
+    def _on_disk(addon_id):
+        """True when the addon's folder + addon.xml physically exist under
+        special://home/addons -- i.e. it was extracted, regardless of whether
+        Kodi currently considers it enabled."""
+        try:
+            return os.path.exists(os.path.join(CONFIG.ADDONS, addon_id, 'addon.xml'))
+        except Exception:
+            return False
+
+    @staticmethod
+    def _enable_addon(addon_id):
+        """Enable an installed addon in the RUNNING Kodi via JSON-RPC.
+
+        Writing enabled=1 straight into Addons??.db (db.addon_database) does NOT
+        flip Kodi's in-memory state, so after a raw zip extract an addon can sit
+        DISABLED -- System.HasAddon then returns false and heal_missing_addons
+        would re-download it on every launch forever (the fishenzon loop). A
+        JSON-RPC SetAddonEnabled makes the enable actually stick at runtime."""
+        try:
+            q = json.dumps({'jsonrpc': '2.0', 'id': 1,
+                            'method': 'Addons.SetAddonEnabled',
+                            'params': {'addonid': addon_id, 'enabled': True}})
+            xbmc.executeJSONRPC(q)
+        except Exception as e:
+            logging.log("[ModularUpdater] enable {0} failed: {1}".format(addon_id, e),
+                        level=xbmc.LOGWARNING)
+
     def get_local_version(self, addon_id):
         """Read the local addon.xml to find the currently installed version.
 
@@ -210,14 +238,35 @@ class ModularUpdater:
         addons = manifest.get('addons', {})
 
         # 1. Manifest addons (our private addons + the third-party repos),
-        #    excluding on-demand skins. Missing ones are downloaded + extracted
-        #    via the normal modular pipeline (sha-verified, DB-registered).
+        #    excluding on-demand skins.
+        #
+        #    CRUCIAL: distinguish "absent from disk" (re-download) from "on disk
+        #    but not enabled". System.HasAddon is false in BOTH cases, but an
+        #    addon that is already extracted must NOT be re-downloaded -- doing so
+        #    is exactly the fishenzon infinite loop (extract -> still disabled ->
+        #    System.HasAddon false -> re-download -> ...). For on-disk-but-disabled
+        #    we just (re)enable it via JSON-RPC; only genuinely absent addons are
+        #    pulled through the modular pipeline.
         missing = []
+        disabled_on_disk = []
         for addon_id, mod in addons.items():
             if mod.get('type') == 'skin':
                 continue
-            if not xbmc.getCondVisibility('System.HasAddon({0})'.format(addon_id)):
+            if xbmc.getCondVisibility('System.HasAddon({0})'.format(addon_id)):
+                continue
+            if self._on_disk(addon_id):
+                disabled_on_disk.append(addon_id)
+            else:
                 missing.append(mod)
+        if disabled_on_disk:
+            logging.log("[OTA-Heal] On-disk but disabled -> enabling (NOT re-downloading): "
+                        "{0}".format(disabled_on_disk), level=xbmc.LOGWARNING)
+            for _aid in disabled_on_disk:
+                self._enable_addon(_aid)
+            try:
+                xbmc.executebuiltin('UpdateLocalAddons')
+            except Exception:
+                pass
         if missing:
             logging.log("[OTA-Heal] Missing manifest addons -> installing: {0}".format(
                 [m.get('id') for m in missing]), level=xbmc.LOGWARNING)
@@ -520,6 +569,13 @@ class ModularUpdater:
             # Force Kodi to see the new files immediately
             xbmc.executebuiltin('UpdateLocalAddons')
             xbmc.sleep(1500)
+
+            # Explicitly enable each addon in the running session. The sqlite
+            # write above does not flip Kodi's in-memory state, so without this a
+            # freshly extracted addon (notably repository.Fishenzon) stays
+            # DISABLED -> System.HasAddon false -> heal re-downloads it forever.
+            for _aid in extracted_addons:
+                self._enable_addon(_aid)
 
         # 4b/4c. Build-config pack + content-addon provisioning.
         #

@@ -137,6 +137,40 @@ def show_notification():
 # modular OTA block further down (manifest.json driven).
 
 
+# Polite Hebrew wait message shown for the whole provisioning run.
+PROVISION_WAIT_MSG_HE = 'אנא המתינו מספר דקות עד לסיום ההתקנה וסגירת קודי.'
+
+
+def _make_provisioning_banner():
+    """Create a persistent, NON-MODAL top banner for the entire fresh-install /
+    provisioning run.
+
+    A ``DialogProgressBG`` renders in Kodi's top-right corner and -- unlike a
+    modal dialog or a transient notification -- STAYS VISIBLE behind every
+    subsequent install dialog / first-run popup until we explicitly close it (or
+    Kodi shuts down at the end of setup). It never grabs focus or input, so there
+    is NO global watchdog and nothing to fight. Returns the dialog object, which
+    the caller MUST keep a reference to (letting it be garbage-collected would
+    close it), or ``None`` if it could not be created.
+    """
+    try:
+        banner = xbmcgui.DialogProgressBG()
+        banner.create(CONFIG.ADDONTITLE, PROVISION_WAIT_MSG_HE)
+        # Indeterminate-ish: keep it near 0 so it never auto-completes/closes.
+        banner.update(1, CONFIG.ADDONTITLE, PROVISION_WAIT_MSG_HE)
+        return banner
+    except Exception:
+        return None
+
+
+def _close_provisioning_banner(banner):
+    try:
+        if banner is not None:
+            banner.close()
+    except Exception:
+        pass
+
+
 def fresh_build_auto_install_if_needed():
     """Hydrate (or RESUME) the modular build install.
 
@@ -178,6 +212,11 @@ def fresh_build_auto_install_if_needed():
     #    landed -- exactly the case that used to break the build permanently).
     build_name = CONFIG.BUILDNAME_DEFAULT
     build_version = CONFIG.BUILDVERSION_DEFAULT
+
+    # Persistent "please wait" banner for the whole provisioning. Stays at the top
+    # of Kodi, surviving every install dialog/popup, until setup ends (Kodi
+    # closes) or we bail to resume next launch.
+    wait_banner = _make_provisioning_banner()
     try:
         tools.ensure_folders(CONFIG.PACKAGES)
         logging.log(
@@ -195,11 +234,13 @@ def fresh_build_auto_install_if_needed():
             logging.log(
                 "[Fresh Build Auto Install] build engine missing after install; "
                 "will resume next launch.", level=xbmc.LOGERROR)
+            _close_provisioning_banner(wait_banner)
             return False
         if not ModularUpdater.is_provisioned():
             logging.log(
                 "[Fresh Build Auto Install] provisioning did not complete (marker "
                 "absent); will resume next launch.", level=xbmc.LOGWARNING)
+            _close_provisioning_banner(wait_banner)
             return False
 
         db.fix_metas()
@@ -218,6 +259,8 @@ def fresh_build_auto_install_if_needed():
         CONFIG.BUILDLATEST = build_version
         CONFIG.INSTALLED = 'true'
 
+        # Keep the wait banner up THROUGH the force-close countdown -- it tells
+        # the user to wait until Kodi fully closes. Kodi tears it down on exit.
         from resources.libs.wizard import Wizard
         Wizard().force_close_kodi_in_5_seconds(
             dialog_header="Kodi POV IL build installed"
@@ -228,6 +271,7 @@ def fresh_build_auto_install_if_needed():
             "[Fresh Build Auto Install] Failed: {0}".format(err),
             level=xbmc.LOGERROR,
         )
+        _close_provisioning_banner(wait_banner)
         return False
 
 
