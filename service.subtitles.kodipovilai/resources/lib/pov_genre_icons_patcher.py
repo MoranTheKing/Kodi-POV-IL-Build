@@ -103,8 +103,7 @@ _SHORTCUT_SETART_OLD = (
     b"'fanart': fanart, 'banner': icon})")
 _SHORTCUT_SETART_NEW = (
     b"listitem.setArt({'icon': icon, 'poster': icon, 'thumb': icon, "
-    b"'fanart': (icon if 'genres/' in str(item_get('iconImage') or '') "
-    b"else fanart), 'banner': icon})")
+    b"'fanart': (icon if 'genres/' in icon else fanart), 'banner': icon})")
 
 
 def _log(msg, level='INFO'):
