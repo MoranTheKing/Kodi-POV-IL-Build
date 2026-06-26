@@ -3,8 +3,10 @@
 #
 # This addon is the CENTRAL home of the build's flat icon + font set:
 #   povil_icons/*.png              (flat, no nested subfolders -- the canonical
-#                                    icon dir; favourites.xml references it at
-#                                    special://home/addons/<this addon>/povil_icons/)
+#                                    SOURCE copy that we deploy/overwrite into the
+#                                    global media folder
+#                                    special://home/media/povil_icons/, which is
+#                                    where favourites.xml references them)
 #   resources/media/fonts/*        (.ttf font files)
 #
 # On startup we (re)install those assets and refresh favourites.xml. Because the
@@ -38,9 +40,11 @@ except Exception:
 
 
 # (source path relative to the addon root, destination special:// folder).
-# Mirrored to the global media folders so skins / patchers that still reference
-# special://home/media/... keep resolving; the canonical copy lives in the addon
-# (povil_icons/) and favourites.xml points there directly.
+# Deployed into the global media folders: favourites.xml and skins/patchers all
+# reference special://home/media/povil_icons/ (the global media cache), so Kodi
+# reads the icons from there rather than reaching into this addon's own folder --
+# avoiding cross-addon containment breaches. The canonical SOURCE copy lives in
+# the addon (povil_icons/) and is overwritten into the global folder on startup.
 _COPY_JOBS = (
     ('povil_icons', 'special://home/media/povil_icons/'),
     (os.path.join('resources', 'media', 'fonts'), 'special://home/media/Fonts/'),
