@@ -245,12 +245,19 @@ class ModularUpdater:
     # Kodi's native InstallAddon so that (a) Kodi resolves their dependencies
     # natively (script.module.*, context.otaku, inputstream.adaptive ...) and
     # (b) they keep receiving OTA updates straight from their own developers.
+    # Order matters: install the lean, reliable core content addons FIRST so the
+    # build is operational fast, and keep plugin.video.otaku DEAD LAST. Otaku
+    # pulls a large dependency tree and is known to spike background syncs / stall
+    # for up to ~60s on a fresh install; placing it last means a transient Otaku
+    # timeout can never block the core addons (POV, IdanPlus, YouTube, language
+    # pack) -- heal_missing_addons() simply (re)installs Otaku on the next launch.
     PROVISION_IDS = [
         'plugin.video.pov',                 # <- repository.kodifitzwell (+ patched at runtime)
         'plugin.video.idanplus',            # <- repository.Fishenzon
-        'plugin.video.otaku',               # <- repository.otaku (+ context.otaku)
         'plugin.video.youtube',             # <- Kodi official repo
         'resource.language.he_il',          # <- Kodi official repo (Hebrew language pack)
+        'plugin.video.otaku',               # <- repository.otaku (+ context.otaku); LAST: heavy
+                                            #    + timeout-prone, must not block core install.
     ]
 
     def post_install_provisioning(self, per_addon_timeout=60, ids=None):

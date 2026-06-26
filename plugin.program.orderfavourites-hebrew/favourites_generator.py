@@ -12,9 +12,9 @@
 # The config defines a dictionary of named tiles plus, per skin, an ordered list
 # of tile keys (or an 'inherit' of another skin) and optional per-tile overrides
 # (icon/action/name). A tile 'icon' is either a bare filename (joined with the
-# config's icon_base, e.g.
-# special://home/addons/plugin.program.orderfavourites-hebrew/povil_icons/<file>) or a full
-# special:// / http(s) path used verbatim.
+# config's icon_base, e.g. special://home/media/povil_icons/<file> -- the global
+# media folder that media_installer.py deploys/overwrites the icons into) or a
+# full special:// / http(s) path used verbatim.
 #
 # Designed to be import-safe outside Kodi (xbmc* are optional) so it can be unit
 # tested, and to be loaded cross-addon by the wizard's skin switcher.

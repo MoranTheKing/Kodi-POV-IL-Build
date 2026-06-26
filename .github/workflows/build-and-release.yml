@@ -162,6 +162,46 @@ jobs:
           set -euo pipefail
           python .github/scripts/gen_manifest.py
 
+      - name: Prune orphaned release assets
+        if: steps.detect.outputs.proceed == 'true'
+        run: |
+          set -euo pipefail
+          TAG="$RELEASE_TAG"
+          # The per-addon delete in "Publish to rolling release" only runs for
+          # addons that CHANGED this run, so the last zip of an addon whose folder
+          # was DELETED from the repo (e.g. service.subtitles.All_Subs,
+          # repository.peno64) would otherwise linger on the release forever.
+          # Here we reconcile against the freshly regenerated manifest: anything
+          # not referenced by it (and not a stable *-latest.zip pointer) is an
+          # orphan and gets removed, keeping the release footprint lean.
+          ASSETS=$(gh release view "$TAG" --json assets -q '.assets[].name' 2>/dev/null || true)
+          ORPHANS=$(python - "$ASSETS" <<'PY'
+          import json, sys
+          assets = [a for a in (sys.argv[1] if len(sys.argv) > 1 else '').split() if a]
+          manifest = json.load(open('manifest.json'))
+          allowed = set()
+          for addon in manifest.get('addons', {}).values():
+              if addon.get('filename'):
+                  allowed.add(addon['filename'])
+          cfg = manifest.get('config') or {}
+          if cfg.get('filename'):
+              allowed.add(cfg['filename'])
+          for name in assets:
+              if name.endswith('-latest.zip'):   # stable rolling pointers -- never prune
+                  continue
+              if name not in allowed:
+                  print(name)
+          PY
+          )
+          if [ -z "${ORPHANS//[[:space:]]/}" ]; then
+            echo "No orphaned assets to prune."
+          else
+            for asset in $ORPHANS; do
+              echo "Pruning orphaned asset: $asset"
+              gh release delete-asset "$TAG" "$asset" -y || true
+            done
+          fi
+
       - name: Commit manifest.json
         if: steps.detect.outputs.proceed == 'true'
         run: |
