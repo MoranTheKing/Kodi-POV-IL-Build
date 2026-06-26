@@ -37,7 +37,7 @@ ICON_SRC_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'icons')
 ICON_FILENAMES = ('gemini.png',)
 
-INJECT_VERSION = 10
+INJECT_VERSION = 11
 MARKER = '# AI_SUBS_MYSERVICES_INJECT_v{0}'.format(INJECT_VERSION)
 END_MARKER = '# END AI_SUBS_MYSERVICES_INJECT_v{0}'.format(INJECT_VERSION)
 TUPLE_MARKER = "# AI_SUBS_MYSERVICES_TUPLE_v{0}".format(INJECT_VERSION)
@@ -79,6 +79,22 @@ TUPLE_MARKER = "# AI_SUBS_MYSERVICES_TUPLE_v{0}".format(INJECT_VERSION)
 #     Now each row is built defensively (a bad provider is rendered
 #     without its auth label, or skipped) and we only fall back when
 #     NOT ONE row could be built, so Gemini reliably appears.
+#   v11 (addon v0.2.272): STOP replacing authorize() entirely. Verified
+#     against POV 6.06.10's real modules/myservices.py: authorize()
+#     builds a LOCAL `services` tuple
+#       icon_path, services = kodi_utils.media_path(), (
+#           ('trakt', Trakt), ..., ('easynews', EasyNews))
+#     and the wrapper approach re-implemented that render path -- every
+#     drift in make_listitem/dialog/provider __init__ risked an empty or
+#     broken dialog, exactly the failure the user still hit from inside
+#     the addon. v11 no longer wraps: it (a) appends only the Gemini
+#     class and (b) splices ('gemini-ai', Gemini) straight into POV's own
+#     `services` tuple via a stable regex anchor, so POV's NATIVE
+#     authorize() renders the list (its real classes, its real dialog)
+#     with Gemini as one more entry. Fail-safe: if the anchor does not
+#     match (POV refactors), nothing is spliced -> POV's menu still works
+#     untouched, Gemini is simply absent. No try/except masking, no
+#     reconstruction, no empty-menu failure mode.
 # Each bump triggers a one-time re-patch on the next Kodi startup;
 # OLD_MARKERS lists every prior version's marker so the legacy
 # blocks get stripped cleanly before the new one is injected.
@@ -92,12 +108,14 @@ OLD_MARKERS = [
     '# AI_SUBS_MYSERVICES_INJECT_v7',
     '# AI_SUBS_MYSERVICES_INJECT_v8',
     '# AI_SUBS_MYSERVICES_INJECT_v9',
+    '# AI_SUBS_MYSERVICES_INJECT_v10',
 ]
 
-# Two service classes plus a hook that monkey-patches authorize()
-# to include them. We do NOT edit the authorize() function source --
-# instead we wrap it after definition. Cleaner + survives most
-# refactors of the inline tuple.
+# Appended at the END of POV's myservices.py: defines ONLY the Gemini
+# service class (plus a tiny addon-handle helper). It does NOT touch
+# authorize() -- the Gemini entry is added to POV's own `services` tuple
+# by a separate, fail-safe regex splice (see TUPLE_ANCHOR / ensure_patched),
+# so POV's native authorize() renders the whole menu.
 CLASS_BLOCK = '''\
 
 {marker}
@@ -150,93 +168,6 @@ class Gemini:
         # handled (not as a failure). The actual save/notify
         # happens in our default.py process.
         return True
-
-
-
-# Replace authorize() with a wrapper that adds our two services to
-# the menu. We can't reliably regex-edit the inline tuple because
-# the formatting might shift in upstream updates, so we wrap the
-# function instead.
-_ai_orig_authorize = authorize
-def authorize():
-    # Robust wrapper. The previous version rebuilt POV's service list purely
-    # from globals() name-guesses; when POV (auto-updated from its own repo)
-    # renamed/moved its service classes, EVERY guess missed and the menu opened
-    # EMPTY. Now: if we cannot resolve POV's real providers, OR anything in the
-    # render path drifts, we fall straight back to POV's own untouched
-    # authorize() -- so the user ALWAYS sees the real provider list
-    # (Real-Debrid, Trakt, Premiumize, ...). Gemini is appended only when our
-    # reconstruction actually succeeds.
-    try:
-        _ai_extra = (('gemini-ai', Gemini),)
-        # Resolve POV's own service classes dynamically (newest spelling
-        # first). Entries the installed POV does not define are skipped.
-        _ai_candidates = (
-            ('trakt', ('Trakt',)),
-            ('mdblist', ('MDBList',)),
-            ('tmdblist', ('TMDBList', 'TMDbList')),
-            ('real-debrid', ('RealDebrid',)),
-            ('premiumize.me', ('Premiumize',)),
-            ('alldebrid', ('AllDebrid',)),
-            ('torbox', ('TorBox',)),
-            ('offcloud', ('Offcloud',)),
-            ('easydebrid', ('EasyDebrid',)),
-            ('easynews', ('EasyNews',)),
-        )
-        _ai_g = globals()
-        _ai_services = []
-        for _ai_name, _ai_classes in _ai_candidates:
-            for _ai_cls in _ai_classes:
-                if _ai_cls in _ai_g:
-                    _ai_services.append((_ai_name, _ai_g[_ai_cls]))
-                    break
-        # Could not resolve POV's providers -> do NOT show a Gemini-only/empty
-        # menu; hand control to POV's native authorize() so the user still gets
-        # the full list.
-        if not _ai_services:
-            return _ai_orig_authorize()
-        services = tuple(_ai_services) + _ai_extra
-        icon_path = kodi_utils.media_path()
-        # Build each row defensively: instantiating a provider (api().token for
-        # the auth label, api.icon for the art) can throw if THAT provider's
-        # class drifted -- one bad row must not nuke the whole dialog (which
-        # would silently drop Gemini and bounce us to the native menu).
-        rows = []
-        for _ai_n, _ai_api in services:
-            try:
-                _ai_item = kodi_utils.make_listitem()
-                _ai_item.setLabel('[B]%s[/B]' % _ai_n.upper())
-                try:
-                    _ai_authed = bool(_ai_api().token)
-                except Exception:
-                    _ai_authed = False
-                _ai_item.setLabel2(auth_str if _ai_authed else noauth_str)
-                try:
-                    _ai_item.setArt({'icon': '%s%s' % (icon_path, _ai_api.icon)})
-                except Exception:
-                    pass
-                rows.append((_ai_n, _ai_api, _ai_item))
-            except Exception:
-                continue
-        # Nothing rendered at all -> fall back to POV's own menu rather than
-        # popping an empty dialog.
-        if not rows:
-            return _ai_orig_authorize()
-        service = kodi_utils.dialog.select('My Services', [_r[2] for _r in rows], useDetails=True)
-        if service < 0: return
-        try: success = rows[service][1]().set()
-        except Exception as e: kodi_utils.logger('myservices error', str(e))
-        else: return success
-        return notification(32574)
-    except Exception as _ai_err:
-        # Render/API drift (kodi_utils.make_listitem / media_path / dialog or
-        # auth_str / noauth_str / notification changed) -> never show an empty
-        # popup; fall back to POV's own menu.
-        try:
-            kodi_utils.logger('myservices inject error', str(_ai_err))
-        except Exception:
-            pass
-        return _ai_orig_authorize()
 {end_marker}
 '''
 # Replace the marker placeholders without using .format() -- the
@@ -245,6 +176,41 @@ def authorize():
 # to interpret those too and crash with IndexError.
 CLASS_BLOCK = CLASS_BLOCK.replace('{marker}', MARKER) \
                          .replace('{end_marker}', END_MARKER)
+
+
+# Fail-safe splice of our Gemini entry into POV's OWN `services` tuple inside
+# modules.myservices.authorize(). Verified against POV 6.06.10:
+#     icon_path, services = kodi_utils.media_path(), (
+#         ('trakt', Trakt), ('mdblist', MDBList), ... ('easynews', EasyNews))
+# We anchor on `services = kodi_utils.media_path(), (` (POV's exact, stable
+# construction) and insert ('gemini-ai', Gemini) as the FIRST tuple element, so
+# POV's native authorize() builds + renders the menu with its REAL classes and
+# its REAL dialog -- Gemini is just one more row. If POV ever refactors this
+# line so the anchor misses, nothing is spliced and POV's menu still works
+# (Gemini merely absent) -- no empty/broken dialog is ever produced.
+TUPLE_ANCHOR = re.compile(r'(services\s*=\s*kodi_utils\.media_path\(\)\s*,\s*\()')
+TUPLE_INSERT = "('gemini-ai', Gemini), "
+TUPLE_MARK = "('gemini-ai', Gemini)"
+
+
+def _inject_services_tuple(content):
+    """Return content with ('gemini-ai', Gemini) spliced into POV's services
+    tuple. Idempotent (skips if already present) and fail-safe (returns content
+    unchanged if the anchor is not found)."""
+    if TUPLE_MARK in content:
+        return content
+    new_content, n = TUPLE_ANCHOR.subn(
+        lambda m: m.group(1) + TUPLE_INSERT, content, count=1)
+    if n:
+        kodi_utils.log(
+            'pov_services_patcher: spliced Gemini into POV services tuple',
+            level='INFO')
+        return new_content
+    kodi_utils.log(
+        'pov_services_patcher: services tuple anchor not found -- leaving POV '
+        'authorize() untouched (Gemini absent, native menu intact)',
+        level='WARNING')
+    return content
 
 
 def _myservices_path():
@@ -358,6 +324,11 @@ def ensure_patched():
             re.MULTILINE | re.DOTALL,
         )
         content = pattern.sub('', content)
+
+    # Splice ('gemini-ai', Gemini) into POV's OWN services tuple so its native
+    # authorize() renders Gemini alongside its real providers. Fail-safe: a
+    # missed anchor leaves POV's menu untouched.
+    content = _inject_services_tuple(content)
 
     if not content.endswith('\n'):
         content += '\n'
