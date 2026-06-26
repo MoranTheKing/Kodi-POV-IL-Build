@@ -268,7 +268,7 @@
     <setting id="rpdb_api_key" default="true" />
     <setting id="get_rpdb_data" default="true">false</setting>
     <setting id="get_rpdb_data_series" default="true">false</setting>
-    <setting id="get_fanart_data" default="true">false</setting>
+    <setting id="get_fanart_data">true</setting>
     <setting id="fanarttv.default" default="true">false</setting>
     <setting id="fanart_amble1" default="true" />
     <setting id="fanart_client_key" default="true">fe073550acf157bdb8a4217f215c0882</setting>

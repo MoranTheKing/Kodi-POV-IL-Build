@@ -1,5 +1,5 @@
 {
-  "config_version": "1.1.4",
+  "config_version": "1.1.5",
   "_comment": "Declarative policy for how the wizard applies the shipped build-config (userdata/) onto a device. Bump config_version whenever ANY file in userdata/ changes -- that is what makes the wizard detect and apply the new config. 'fresh' is used on a clean/first install, 'update' on an existing device. Modes: replace (overwrite whole file), merge_id (per <setting id=...>, build value wins, other user settings untouched), merge_name (per <source><name>, add build's, keep user's), seed_if_absent (write only if the file does not already exist).",
   "files": [
     {
@@ -20,6 +20,29 @@
       "fresh": "replace",
       "update": "merge_id",
       "exclude_ids": []
+    },
+    {
+      "src": "addon_data/plugin.video.pov/settings.xml",
+      "dest": "userdata/addon_data/plugin.video.pov/settings.xml",
+      "fresh": "replace",
+      "update": "merge_id",
+      "_note": "POV's own settings. WAS bundled in config.zip but never in this policy, so it was never applied -- POV ran on its English/no-fanart defaults (the black-background + English-metadata bug). fresh=replace lands our full config (meta_language=he, get_fanart_data=true, TMDB/Trakt app keys, provider toggles). update=merge_id pushes those build defaults to existing devices WITHOUT clobbering the user's own service logins -- every credential / per-account id is in exclude_ids so My Services authorizations (Real-Debrid, Trakt, Premiumize, TorBox, ...) survive a config update.",
+      "exclude_ids": [
+        "rd.client_id", "rd.secret", "rd.refresh", "rd.token", "rd.username",
+        "pm.token", "pm.account_id",
+        "ed.token", "ed.account_id",
+        "tb.token", "tb.account_id",
+        "oc.token", "oc.account_id",
+        "ad.token", "ad.account_id",
+        "trakt.token", "trakt.refresh", "trakt.expires", "trakt_user", "trakt_indicators_active",
+        "mdblist.token", "mdblist_user", "mdbl_indicators_active",
+        "tmdb.token", "tmdb.account_id", "tmdb.session_id", "tmdb.session_account_id", "tmdb.username",
+        "imdb_user",
+        "easynews_user", "easynews_password",
+        "prowlarr.token", "prowlarr.url",
+        "rpdb_api_key",
+        "watched_indicators"
+      ]
     },
     {
       "src": "favourites.xml",

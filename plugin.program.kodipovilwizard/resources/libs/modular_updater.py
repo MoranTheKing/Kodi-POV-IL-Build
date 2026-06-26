@@ -261,203 +261,133 @@ class ModularUpdater:
     ]
 
     def post_install_provisioning(self, per_addon_timeout=60, ids=None):
-        """Silently install addons via Kodi's native InstallAddon (so Kodi
-        resolves the script.module.* / context.* / skin deps natively and they
-        keep getting OTA updates from their own repos).
+        """HEADLESS provisioning of the third-party content addons.
 
-        ``ids`` defaults to PROVISION_IDS (the build's third-party content
-        addons). It can be overridden to install ANY addon(s) on demand through
-        the same battle-tested path -- e.g. the Arctic Fuse 3 skin, which is
-        pulled from repository.jurialmunkey with all its dependencies resolved
-        natively instead of from a static zip pack.
+        Resolves each addon + its dependency closure from the repositories already
+        on disk (ours: kodifitzwell / Fishenzon / otaku / jurialmunkey, AND Kodi's
+        bundled official repo) and installs them by direct zip download + extract
+        -- exactly like the manifest phase. No xbmc.executebuiltin('InstallAddon'),
+        so NO native dependency dialog, NO addon download dialogs, and NO addon
+        first-run popups during install -> NO UI watchdog to fight (the old
+        aggressive watchdog mis-closed user menus and stalled the queue; it is
+        gone).
 
-        Silent: InstallAddon raises a native Yes/No confirm ("install the
-        following add-ons / dependencies?"). That dialog is CGUIDialogYesNo
-        (window 10100) whose button ids are FIXED by Kodi core regardless of
-        skin (10 = No, 11 = Yes), so a short-lived watcher thread auto-confirms
-        it by clicking control 11. This keeps installs hands-off -- our settings
-        are pre-seeded in userdata, so the user is never prompted.
+        Anything the headless path cannot resolve/download (e.g. a dependency that
+        only lives in a repo we do not ship) falls back to a SINGLE native
+        InstallAddon for that addon, with a MINIMAL confirmer that only
+        auto-accepts Kodi's dependency Yes/No -- never touching other dialogs.
+
+        ``ids`` defaults to PROVISION_IDS; override it to provision any addon(s)
+        on demand through the same path (e.g. the Arctic Fuse 3 skin).
 
         Idempotent: addons already present are skipped, so this is safe to call
         both right after a fresh install AND as a startup self-heal.
         """
-        import threading
-        import time
         import xbmc
-        monitor = xbmc.Monitor()
-
         provision_ids = list(ids) if ids is not None else list(self.PROVISION_IDS)
 
-        logging.log("[Provisioning] Starting SILENT provisioning of {0} addons".format(
+        logging.log("[Provisioning] HEADLESS provisioning of {0} addons".format(
             len(provision_ids)), level=xbmc.LOGINFO)
 
-        # The repositories were just extracted to disk. Force Kodi to load them
-        # and refresh their addons.xml index, otherwise the first InstallAddon
-        # after a fresh repo extract can fail with 'addon not available'.
-        xbmc.executebuiltin('UpdateLocalAddons')
-        xbmc.executebuiltin('UpdateAddonRepos', True)  # wait=True -> block until repos refreshed
-        if monitor.waitForAbort(3):
-            return
-
-        # Dialog watchdog -- keeps the whole provisioning sequence unattended.
-        # Active ONLY for the provisioning window, it handles two things:
-        #   1. The native install Yes/No (DialogConfirm, window 10100): confirm
-        #      it (control 11 = Yes/OK, fixed by Kodi core) so installs are silent.
-        #   2. ANY other modal an addon throws up on first run -- e.g. Otaku's
-        #      custom "ChangeLog & News" WindowXMLDialog, plus news/migration/
-        #      setup popups. These block the GUI's nested message loop, so the
-        #      NEXT addon's confirm can't appear and the queue stalls. We
-        #      force-close them by id (Dialog.Close, not Action(Back), because
-        #      addon windows can have broken Back handlers -- Otaku's onAction is
-        #      literally bugged). We have our own settings pre-seeded, so nothing
-        #      an addon asks on first run is wanted.
-        # Kodi's own install progress / busy dialogs are PROTECTED so we never
-        # cancel an in-flight download.
-        # ONLY Kodi's own busy/progress dialogs are protected -- everything else
-        # that appears during provisioning is an unwanted prompt/popup and gets
-        # closed aggressively (we have our settings pre-seeded; nothing an addon
-        # asks on first run is wanted).
-        PROTECTED_DIALOGS = (
-            10101,  # DialogProgress
-            10151,  # DialogExtendedProgressBar (addon download progress)
-            10138,  # DialogBusy
-            10160,  # DialogBusyNoCancel
-            # Native, USER-invoked menus -- never an addon's first-run popup, so
-            # they must be left alone. The watchdog was eating the Power/Shutdown
-            # menu (10111) when the user opened it to force-quit a perceived
-            # freeze; protect it (and the context menu) so user input is honored.
-            10111,  # WINDOW_DIALOG_BUTTON_MENU (power / shutdown menu)
-            10106,  # WINDOW_DIALOG_CONTEXT_MENU
-        )
-        stop = threading.Event()
-        stray = {'id': 0, 'hits': 0}
-        seen = {'win': -1, 'dlg': -1}
-
-        def _watchdog():
-            while not stop.is_set():
-                try:
-                    win = xbmcgui.getCurrentWindowId()
-                    dlg = xbmcgui.getCurrentWindowDialogId()
-
-                    # OBSERVABILITY: log the foreground window + dialog id every
-                    # time either changes, so a secondary freeze is never a
-                    # mystery again -- the offending window id is in kodi.log.
-                    if win != seen['win'] or dlg != seen['dlg']:
-                        seen['win'], seen['dlg'] = win, dlg
-                        logging.log("[Provisioning][watchdog] foreground window={0} dialog={1}".format(win, dlg),
-                                    level=xbmc.LOGINFO)
-
-                    if dlg == 10100:
-                        stray['id'] = 0
-                        stray['hits'] = 0
-                        logging.log("[Provisioning][watchdog] confirming install dialog 10100 (SendClick 11)",
-                                    level=xbmc.LOGINFO)
-                        xbmc.executebuiltin('SendClick(11)')  # Yes / OK
-                        # let it close before re-checking so we don't click
-                        # control 11 of whatever sits underneath.
-                        if monitor.waitForAbort(0.8):
-                            return
-                        continue
-
-                    if dlg > 10100 and dlg not in PROTECTED_DIALOGS:
-                        # an addon's own first-run popup -> force-close it so the
-                        # provisioning queue keeps moving. Try the targeted close
-                        # first; if the same dialog is still stuck after a few
-                        # passes (e.g. a Python window id Dialog.Close can't
-                        # address), escalate -- first Action(Back), then close ALL
-                        # dialogs (by then the addon's own install progress is
-                        # already gone).
-                        stray['hits'] = stray['hits'] + 1 if stray['id'] == dlg else 1
-                        stray['id'] = dlg
-                        if stray['hits'] >= 4:
-                            logging.log("[Provisioning][watchdog] dialog {0} STILL stuck -> Dialog.Close(all)".format(dlg),
-                                        level=xbmc.LOGWARNING)
-                            xbmc.executebuiltin('Dialog.Close(all,true)')
-                        elif stray['hits'] == 3:
-                            logging.log("[Provisioning][watchdog] dialog {0} sticky -> Action(Back)".format(dlg),
-                                        level=xbmc.LOGWARNING)
-                            xbmc.executebuiltin('Action(Back)')
-                        else:
-                            logging.log("[Provisioning][watchdog] closing stray dialog {0} (Dialog.Close)".format(dlg),
-                                        level=xbmc.LOGINFO)
-                            xbmc.executebuiltin('Dialog.Close({0},true)'.format(dlg))
-                        if monitor.waitForAbort(0.5):
-                            return
-                        continue
-
-                    stray['id'] = 0
-                    stray['hits'] = 0
-                except Exception as _wd_err:
-                    try:
-                        logging.log("[Provisioning][watchdog] error: {0}".format(_wd_err), level=xbmc.LOGERROR)
-                    except Exception:
-                        pass
-                if monitor.waitForAbort(0.3):
-                    return
-
-        watcher = threading.Thread(target=_watchdog)
-        watcher.daemon = True
-        watcher.start()
-
+        # The repositories were just extracted to disk. Force Kodi to load them so
+        # their addon.xml (datadir) is visible to the headless resolver.
         try:
-            for addon_id in provision_ids:
-                if monitor.abortRequested():
-                    break
-                if xbmc.getCondVisibility('System.HasAddon({0})'.format(addon_id)):
-                    logging.log("[Provisioning] {0} already present -- skipping".format(addon_id),
-                                level=xbmc.LOGINFO)
-                    continue
+            xbmc.executebuiltin('UpdateLocalAddons')
+            if xbmc.Monitor().waitForAbort(2):
+                return False
+        except Exception:
+            pass
 
-                logging.log("[Provisioning] Installing {0} (silent)".format(addon_id), level=xbmc.LOGINFO)
-                xbmc.executebuiltin('InstallAddon({0})'.format(addon_id))
+        installed, missing = [], list(provision_ids)
+        try:
+            from resources.libs.headless_installer import HeadlessInstaller
+            installed, missing = HeadlessInstaller().install(provision_ids)
+            logging.log("[Provisioning] headless installed={0} missing={1}".format(
+                installed, missing), level=xbmc.LOGINFO)
+        except Exception as e:
+            logging.log("[Provisioning] headless installer error: {0}".format(e),
+                        level=xbmc.LOGERROR)
+            missing = [a for a in provision_ids
+                       if not xbmc.getCondVisibility('System.HasAddon({0})'.format(a))]
 
-                # InstallAddon is asynchronous; wait for the addon to land so a
-                # fresh install never force-closes Kodi mid-download. This wait is
-                # STRICTLY bounded (per_addon_timeout seconds): an addon can
-                # silently fail or be starved by another addon's background
-                # services (e.g. Otaku's AnimESchedule thread churning right when
-                # YouTube tries to install), and we must NEVER let the queue hang
-                # forever waiting on System.HasAddon. On timeout we log an error
-                # and move on to the next addon -- the missing one self-heals on
-                # the next launch / OTA pass.
-                installed = False
-                deadline = time.time() + int(per_addon_timeout)
-                while time.time() < deadline:
-                    if monitor.waitForAbort(1):
-                        return
-                    if xbmc.getCondVisibility('System.HasAddon({0})'.format(addon_id)):
-                        installed = True
-                        break
-                if installed:
-                    logging.log("[Provisioning] {0} installed".format(addon_id), level=xbmc.LOGINFO)
-                else:
-                    logging.log("[Provisioning] TIMEOUT: {0} did not install within {1}s -- "
-                                "skipping to next addon (will retry on next launch / OTA)".format(
-                                    addon_id, per_addon_timeout),
-                                level=xbmc.LOGERROR)
-        finally:
-            # Watchdog lifecycle: the watcher is hard-bound to this loop. Signal
-            # it to stop the instant the queue finishes OR times out, then JOIN
-            # it so it is provably dead before we return. Otherwise a lingering
-            # watchdog would keep force-closing dialogs the user opens AFTER
-            # provisioning -- e.g. it was eating the native Power Menu (window
-            # 10111) when the user opened it to force-quit a perceived freeze.
-            stop.set()
-            watcher.join(5)
-            if watcher.is_alive():
-                logging.log("[Provisioning][watchdog] did not stop within 5s after signal",
-                            level=xbmc.LOGWARNING)
-            else:
-                logging.log("[Provisioning][watchdog] stopped", level=xbmc.LOGINFO)
+        # Native fallback ONLY for what headless could not provision.
+        if missing and not xbmc.Monitor().abortRequested():
+            logging.log("[Provisioning] native fallback for: {0}".format(missing),
+                        level=xbmc.LOGWARNING)
+            self._native_install_fallback(missing, per_addon_timeout)
 
-        logging.log("[Provisioning] Silent provisioning finished", level=xbmc.LOGINFO)
+        logging.log("[Provisioning] Provisioning finished", level=xbmc.LOGINFO)
 
-        # Report whether every requested addon is now present, so on-demand
-        # callers (e.g. the AF3 Switch-Skin flow) can tell success from failure.
         all_present = all(
             xbmc.getCondVisibility('System.HasAddon({0})'.format(a)) for a in provision_ids
         )
         return all_present
+
+    def _native_install_fallback(self, ids, per_addon_timeout=60):
+        """Last-resort native install for addons the headless resolver could not
+        place (e.g. a dependency only in a repo we don't ship). Uses Kodi's own
+        InstallAddon so Kodi pulls the remaining deps, with a MINIMAL confirmer
+        thread that auto-accepts ONLY the dependency Yes/No dialog (window 10100,
+        control 11 = Yes -- fixed by Kodi core regardless of skin). Unlike the old
+        watchdog it NEVER closes any other dialog, so it can't eat the user's
+        menus or an in-flight download.
+        """
+        import threading
+        import time
+        import xbmc
+        import xbmcgui
+        monitor = xbmc.Monitor()
+
+        # Make sure repo indexes are fresh so InstallAddon can find the addons.
+        try:
+            xbmc.executebuiltin('UpdateAddonRepos', True)
+        except Exception:
+            pass
+        if monitor.waitForAbort(2):
+            return
+
+        stop = threading.Event()
+
+        def _confirmer():
+            while not stop.is_set():
+                try:
+                    if xbmcgui.getCurrentWindowDialogId() == 10100:
+                        xbmc.executebuiltin('SendClick(11)')  # Yes / OK
+                        if monitor.waitForAbort(0.8):
+                            return
+                        continue
+                except Exception:
+                    pass
+                if monitor.waitForAbort(0.3):
+                    return
+
+        watcher = threading.Thread(target=_confirmer)
+        watcher.daemon = True
+        watcher.start()
+        try:
+            for addon_id in ids:
+                if monitor.abortRequested():
+                    break
+                if xbmc.getCondVisibility('System.HasAddon({0})'.format(addon_id)):
+                    continue
+                logging.log("[Provisioning] native install {0}".format(addon_id),
+                            level=xbmc.LOGINFO)
+                xbmc.executebuiltin('InstallAddon({0})'.format(addon_id))
+                deadline = time.time() + int(per_addon_timeout)
+                landed = False
+                while time.time() < deadline:
+                    if monitor.waitForAbort(1):
+                        break
+                    if xbmc.getCondVisibility('System.HasAddon({0})'.format(addon_id)):
+                        landed = True
+                        break
+                if not landed:
+                    logging.log("[Provisioning] native install did not confirm {0} "
+                                "within {1}s (will self-heal next launch)".format(
+                                    addon_id, per_addon_timeout), level=xbmc.LOGWARNING)
+        finally:
+            stop.set()
+            watcher.join(5)
 
     def _config_pending(self, manifest):
         """True when the manifest's config version is ahead of what we last
@@ -591,38 +521,50 @@ class ModularUpdater:
             xbmc.executebuiltin('UpdateLocalAddons')
             xbmc.sleep(1500)
 
-        # 4b. Apply the build-config pack (value/id-level merge). This is what
-        # keeps the user's RD/Trakt keys, widgets and tweaks intact across
-        # updates while still landing new build defaults (skin look, extra repo
-        # sources, Hebrew labels...). Idempotent: it self-skips when the
-        # device already has the manifest's config_version.
+        # 4b/4c. Build-config pack + content-addon provisioning.
+        #
+        # ORDERING MATTERS (the black-background / English-metadata fix):
+        # config.zip carries POV's settings.xml (meta_language=he, fanart on,
+        # TMDB/Trakt keys). On a FRESH install we must place every content addon
+        # FIRST and apply config.zip as the ABSOLUTE FINAL step, so nothing an
+        # addon writes at install/first-init can clobber our POV config. On an
+        # OTA update there is no content provisioning here, so the pack is
+        # applied right away (idempotent: self-skips when the device already has
+        # the manifest's config_version).
         fresh = getattr(self, 'fresh', False)
         config_skin_touched = False
-        try:
-            manifest = getattr(self, '_manifest', None)
-            if manifest:
-                res = config_apply.apply_config_pack(manifest, fresh=fresh, background=self.background)
-                config_skin_touched = bool(res.get('skin_touched'))
-        except Exception as e:
-            logging.log("[ModularUpdater] config apply failed: {0}".format(e), level=xbmc.LOGERROR)
 
-        # 4c. Fresh install only: now that our private addons + the third-party
-        # repositories are on disk, provision the actual content addons via
-        # Kodi's native InstallAddon (dependency resolution + future OTA updates
-        # handled by Kodi / the original developers).
-        if fresh:
+        def _apply_config_pack():
+            try:
+                manifest = getattr(self, '_manifest', None)
+                if manifest:
+                    res = config_apply.apply_config_pack(manifest, fresh=fresh, background=self.background)
+                    return bool(res.get('skin_touched'))
+            except Exception as e:
+                logging.log("[ModularUpdater] config apply failed: {0}".format(e), level=xbmc.LOGERROR)
+            return False
+
+        if not fresh:
+            config_skin_touched = _apply_config_pack()
+        else:
+            # Provision the third-party content addons (POV, IdanPlus, YouTube,
+            # language pack, Otaku) -- now headless/silent (see
+            # post_install_provisioning), so no UI dialogs to fight.
             try:
                 self.post_install_provisioning()
             except Exception as e:
                 logging.log("[ModularUpdater] provisioning failed: {0}".format(e), level=xbmc.LOGERROR)
 
-            # ABSOLUTE END of the fresh-install sequence: every addon has been
-            # attempted and the config.zip applied. Stamp the persistent
-            # .provisioned marker -- but ONLY if Kodi is not aborting. If the
-            # user force-closed mid-provisioning, abortRequested() is True and we
-            # must leave the marker ABSENT so startup resumes the setup next
-            # launch. Any single addon that timed out (still missing) is caught
-            # separately by the startup HasAddon OTA enforcement.
+            # ABSOLUTE FINAL config step: apply config.zip AFTER every addon is on
+            # disk so our POV (and skin) settings win the last write.
+            config_skin_touched = _apply_config_pack()
+
+            # End of the fresh-install sequence: every addon attempted + the
+            # config.zip applied. Stamp the persistent .provisioned marker -- but
+            # ONLY if Kodi is not aborting. If the user force-closed mid-setup,
+            # abortRequested() is True and we leave the marker ABSENT so startup
+            # resumes next launch. A single addon that timed out (still missing)
+            # is caught separately by the startup HasAddon OTA enforcement.
             if not xbmc.Monitor().abortRequested():
                 cfg = (getattr(self, '_manifest', None) or {}).get('config') or {}
                 self.mark_provisioned(cfg.get('config_version') or CONFIG.BUILDVERSION_DEFAULT)
