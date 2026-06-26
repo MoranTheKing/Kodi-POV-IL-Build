@@ -3,15 +3,15 @@
   "name": "Kodi POV IL Build",
   "repo": "MoranTheKing/Kodi-POV-IL-Build",
   "release_tag": "addons-latest",
-  "generated": "2026-06-26T19:25:27Z",
+  "generated": "2026-06-26T23:29:25Z",
   "manifest_url": "https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL-Build/main/manifest.json",
   "config": {
-    "config_version": "1.1.6",
-    "filename": "config-1.1.6.zip",
-    "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/config-1.1.6.zip",
-    "size": 23233,
-    "sha256": "755116c4adb294502138a670ca8d8655ab21ec79b69ad4744376fba794a3524c",
-    "updated": "2026-06-26T19:25:27Z"
+    "config_version": "2.0.0",
+    "filename": "config-2.0.0.zip",
+    "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/config-2.0.0.zip",
+    "size": 28129,
+    "sha256": "e3309b09045e933eb6da8c5cdf0adc5dec4e234d07b13c31c51846b6fb44d592",
+    "updated": "2026-06-26T23:29:25Z"
   },
   "addons": {
     "plugin.program.autocompletion": {
@@ -120,9 +120,9 @@
       "type": "subtitle",
       "filename": "service.subtitles.kodipovilai-0.2.272.zip",
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/service.subtitles.kodipovilai-0.2.272.zip",
-      "size": 2768289,
-      "sha256": "7e402a4b87875546618a20470789c223545d8c350f301fc972f046902a954e61",
-      "updated": "2026-06-26T15:41:24Z"
+      "size": 2776853,
+      "sha256": "efbf8fe49229499b9061c21e671befee29ca77c52912ea11bf3d61cd4aaae334",
+      "updated": "2026-06-26T23:29:25Z"
     },
     "skin.estuary": {
       "id": "skin.estuary",
