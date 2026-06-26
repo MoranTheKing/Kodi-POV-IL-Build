@@ -3,15 +3,15 @@
   "name": "Kodi POV IL Build",
   "repo": "MoranTheKing/Kodi-POV-IL-Build",
   "release_tag": "addons-latest",
-  "generated": "2026-06-26T15:41:24Z",
+  "generated": "2026-06-26T19:25:27Z",
   "manifest_url": "https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL-Build/main/manifest.json",
   "config": {
-    "config_version": "1.1.5",
-    "filename": "config-1.1.5.zip",
-    "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/config-1.1.5.zip",
-    "size": 27209,
-    "sha256": "e6942838c03d8cc9020c6107019035e9b55ed88d48695d9603ddad62e568ed75",
-    "updated": "2026-06-26T15:41:24Z"
+    "config_version": "1.1.6",
+    "filename": "config-1.1.6.zip",
+    "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/config-1.1.6.zip",
+    "size": 23233,
+    "sha256": "755116c4adb294502138a670ca8d8655ab21ec79b69ad4744376fba794a3524c",
+    "updated": "2026-06-26T19:25:27Z"
   },
   "addons": {
     "plugin.program.autocompletion": {
