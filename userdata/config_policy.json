@@ -1,5 +1,5 @@
 {
-  "config_version": "2.0.0",
+  "config_version": "2.0.1",
   "_comment": "Declarative policy for how the wizard applies the shipped build-config (userdata/) onto a device. Bump config_version whenever ANY file in userdata/ changes -- that is what makes the wizard detect and apply the new config. 'fresh' is used on a clean/first install, 'update' on an existing device. Modes: replace (overwrite whole file), merge_id (per <setting id=...>, build value wins, other user settings untouched), merge_name (per <source><name>, add build's, keep user's), seed_if_absent (write only if the file does not already exist).",
   "files": [
     {
@@ -62,6 +62,27 @@
       "dest": "userdata/advancedsettings.xml",
       "fresh": "replace",
       "update": "replace"
+    },
+    {
+      "src": "addon_data/plugin.video.pov/navigator.db",
+      "dest": "userdata/addon_data/plugin.video.pov/navigator.db",
+      "fresh": "replace",
+      "update": "replace",
+      "_note": "Seeded POV navigator state (custom menu order/visibility). Binary DB -- shipped whole and OVERWRITTEN on both fresh and update so build menu changes always reach users. No merge at this stage (by design)."
+    },
+    {
+      "src": "addon_data/plugin.video.pov/views.db",
+      "dest": "userdata/addon_data/plugin.video.pov/views.db",
+      "fresh": "replace",
+      "update": "replace",
+      "_note": "Seeded POV per-list view types. Binary DB -- overwritten on fresh + update."
+    },
+    {
+      "src": "addon_data/script.fentastic.helper/cpath_cache.db",
+      "dest": "userdata/addon_data/script.fentastic.helper/cpath_cache.db",
+      "fresh": "replace",
+      "update": "replace",
+      "_note": "Seeded FENtastic home-view / main-menu + widget path cache. Binary DB -- intentionally shipped (not a per-device-only cache here) and overwritten on fresh + update to pin the build's home layout and fix widget bugs."
     }
   ],
   "cleanup": {
