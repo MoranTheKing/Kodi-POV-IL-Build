@@ -37,7 +37,7 @@ ICON_SRC_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'icons')
 ICON_FILENAMES = ('gemini.png',)
 
-INJECT_VERSION = 8
+INJECT_VERSION = 9
 MARKER = '# AI_SUBS_MYSERVICES_INJECT_v{0}'.format(INJECT_VERSION)
 END_MARKER = '# END AI_SUBS_MYSERVICES_INJECT_v{0}'.format(INJECT_VERSION)
 TUPLE_MARKER = "# AI_SUBS_MYSERVICES_TUPLE_v{0}".format(INJECT_VERSION)
@@ -76,6 +76,8 @@ OLD_MARKERS = [
     '# AI_SUBS_MYSERVICES_INJECT_v4',
     '# AI_SUBS_MYSERVICES_INJECT_v5',
     '# AI_SUBS_MYSERVICES_INJECT_v6',
+    '# AI_SUBS_MYSERVICES_INJECT_v7',
+    '# AI_SUBS_MYSERVICES_INJECT_v8',
 ]
 
 # Two service classes plus a hook that monkey-patches authorize()
@@ -143,53 +145,66 @@ class Gemini:
 # function instead.
 _ai_orig_authorize = authorize
 def authorize():
-    _ai_extra = (('gemini-ai', Gemini),)
-    # Monkey-patch the module's `_builder` indirectly by replicating
-    # authorize()'s logic exactly, but with our extras appended to
-    # the services list. (We can't just call _orig_authorize and
-    # then patch -- the dialog gets built INSIDE the function and
-    # we'd have already shown the original.)
-    def _builder():
-        for name, api in services:
-            item = kodi_utils.make_listitem()
-            item.setLabel('[B]%s[/B]' % name.upper())
-            item.setLabel2(auth_str if api().token else noauth_str)
-            item.setArt({'icon': '%s%s' % (icon_path, api.icon)})
-            yield(item)
-    icon_path = kodi_utils.media_path()
-    # Resolve POV's own service classes dynamically instead of naming
-    # them directly. Upstream renames/removes classes between releases
-    # (POV 5.x: TMDbList + EasyDebrid, POV 6.x: TMDBList, no
-    # EasyDebrid) and a hardcoded name crashes the whole menu with
-    # NameError after Kodi auto-updates POV. Each entry lists the
-    # known spellings, newest first; entries the installed POV does
-    # not define are skipped.
-    _ai_candidates = (
-        ('trakt', ('Trakt',)),
-        ('mdblist', ('MDBList',)),
-        ('tmdblist', ('TMDBList', 'TMDbList')),
-        ('real-debrid', ('RealDebrid',)),
-        ('premiumize.me', ('Premiumize',)),
-        ('alldebrid', ('AllDebrid',)),
-        ('torbox', ('TorBox',)),
-        ('offcloud', ('Offcloud',)),
-        ('easydebrid', ('EasyDebrid',)),
-        ('easynews', ('EasyNews',)),
-    )
-    _ai_g = globals()
-    _ai_services = []
-    for _ai_name, _ai_classes in _ai_candidates:
-        for _ai_cls in _ai_classes:
-            if _ai_cls in _ai_g:
-                _ai_services.append((_ai_name, _ai_g[_ai_cls]))
-                break
-    services = tuple(_ai_services) + _ai_extra
-    service = kodi_utils.dialog.select('My Services', list(_builder()), useDetails=True)
-    if service < 0: return
-    try: success = services[service][1]().set()
-    except Exception as e: kodi_utils.logger('myservices error', str(e))
-    else: return success
-    return notification(32574)
+    # Robust wrapper. The previous version rebuilt POV's service list purely
+    # from globals() name-guesses; when POV (auto-updated from its own repo)
+    # renamed/moved its service classes, EVERY guess missed and the menu opened
+    # EMPTY. Now: if we cannot resolve POV's real providers, OR anything in the
+    # render path drifts, we fall straight back to POV's own untouched
+    # authorize() -- so the user ALWAYS sees the real provider list
+    # (Real-Debrid, Trakt, Premiumize, ...). Gemini is appended only when our
+    # reconstruction actually succeeds.
+    try:
+        _ai_extra = (('gemini-ai', Gemini),)
+        # Resolve POV's own service classes dynamically (newest spelling
+        # first). Entries the installed POV does not define are skipped.
+        _ai_candidates = (
+            ('trakt', ('Trakt',)),
+            ('mdblist', ('MDBList',)),
+            ('tmdblist', ('TMDBList', 'TMDbList')),
+            ('real-debrid', ('RealDebrid',)),
+            ('premiumize.me', ('Premiumize',)),
+            ('alldebrid', ('AllDebrid',)),
+            ('torbox', ('TorBox',)),
+            ('offcloud', ('Offcloud',)),
+            ('easydebrid', ('EasyDebrid',)),
+            ('easynews', ('EasyNews',)),
+        )
+        _ai_g = globals()
+        _ai_services = []
+        for _ai_name, _ai_classes in _ai_candidates:
+            for _ai_cls in _ai_classes:
+                if _ai_cls in _ai_g:
+                    _ai_services.append((_ai_name, _ai_g[_ai_cls]))
+                    break
+        # Could not resolve POV's providers -> do NOT show a Gemini-only/empty
+        # menu; hand control to POV's native authorize() so the user still gets
+        # the full list.
+        if not _ai_services:
+            return _ai_orig_authorize()
+        services = tuple(_ai_services) + _ai_extra
+        icon_path = kodi_utils.media_path()
+        def _builder():
+            for name, api in services:
+                item = kodi_utils.make_listitem()
+                item.setLabel('[B]%s[/B]' % name.upper())
+                item.setLabel2(auth_str if api().token else noauth_str)
+                item.setArt({'icon': '%s%s' % (icon_path, api.icon)})
+                yield(item)
+        service = kodi_utils.dialog.select('My Services', list(_builder()), useDetails=True)
+        if service < 0: return
+        try: success = services[service][1]().set()
+        except Exception as e: kodi_utils.logger('myservices error', str(e))
+        else: return success
+        return notification(32574)
+    except Exception as _ai_err:
+        # Render/API drift (kodi_utils.make_listitem / media_path / dialog or
+        # auth_str / noauth_str / notification changed) -> never show an empty
+        # popup; fall back to POV's own menu.
+        try:
+            kodi_utils.logger('myservices inject error', str(_ai_err))
+        except Exception:
+            pass
+        return _ai_orig_authorize()
 {end_marker}
 '''
 # Replace the marker placeholders without using .format() -- the

@@ -1,6 +1,6 @@
 {
   "_comment": "Canonical favourites for the Kodi POV IL build. favourites_generator.generate_favourites_xml(skin_id) builds userdata/favourites.xml from this per active skin. Each tile: 'name' (label), 'icon' (bare filename -> prefixed with icon_base, OR a full special:// path used as-is), 'action' (the <favourite> body). A skin either 'inherit's another skin's order or defines its own 'order' (list of tile keys) plus optional per-tile 'overrides'.",
-  "icon_base": "special://home/media/povil_icons/",
+  "icon_base": "special://home/addons/plugin.program.orderfavourites-hebrew/povil_icons/",
   "tiles": {
     "pov": {
       "name": "[B]POV[/B]",
