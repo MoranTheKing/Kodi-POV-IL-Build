@@ -157,9 +157,6 @@ def _run_build_startup_repairs():
         monitor = None
 
     steps = (
-        _maybe_patch_hebrew_build_ui,
-        _maybe_patch_brand_assets,
-        _maybe_patch_brand_favourites,
         _maybe_patch_pov_genre_icons,
         _maybe_patch_pov_hebrew_genres,
         _maybe_patch_pov_hebrew_ui,
@@ -170,13 +167,8 @@ def _run_build_startup_repairs():
         _maybe_patch_af3_home,
         _maybe_patch_pov_repeat_timer,
         _maybe_patch_pov_favorites_refresh,
-        _maybe_run_fav_diagnostic,
-        _maybe_fix_pov_favourites_typo,
         _maybe_patch_pov_menus,
-        _maybe_patch_pov_personal_area,
         _maybe_reseed_series_networks,
-        _maybe_patch_fentastic_widgets,
-        _maybe_patch_favourites_xml,
         _maybe_patch_pov_torbox_usage,
         _maybe_patch_pov_cache_empty,
         _maybe_patch_pov_trakt_cache_empty,
@@ -507,60 +499,6 @@ def _maybe_patch_pov_menus():
             pass
 
 
-
-def _maybe_cleanup_standalone_build_patches():
-    """Best-effort cleanup for users who installed only the subtitle addon."""
-    if _is_kodi_pov_il_build():
-        return
-    try:
-        from resources.lib import standalone_cleanup, kodi_utils
-    except Exception:
-        return
-    try:
-        status = standalone_cleanup.ensure_cleaned()
-        if status not in ('already_done', 'no_db'):
-            kodi_utils.log(
-                'standalone_cleanup: {0}'.format(status),
-                level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'standalone_cleanup failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_pov_personal_area():
-    """Rewrite POV's navigator.db personal-area rows so the
-    FENtastic widget on the movies/shows pages leads with TMDB
-    Favorites instead of Trakt Collection. Only rewrites rows
-    that match the shipped baseline byte-for-byte (any user
-    customization aborts the rewrite cleanly).
-    """
-    try:
-        from resources.lib import pov_navigator_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        results = pov_navigator_patcher.maybe_fix_personal_area_lists()
-        # results is either {'_status': '...'} or {row_name: status}
-        if isinstance(results, dict) and '_status' not in results:
-            fixed = [k for k, v in results.items() if v == 'fixed']
-            if fixed:
-                kodi_utils.log(
-                    'pov_navigator_patcher: rewrote personal-area '
-                    'rows: {0}'.format(', '.join(fixed)),
-                    level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_navigator_patcher (personal area) failed: '
-                '{0}'.format(e), level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_reseed_series_networks():
     """One-time restore of the NOX 'series by networks' home row in
     POV's navigator.db. Some devices lost most of the per-service
@@ -634,71 +572,6 @@ def _maybe_patch_fentastic_search():
                 level='WARNING')
         except Exception:
             pass
-
-def _maybe_patch_brand_assets():
-    """Replace legacy Real-Debrid/KODI build branding with POV IL branding."""
-    try:
-        from resources.lib import brand_assets_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        result = brand_assets_patcher.ensure_patched()
-        if isinstance(result, dict):
-            updated = [k for k, v in result.items() if v == 'updated']
-            if updated:
-                kodi_utils.log(
-                    'brand_assets_patcher: updated {0}'.format(
-                        ', '.join(updated)), level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'brand_assets_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_brand_favourites():
-    """Move home favourites to cache-busting POV IL icon filenames."""
-    try:
-        from resources.lib import brand_favourites_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = brand_favourites_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'brand_favourites_patcher: updated home icon paths',
-                level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'brand_favourites_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_hebrew_build_ui():
-    """Keep Wizard-installed build profiles on the intended Hebrew UI."""
-    try:
-        from resources.lib import hebrew_build_ui_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = hebrew_build_ui_patcher.ensure_patched()
-        if status != 'already_ok':
-            kodi_utils.log(
-                'hebrew_build_ui_patcher: {0}'.format(status),
-                level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'hebrew_build_ui_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
 
 def _maybe_patch_pov_genre_icons():
     """Re-icon POV's genre navigator rows to the stable genre icon

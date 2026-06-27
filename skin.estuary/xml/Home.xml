@@ -1075,7 +1075,7 @@
 					</include>
 					<include content="IconButton">
 						<param name="control_id" value="801" />
-						<param name="onclick" value="ActivateWindow(1107)" />
+						<param name="onclick" value="ActivateWindow(videos,plugin://plugin.video.pov/?mode=navigator.search,return)" />
 						<param name="icon" value="icons/search.png" />
 						<param name="label" value="$LOCALIZE[137]" />
 					</include>
