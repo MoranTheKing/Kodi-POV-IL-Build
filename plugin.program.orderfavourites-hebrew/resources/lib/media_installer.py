@@ -44,12 +44,11 @@ except Exception:
 # reference special://home/media/povil_icons/ (the global media cache), so Kodi
 # reads the icons from there rather than reaching into this addon's own folder --
 # avoiding cross-addon containment breaches. The canonical SOURCE copy lives in
-# the addon (povil_icons/) and is overwritten into the global folder on startup.
+# the addon (resources/media/povil_icons/) and is overwritten into the global folder on startup.
 _COPY_JOBS = (
-    ('povil_icons', 'special://home/media/povil_icons/'),
+    (os.path.join('resources', 'media', 'povil_icons'), 'special://home/media/povil_icons/'),
     (os.path.join('resources', 'media', 'fonts'), 'special://home/media/Fonts/'),
 )
-
 
 def _log(msg):
     if xbmc is None:

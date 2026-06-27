@@ -159,7 +159,6 @@ def _run_build_startup_repairs():
     steps = (
         _maybe_patch_hebrew_build_ui,
         _maybe_patch_brand_assets,
-        _maybe_install_build_icons,
         _maybe_patch_brand_favourites,
         _maybe_patch_pov_genre_icons,
         _maybe_patch_pov_genre_menu_icons,
@@ -605,34 +604,6 @@ def _maybe_patch_fentastic_search():
         except Exception:
             pass
 
-
-def _maybe_install_build_icons():
-    """Install the bundled TMDB-branded home-tile icons (flattened) under
-    media/povil_icons/ so the favourites_xml_patcher can point at
-    them. Idempotent -- skips files that already exist."""
-    try:
-        from resources.lib import build_icons_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        result = build_icons_patcher.ensure_installed()
-        if isinstance(result, dict) and result.get('installed'):
-            kodi_utils.log(
-                'build_icons_patcher: installed {0}'.format(
-                    ', '.join(result['installed'])), level='INFO')
-        if isinstance(result, dict) and result.get('updated'):
-            kodi_utils.log(
-                'build_icons_patcher: updated {0}'.format(
-                    ', '.join(result['updated'])), level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'build_icons_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_patch_brand_assets():
     """Replace legacy Real-Debrid/KODI build branding with POV IL branding."""
     try:
@@ -709,7 +680,7 @@ def _maybe_patch_pov_genre_icons():
         if af3_home_patcher._patch_pov_genre_icons():
             kodi_utils.log(
                 'pov genre icons: repointed navigator rows to '
-                'build_icons/Genres', level='INFO')
+                'povil_icons', level='INFO')
     except Exception as e:
         try:
             kodi_utils.log(

@@ -710,7 +710,7 @@ def _patch_hebrew_language():
 
 
 # Stable genre-icon location we control + ship via build_icons_patcher
-# (resources/lib/media_assets/build_icons/Genres/genre_*.png). We point
+# (media/povil_icons/genre_*.png by plugin.program.orderfavourites-hebrew. We point
 # every genre row's iconImage here instead of POV's own media/genres/
 # folder, which isn't shipped by us and vanishes on POV self-updates --
 # the reason genre icons were blank on BOTH skins.
