@@ -75,7 +75,7 @@
     <setting id="category_widget_display_delay" type="bool">false</setting>
     <setting id="disable.widgetlabelratings" type="bool">true</setting>
     <setting id="zoomtoggle" type="bool">true</setting>
-    <setting id="chooseosdplayer" type="bool">false</setting>
+    <setting id="chooseosdplayer" type="bool">true</setting>
     <setting id="circle_none" type="bool">false</setting>
     <setting id="homemenunoidanplusbutton" type="bool">false</setting>
     <setting id="moviekeywordresults" type="bool">false</setting>

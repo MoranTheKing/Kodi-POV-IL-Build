@@ -157,21 +157,13 @@ def _run_build_startup_repairs():
         monitor = None
 
     steps = (
-        _maybe_patch_hebrew_build_ui,
-        _maybe_patch_brand_assets,
-        _maybe_patch_brand_favourites,
         _maybe_patch_pov_genre_icons,
         _maybe_patch_pov_genre_menu_icons,
         _maybe_patch_pov_combined_discover,
         _maybe_patch_af3_home,
         _maybe_patch_pov_repeat_timer,
         _maybe_patch_pov_favorites_refresh,
-        _maybe_run_fav_diagnostic,
-        _maybe_fix_pov_favourites_typo,
         _maybe_patch_pov_menus,
-        _maybe_patch_pov_personal_area,
-        _maybe_patch_fentastic_widgets,
-        _maybe_patch_favourites_xml,
         _maybe_patch_pov_torbox_usage,
         _maybe_patch_pov_cache_empty,
         _maybe_patch_pov_trakt_cache_empty,
@@ -415,60 +407,6 @@ def _maybe_repair_rtl_cache():
             pass
 
 
-def _maybe_unpatch_fentastic_notification():
-    """v0.2.9 patched FENtastic's DialogNotification.xml to swap
-    the message control from fadelabel to wraplabel, trying to
-    work around a BiDi-deaf marquee that scrolls Hebrew the wrong
-    way. It produced regressions in the user's UI (empty
-    notifications + buggy subtitle picker), so v0.2.10 reverts
-    the patch and never re-applies it. For users who got v0.2.9
-    on disk, this restores the upstream FENtastic file on next
-    Kodi startup. Idempotent + safe to call every startup."""
-    try:
-        from resources.lib import fentastic_patcher
-    except Exception:
-        return
-    try:
-        fentastic_patcher.ensure_unpatched()
-    except Exception:
-        pass
-
-
-def _maybe_fix_pov_favourites_typo():
-    """One-shot rewrite of POV's bundled navigator.db so the
-    Favorites tile on the home screen points at the method POV
-    actually defines (navigator.favorites, US spelling). The
-    shipped DB has 'navigator.favourites' (UK spelling, with 'u')
-    which doesn't match POV's method name, so the plugin invocation
-    returns None, never calls endOfDirectory(), and Kodi kills the
-    script after its 5-second timeout -- experienced by the user
-    as "click Favorites, Kodi freezes for ~a minute, bounces back
-    to home". Idempotent + defensive; future installs ship a
-    corrected DB so this patcher is belt-and-braces."""
-    try:
-        from resources.lib import pov_navigator_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_navigator_patcher.maybe_fix_favourites_typo()
-        if status == 'fixed':
-            kodi_utils.log(
-                'pov_navigator_patcher: rewrote favourites typo '
-                'in navigator.db', level='INFO')
-        elif status == 'failed':
-            kodi_utils.log(
-                'pov_navigator_patcher: skipped (will retry next '
-                'startup)', level='WARNING')
-        # 'unchanged' / 'no_db' -- silent; the common steady state
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_navigator_patcher run failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_patch_pov_menus():
     """Force-sync POV's three context-menu builders (movies.py,
     tvshows.py, episodes.py) to the canonical versions bundled in
@@ -497,173 +435,6 @@ def _maybe_patch_pov_menus():
         try:
             kodi_utils.log(
                 'pov_menus_patcher run failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
-
-def _maybe_cleanup_standalone_build_patches():
-    """Best-effort cleanup for users who installed only the subtitle addon."""
-    if _is_kodi_pov_il_build():
-        return
-    try:
-        from resources.lib import standalone_cleanup, kodi_utils
-    except Exception:
-        return
-    try:
-        status = standalone_cleanup.ensure_cleaned()
-        if status not in ('already_done', 'no_db'):
-            kodi_utils.log(
-                'standalone_cleanup: {0}'.format(status),
-                level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'standalone_cleanup failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_pov_personal_area():
-    """Rewrite POV's navigator.db personal-area rows so the
-    FENtastic widget on the movies/shows pages leads with TMDB
-    Favorites instead of Trakt Collection. Only rewrites rows
-    that match the shipped baseline byte-for-byte (any user
-    customization aborts the rewrite cleanly).
-    """
-    try:
-        from resources.lib import pov_navigator_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        results = pov_navigator_patcher.maybe_fix_personal_area_lists()
-        # results is either {'_status': '...'} or {row_name: status}
-        if isinstance(results, dict) and '_status' not in results:
-            fixed = [k for k, v in results.items() if v == 'fixed']
-            if fixed:
-                kodi_utils.log(
-                    'pov_navigator_patcher: rewrote personal-area '
-                    'rows: {0}'.format(', '.join(fixed)),
-                    level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_navigator_patcher (personal area) failed: '
-                '{0}'.format(e), level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_fentastic_widgets():
-    """Drop the "(must connect to Trakt)" subtitle from the
-    FENtastic personal-area widget header on movies/shows pages.
-    """
-    try:
-        from resources.lib import fentastic_widget_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        results = fentastic_widget_patcher.ensure_patched()
-        patched = [k for k, v in results.items() if v == 'patched']
-        if patched:
-            kodi_utils.log(
-                'fentastic_widget_patcher: updated header in '
-                '{0}'.format(', '.join(patched)), level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'fentastic_widget_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_fentastic_search():
-    """Repoint the "simple" skins' home SEARCH button to POV's search node
-    so pressing search lands directly on SEARCH: Movies / TV Shows / People
-    / Movies Collection, instead of the skin's own search dialog. Covers
-    skin.fentastic and skin.estuary; a skin that isn't installed has no
-    Home.xml and is a no-op. Idempotent + self-healing each startup."""
-    try:
-        from resources.lib import fentastic_search_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = fentastic_search_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'fentastic_search_patcher: search buttons adjusted per skin',
-                level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'fentastic_search_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-def _maybe_patch_brand_assets():
-    """Replace legacy Real-Debrid/KODI build branding with POV IL branding."""
-    try:
-        from resources.lib import brand_assets_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        result = brand_assets_patcher.ensure_patched()
-        if isinstance(result, dict):
-            updated = [k for k, v in result.items() if v == 'updated']
-            if updated:
-                kodi_utils.log(
-                    'brand_assets_patcher: updated {0}'.format(
-                        ', '.join(updated)), level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'brand_assets_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_brand_favourites():
-    """Move home favourites to cache-busting POV IL icon filenames."""
-    try:
-        from resources.lib import brand_favourites_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = brand_favourites_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'brand_favourites_patcher: updated home icon paths',
-                level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'brand_favourites_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_hebrew_build_ui():
-    """Keep Wizard-installed build profiles on the intended Hebrew UI."""
-    try:
-        from resources.lib import hebrew_build_ui_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = hebrew_build_ui_patcher.ensure_patched()
-        if status != 'already_ok':
-            kodi_utils.log(
-                'hebrew_build_ui_patcher: {0}'.format(status),
-                level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'hebrew_build_ui_patcher failed: {0}'.format(e),
                 level='WARNING')
         except Exception:
             pass
@@ -747,33 +518,6 @@ def _maybe_patch_pov_combined_discover():
         try:
             kodi_utils.log(
                 'pov_combined_discover_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_favourites_xml():
-    """Migrate the two Trakt-collection home tiles to TMDB
-    Favorites equivalents in userdata/favourites.xml. Surgical --
-    only touches lines that match the shipped baseline.
-    """
-    try:
-        from resources.lib import favourites_xml_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = favourites_xml_patcher.ensure_patched()
-        if status.startswith('patched'):
-            kodi_utils.log(
-                'favourites_xml_patcher: ' + status, level='INFO')
-        elif status in ('write_failed', 'read_failed'):
-            kodi_utils.log(
-                'favourites_xml_patcher skipped: ' + status,
-                level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'favourites_xml_patcher failed: {0}'.format(e),
                 level='WARNING')
         except Exception:
             pass
@@ -970,29 +714,6 @@ def _maybe_patch_pov_repeat_timer():
         try:
             kodi_utils.log(
                 'pov_repeat_timer_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_run_fav_diagnostic():
-    """One-shot diagnostic for the 'Add to My List shows 0 results' bug:
-    reads (never writes) POV's TMDB/Trakt auth state, the POV-local
-    favorites DB, and the TMDB/Trakt list caches, then logs + writes a
-    file + pops a textviewer the user can screenshot. Gated so it runs
-    once per DIAG_VERSION."""
-    try:
-        from resources.lib import pov_favorites_diagnostic, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_favorites_diagnostic.run()
-        kodi_utils.log('pov_favorites_diagnostic: ' + str(status),
-                       level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_favorites_diagnostic run failed: {0}'.format(e),
                 level='WARNING')
         except Exception:
             pass
@@ -1717,37 +1438,6 @@ def _maybe_reload_nox_skin():
         xbmc.executebuiltin('ReloadSkin()')
     except Exception:
         pass
-
-
-def _maybe_patch_estuary_change_source():
-    """Add a 'החלף מקור' (change source) button to the Estuary skin's player OSD
-    (skin.estuary/xml/VideoOSD.xml). The build's Estuary shipped without one
-    (only a stale commented-out attempt that used the wrong POV param), so a bad
-    source mid-playback left users stuck. No-op when Estuary isn't installed.
-    Marker-gated + XML-parse-checked so it can never corrupt the skin / black-
-    screen the player."""
-    try:
-        from resources.lib import estuary_change_source_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = estuary_change_source_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'estuary_change_source_patcher: change-source button added to '
-                'Estuary OSD', level='INFO')
-            _maybe_reload_estuary_skin()
-        elif status in ('unmatched', 'parse_failed', 'write_failed',
-                        'read_failed'):
-            kodi_utils.log('estuary_change_source_patcher: ' + status,
-                           level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'estuary_change_source_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
 
 
 def _maybe_patch_choose_subs_buttons():
@@ -2698,8 +2388,6 @@ def main():
     build_mode = _is_kodi_pov_il_build()
     if build_mode:
         _ensure_build_marker()
-    else:
-        _maybe_cleanup_standalone_build_patches()
 
     # Enable "remember picked source" by default (one-shot) BEFORE the POV
     # patcher runs, so the patcher sees it on and reloads POV this session.
@@ -2823,10 +2511,6 @@ def main():
     # while NOX is the active skin; a later manual change sticks).
     _maybe_default_nox_poster_rating()
 
-    # Same for the Estuary skin (skin.estuary) -- it also shipped without a
-    # change-source button. Skin-gated, XML-parse-checked.
-    _maybe_patch_estuary_change_source()
-
     # Point the player's subtitle button at MoranSubs's own chooser window
     # (FENtastic + Estuary pointed at the now-disabled DarkSubs; NOX's existing
     # subtitles button is rewired in place, not duplicated, to avoid widening
@@ -2851,19 +2535,8 @@ def main():
     # Gemini + Wyzie entries here on every startup; idempotent.
     _maybe_patch_pov_services()
 
-    # Safe for standalone installs: this only repoints FENtastic/Estuary's
-    # home search button to POV's own search node, so users do not get the
-    # English skin-helper search menu. It does not touch favourites, lists,
-    # caches, auth state, or skin home widgets.
-    _maybe_patch_fentastic_search()
-
     if build_mode:
         _run_build_startup_repairs()
-
-    # v0.2.9 tried patching FENtastic's notification widget but
-    # it broke things; this cleans up the leftover patch on disk
-    # for anyone who got that version.
-    _maybe_unpatch_fentastic_notification()
 
     # One-shot RTL punctuation repair of any cached translations
     # that were written before the post-processor caught their
