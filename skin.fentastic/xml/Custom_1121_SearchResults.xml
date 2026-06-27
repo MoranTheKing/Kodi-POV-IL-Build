@@ -39,19 +39,28 @@
             </include>
             <include content="WidgetListBigPoster" condition="!Skin.HasSetting(HideTVShowResults)">
               <param name="content_path" value="$VAR[SearchProviderTVShowsVar]"/>
-              <param name="widget_header" value="TV Shows"/>
+              <!-- KODI-RD-IL CHANGES -->
+              <!-- <param name="widget_header" value="TV Shows"/> -->
+              <param name="widget_header" value="$LOCALIZE[20343]"/>
+              <!-- ##################### -->
               <param name="widget_target" value="videos"/>
               <param name="list_id" value="27012"/>
             </include>
             <include content="WidgetListBigPoster" condition="!Skin.HasSetting(HideCollectionsResults) + [String.IsEqual(Skin.String(current_search_provider),0) | String.IsEqual(Skin.String(current_search_provider),3)]">
               <param name="content_path" value="$VAR[SearchProviderCollectionsVar]"/>
-              <param name="widget_header" value="Collections"/>
+              <!-- KODI-RD-IL CHANGES -->
+              <!-- <param name="widget_header" value="Collections"/> -->
+              <param name="widget_header" value="[B]$LOCALIZE[700021][/B]"/>
+              <!-- ##################### -->
               <param name="widget_target" value="videos"/>
               <param name="list_id" value="27013"/>
             </include>
             <include content="WidgetListBigPoster" condition="!Skin.HasSetting(HidePeopleResults) + [String.IsEqual(Skin.String(current_search_provider),0) | String.IsEqual(Skin.String(current_search_provider),1) | String.IsEqual(Skin.String(current_search_provider),3)]">
               <param name="content_path" value="$VAR[SearchProviderPeopleVar]"/>
-              <param name="widget_header" value="Actors/Actresses"/>
+              <!-- KODI-RD-IL CHANGES -->
+              <!-- <param name="widget_header" value="Actors/Actresses"/> -->
+              <param name="widget_header" value="[B]$LOCALIZE[700022][/B]"/>
+              <!-- ##################### -->
               <param name="widget_target" value="videos"/>
               <param name="list_id" value="27014"/>
             </include>
@@ -81,7 +90,10 @@
             </include>
 						<include content="WidgetListCategoryStacked" condition="!Skin.HasSetting(HideTraktResults) + [String.IsEqual(Skin.String(current_search_provider),0) | String.IsEqual(Skin.String(current_search_provider),1) | String.IsEqual(Skin.String(current_search_provider),3)]">
 							<param name="content_path" value="$VAR[SearchProviderTRAKTListsVar]"/>
-							<param name="widget_header" value="TRAKT Lists"/>
+							<!-- KODI-RD-IL CHANGES -->
+							<!-- <param name="widget_header" value="TRAKT Lists"/> -->
+							<param name="widget_header" value="[B]$LOCALIZE[700025][/B]"/>
+							<!-- ##################### -->
 							<param name="widget_target" value="videos"/>
 							<param name="list_id" value="27017"/>
 						</include>
@@ -133,8 +145,9 @@
 				</include>
 				<include content="ImageWidget" condition="!String.IsEmpty(Skin.String(DatabaseStatus))">
 					<param name="left">50</param>
-					<param name="text_label" value="Your search history is currently empty. Would you like to perform a new search or return to the home screen?" />
-					<param name="button_label" value="New search" />
+					<!-- KODI-RD-IL CHANGES -->
+					<param name="text_label" value="$LOCALIZE[700047]" />
+					<param name="button_label" value="$LOCALIZE[700048]" />
 					<param name="button_onclick" value="RunScript(script.fentastic.helper,mode=re_search)"/>
 					<param name="button3_onclick" value="ActivateWindow(home)"/>
 					<param name="button_id" value="27400"/>
@@ -257,12 +270,20 @@
 					</control>
 					<control type="textbox">
 						<top>75</top>
-						<left>30</left>
+						<!-- KODI-RD-IL CHANGES -->
+						<left>10</left>
 						<width>430</width>
 						<aligny>center</aligny>
 						<height>98</height>
 						<font>font36_title</font>
-						<label>$INFO[ListItem.Label]</label>
+						<!-- KODI-RD-IL CHANGES -->
+						<label>[COLOR yellow]$INFO[ListItem.Label][/COLOR]</label>
+						<!-- ##################### -->
+						
+						<!-- KODI-RD-IL ADDITION -->
+						<align>right</align>
+						<!-- ##################### -->
+						
 						<visible>String.IsEmpty(ListItem.Art(clearlogo))</visible>
 					</control>
 					<control type="textbox">
@@ -271,6 +292,11 @@
 						<width>410</width>
 						<bottom>60</bottom>
 						<label>$VAR[InfoPanel]</label>
+						
+						<!-- KODI-RD-IL ADDITION -->
+						<align>right</align>
+						<!-- ##################### -->
+						
 						<textcolor>unfocused_text</textcolor>
 						<autoscroll delay="10000" time="3000" repeat="10000">Skin.HasSetting(autoscroll)</autoscroll>
 						<visible>Skin.HasSetting(Disable.RatingsINF) | String.IsEmpty(Skin.String(mdblist_api_key))</visible>
@@ -337,12 +363,13 @@
 				<left>90</left>
 				<control type="label">
 					<top>65</top>
-					<left>-23</left>
+					<!-- KODI-RD-IL CHANGES -->
+					<left>0</left>
 					<width>1085</width>
 					<aligny>center</aligny>
 					<height>98</height>
 					<font>font27</font>
-					<label>Search provider: [COLOR accent_color][B]$VAR[CurrentSearchProviderVar][/B][/COLOR]</label>
+					<label>[B]$LOCALIZE[700064]:[/B] [COLOR accent_color][B]$VAR[CurrentSearchProviderVar][/B][/COLOR]</label>
 				</control>
 				<control type="label">
 					<top>110</top>
@@ -351,7 +378,8 @@
 					<aligny>center</aligny>
 					<height>98</height>
 					<font>font36_title</font>
-					<label>Recent searches</label>
+					<!-- KODI-RD-IL CHANGES -->
+					<label>[COLOR yellow]$LOCALIZE[700019][/COLOR]</label>
 				</control>
 			</control>
 			<control type="group">
@@ -369,7 +397,13 @@
 					<height>98</height>
 					<font>font37</font>
 					<textcolor>unfocused_text</textcolor>
-					<label>Search results for: [B]$INFO[Skin.String(SearchInput)][/B]</label>
+					<!-- KODI-RD-IL CHANGES -->
+					<label>$LOCALIZE[700020]: [COLOR button_focus][B]$INFO[Skin.String(SearchInput)][/B][/COLOR]</label>
+						
+					<!-- KODI-RD-IL ADDITION -->
+					<align>right</align>
+					<!-- ##################### -->
+					
 				</control>
 				<control type="label">
 					<visible>String.IsEmpty(Skin.String(SearchInput)) + String.IsEmpty(Skin.String(DatabaseStatus))</visible>

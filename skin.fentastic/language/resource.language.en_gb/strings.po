@@ -929,3 +929,363 @@ msgstr ""
 msgctxt "#31611"
 msgid "System"
 msgstr ""
+
+################################################################
+
+# KODI-RD-IL CUSTOM ADDITIONS:
+
+# Voice Search - ButtonDialogKeyboard.xml:
+
+msgctxt "#70000"
+msgid "Voice Search"
+msgstr ""
+
+# Search Button - Custom_1107_SearchDialog.xml:
+
+msgctxt "#70001"
+msgid "Search movies"
+msgstr ""
+
+msgctxt "#70002"
+msgid "Search shows"
+msgstr ""
+
+msgctxt "#70003"
+msgid "Search by year"
+msgstr ""
+
+msgctxt "#70004"
+msgid "Search actors/actresses"
+msgstr ""
+
+msgctxt "#70005"
+msgid "Search movie collections"
+msgstr ""
+
+msgctxt "#70006"
+msgid "Search Trakt list"
+msgstr ""
+
+# InfoPanel - Variables.xml:
+
+msgctxt "#70007"
+msgid "Released"
+msgstr ""
+
+# (Also for Poster View Type):
+
+msgctxt "#70008"
+msgid "Genre"
+msgstr ""
+
+# Continue InfoPanel - Variables.xml:
+
+msgctxt "#700010"
+msgid "Director"
+msgstr ""
+
+msgctxt "#700011"
+msgid "episodes"
+msgstr ""
+
+# For Episodes (In Hebrew "watched" spelled differently for movies or shows)
+msgctxt "#700012"
+msgid "watched"
+msgstr ""
+
+# For Movie (In Hebrew "watched" spelled differently for movies or shows)
+msgctxt "#700013"
+msgid "watched"
+msgstr ""
+
+msgctxt "#700014"
+msgid "Status"
+msgstr ""
+
+# Episode List + Poster View - View_50_List.xml + View_51_Poster.xml:
+
+msgctxt "#700015"
+msgid "Season"
+msgstr ""
+
+msgctxt "#7000151"
+msgid "Seasons"
+msgstr ""
+
+msgctxt "#700016"
+msgid "Episode"
+msgstr ""
+
+msgctxt "#7000161"
+msgid "Episodes"
+msgstr ""
+
+# Power Button - DialogButtonMenu.xml:
+
+msgctxt "#700017"
+msgid "Reload skin"
+msgstr ""
+
+msgctxt "#700018"
+msgid "Skin settings"
+msgstr ""
+
+# FENtastic Search Results Window - Custom_1121_SearchResults.xml:
+
+msgctxt "#700019"
+msgid "Recent searches"
+msgstr ""
+
+msgctxt "#700020"
+msgid "Search results for"
+msgstr ""
+
+msgctxt "#700021"
+msgid "Collections"
+msgstr ""
+
+msgctxt "#700022"
+msgid "Actors/Actresses"
+msgstr ""
+
+msgctxt "#700023"
+msgid "IMDb Keywords (Movies)"
+msgstr ""
+
+msgctxt "#700024"
+msgid "IMDb Keywords (TV Shows)"
+msgstr ""
+
+msgctxt "#700025"
+msgid "TRAKT Lists"
+msgstr ""
+
+# FENtastic Idan Plus Widgets Menu - script.fentastic.helper - cpath_maker.py
+
+msgctxt "#700026"
+msgid "[B]Idan Plus[/B]"
+msgstr ""
+
+# Continue InfoPanel - Status Label Hebrew Translation For TV Shows - Variables.xml
+
+msgctxt "#700027"
+msgid "Returning Series"
+msgstr ""
+
+msgctxt "#700028"
+msgid "In Production"
+msgstr ""
+
+msgctxt "#700029"
+msgid "Planned"
+msgstr ""
+
+msgctxt "#700030"
+msgid "Canceled"
+msgstr ""
+
+msgctxt "#700031"
+msgid "Ended"
+msgstr ""
+
+# DialogSeekVideoOSD in Player - VideoOSD.XML
+
+# msgctxt "#700032"
+# msgid "Show Seek Steps Window"
+# msgstr ""
+
+# msgctxt "#700033"
+# msgid "Forward Seek Steps"
+# msgstr ""
+
+# msgctxt "#700034"
+# msgid "Rewind Seek Steps"
+# msgstr ""
+
+# msgctxt "#700035"
+# msgid "Mins"
+# msgstr ""
+
+# Zoom Toggle Buttons in Player - VideoOSD.XML
+
+msgctxt "#700036"
+msgid "Show Zoom Toggle Buttons"
+msgstr ""
+
+msgctxt "#700037"
+msgid "IN"
+msgstr ""
+
+msgctxt "#700038"
+msgid "OUT"
+msgstr ""
+
+# Episode List - Variables.xml
+
+msgctxt "#700039"
+msgid "Duration"
+msgstr ""
+
+# Player OSD Pause Window - Custom_1122_PlayerPauseWindow.xml
+
+msgctxt "#700040"
+msgid "Paused"
+msgstr ""
+
+# Player Label Empty While Pausing Pause Window - Custom_1122_PlayerPauseWindow.xml
+
+msgctxt "#700041"
+msgid "Info Not Available"
+msgstr ""
+
+# Continue InfoPanel - Variables.xml:
+
+msgctxt "#700042"
+msgid "Age Limit"
+msgstr ""
+
+# Idan Plus Channels Button VideoOSD.xml + Custom_1123_IdanPlusChannelsAndRadios.xml
+
+msgctxt "#700043"
+msgid "Idan Plus Channels"
+msgstr ""
+
+msgctxt "#700044"
+msgid "Radio Channels"
+msgstr ""
+
+msgctxt "#700045"
+msgid "Idan Plus And Radio Channels"
+msgstr ""
+
+# ShowPlayerPauseWindow Seting - Custom_1101_SettingsList.xml
+
+msgctxt "#700046"
+msgid "Show information window on playback pause"
+msgstr ""
+
+# Continue FENtastic Search Results Window - Custom_1121_SearchResults.xml:
+
+msgctxt "#700047"
+msgid "[B]Your search history is currently empty. Would you like to perform a new search or return to the home screen?[/B]"
+msgstr ""
+
+msgctxt "#700048"
+msgid "[B]New search[/B]"
+msgstr ""
+
+msgctxt "#700049"
+msgid "[B]Return to the home screen[/B]"
+msgstr ""
+
+# Twilight + DarkSubs Setting / CLear Cache In Power Menu - DialogButtonMenu.xml
+
+msgctxt "#700050"
+msgid "Open Twilight Settings"
+msgstr ""
+
+msgctxt "#700051"
+msgid "Open DarkSubs Settings"
+msgstr ""
+
+msgctxt "#700052"
+msgid "Clear Twilight Cache"
+msgstr ""
+
+msgctxt "#700053"
+msgid "Clear DarkSubs Cache"
+msgstr ""
+
+# Episodes Playlist Button - VideoOSD.xml
+
+msgctxt "#700054"
+msgid "Episodes List"
+msgstr ""
+
+# Twilight Switch Video Source Button - VideoOSD.xml
+
+msgctxt "#700055"
+msgid "Switch Source"
+msgstr ""
+
+# Switch to next Audio track Button - VideoOSD.xml
+
+msgctxt "#700056"
+msgid "Switch Audio track"
+msgstr ""
+
+# ChooseSubtitlesButtonOpensKodiWindow Seting - Custom_1101_SettingsList.xml
+
+msgctxt "#700057"
+msgid "\"Choose subtitles\" button opens Kodi window"
+msgstr ""
+
+# Build Switch Skin In Power Menu - DialogButtonMenu.xml
+
+msgctxt "#700058"
+msgid "Switch Skin"
+msgstr ""
+
+# Twilight Next Episode Button - VideoOSD.xml
+
+msgctxt "#700059"
+msgid "Next Episode"
+msgstr ""
+
+# Kodi Manual Sync Subtitles - VideoOSD.xml
+
+msgctxt "#700060"
+msgid "Sync Subtitles"
+msgstr ""
+
+# DarkSubs Subtitles Window Button - VideoOSD.xml
+
+msgctxt "#700061"
+msgid "Choose Subtitles (DarkSubs)"
+msgstr ""
+
+# Kodi Version - Home.xml
+
+msgctxt "#700062"
+msgid "Kodi Version"
+msgstr ""
+
+# Kodi Update Check In Power Menu - DialogButtonMenu.xml
+
+msgctxt "#700063"
+msgid "Update Kodi Version"
+msgstr ""
+
+# CONTINUE FENtastic Search Results Window - Custom_1121_SearchResults.xml:
+
+msgctxt "#700064"
+msgid "Search provider"
+msgstr ""
+
+# InfoPanel - Variables.xml:
+
+msgctxt "#700065"
+msgid "Aired"
+msgstr ""
+
+msgctxt "#700066"
+msgid "hr"
+msgstr ""
+
+msgctxt "#700067"
+msgid "mins"
+msgstr ""
+
+#: Show Widget Menu button_focus Border - SkinSettings.xml
+
+msgctxt "#700068"
+msgid "Show widget menu name colored border"
+msgstr ""
+
+# Kodi CoreELEC Reboot In Power Menu - DialogButtonMenu.xml
+
+msgctxt "#700069"
+msgid "CoreELEC - Reboot to Android TV"
+msgstr ""
+
+################################################################

@@ -52,6 +52,11 @@
 						<height>110</height>
 						<font>font36_title</font>
 						<label>$INFO[ListItem.Label]</label>
+						
+						<!-- KODI-RD-IL ADDITION -->
+						<align>right</align>
+						<!-- ##################### -->
+						
 						<visible>String.IsEmpty(ListItem.Art(clearlogo))</visible>
 					</control>
 					<control type="group">
@@ -62,6 +67,11 @@
 							<width>525</width>
 							<bottom>115</bottom>
 							<label>$VAR[InfoPanel]</label>
+						
+							<!-- KODI-RD-IL ADDITION -->
+							<align>right</align>
+							<!-- ##################### -->
+							
 							<textcolor>unfocused_text</textcolor>
 							<autoscroll delay="10000" time="3000" repeat="10000">Skin.HasSetting(autoscroll)</autoscroll>
 						</control>
@@ -71,6 +81,11 @@
 							<width>525</width>
 							<bottom>105</bottom>
 							<label>$VAR[InfoPanelEpisode]</label>
+						
+							<!-- KODI-RD-IL ADDITION -->
+							<align>right</align>
+							<!-- ##################### -->
+							
 							<textcolor>unfocused_text</textcolor>
 							<autoscroll delay="10000" time="3000" repeat="10000">Skin.HasSetting(autoscroll)</autoscroll>
 						</control>
@@ -83,7 +98,14 @@
 							<bottom>70</bottom>
 							<font>font36_title</font>
 							<textcolor>unfocused_text</textcolor>
-							<label>Season $INFO[ListItem.Season], Episode $INFO[ListItem.Episode]</label>
+							<!-- KODI-RD-IL CHANGES -->
+							<label>$LOCALIZE[700015] $INFO[ListItem.Season], $LOCALIZE[700016] $INFO[ListItem.Episode]</label>
+							<!-- ##################### -->
+						
+							<!-- KODI-RD-IL ADDITION -->
+							<align>right</align>
+							<!-- ##################### -->
+							
 							<visible>String.IsEqual(ListItem.DbType,episode)</visible>
 						</control>
 						<control type="textbox">

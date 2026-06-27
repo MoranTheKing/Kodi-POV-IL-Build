@@ -13,6 +13,12 @@
 			<description>Poster Viewtype</description>
 			<centertop>50%</centertop>
 			<height>720</height>
+
+			<!-- KODI-RD-IL ADDITION -->
+			<include content="Poster_View_Art_Logo">
+			</include>
+			<!-- ##################### -->
+		
 			<control type="group">
 				<visible>Control.IsVisible(51)</visible>
 				<include>Visible_Right</include>
@@ -92,6 +98,9 @@
 						<height>40</height>
 						<label>$INFO[ListItem.Label]$VAR[ListSubLabelVar]</label>
 						<font>font45_title</font>
+						<!-- KODI-RD-IL ADDITION -->
+						<textcolor>yellow</textcolor>
+						<!-- ##################### -->
 						<shadowcolor>text_shadow</shadowcolor>
 					</control>
 					<control type="textbox">
@@ -138,13 +147,29 @@
 					<left>275</left>
 					<top>680</top>
 					<width>180</width>
-					<label>$INFO[ListItem.Property(WatchedProgress)]% watched</label>
+					<!-- KODI-RD-IL CHANGES -->
+					<label>$INFO[ListItem.Property(WatchedProgress)]% $LOCALIZE[700013]</label>
+					<!-- ##################### -->
 					<font>font20_title</font>
 					<shadowcolor>text_shadow</shadowcolor>
 					<align>right</align>
 					<visible>String.IsEqual(ListItem.DBtype,movie) + !String.IsEmpty(Container($PARAM[id]).ListItem.Property(WatchedProgress)) + !Integer.IsEqual(Container($PARAM[id]).ListItem.Property(WatchedProgress),0)</visible>
 					<include condition="$PARAM[focused]">Animation_FocusTextureFade</include>
 				</control>
+				
+				<!-- KODI-RD-IL ADDITION -->
+					<control type="image">
+					<animation effect="fade" start="0" end="100" time="400">VisibleChange</animation>
+					<visible>!String.IsEmpty(ListItem.Studio)</visible>
+					<left>22</left>
+					<top>0</top>
+					<width>120</width>
+					<height>90</height>
+					<aspectratio align="left" aligny="center" scalediffuse="false">keep</aspectratio>
+					<texture>kodirdil/studiologos/$INFO[ListItem.Studio].png</texture>
+				</control>
+				<!-- ##################### -->
+				
 				<control type="group">
 				<left>433</left>
 				<top>-14</top>
@@ -175,7 +200,9 @@
 					<top>684</top>
 					<width>435</width>
 					<height>24</height>
-					<label>$INFO[ListItem.Property(WatchedEpisodes)]$INFO[ListItem.Property(TotalEpisodes), / ,]</label>
+					<!-- KODI-RD-IL CHANGES -->
+					<label>$INFO[ListItem.Property(TotalSeasons)] $VAR[SeasonCorrectLabel] / $INFO[ListItem.Property(TotalEpisodes)] $LOCALIZE[7000161]</label>
+					<!-- ##################### -->
 					<font>font20_title</font>
 					<shadowcolor>text_shadow</shadowcolor>
 					<align>right</align>
@@ -203,4 +230,25 @@
 			</control>
 		</control>
 	</include>
+	
+	<!-- KODI-RD-IL ADDITION -->
+	<include name="Poster_View_Art_Logo">
+	<param name="top" default="-105"/>
+	<param name="left" default="50%"/>
+		<definition>
+			<control type="group">
+				<visible>Control.IsVisible(51)</visible>
+				<control type="image">
+					<top>-150</top>
+					<left>42%</left>
+					<width>320</width>
+					<height>130</height>
+					<aspectratio scalediffuse="false" align="left" aligny="center">keep</aspectratio>
+					<texture>$VAR[ClearArtLogo]</texture>
+				</control>
+			</control>
+		</definition>
+	</include>
+	<!-- ##################### -->
+	
 </includes>

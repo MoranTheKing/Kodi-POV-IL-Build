@@ -64,7 +64,8 @@
 				<left>51</left>
 				<top>195</top>
 				<width>100</width>
-				<label>$INFO[ListItem.Property(WatchedProgress)]</label>
+				<!-- KODI-RD-IL CHANGES -->
+				<label>$INFO[ListItem.Property(WatchedProgress)]% $LOCALIZE[700013]</label>
 				<font>font20_title</font>
 				<shadowcolor>text_shadow</shadowcolor>
 				<align>left</align>
@@ -261,7 +262,8 @@
 					<left>55</left>
 					<top>160</top>
 					<width>315</width>
-					<label>$INFO[ListItem.Property(WatchedProgress)]% watched</label>
+					<!-- KODI-RD-IL CHANGES -->
+					<label>$INFO[ListItem.Property(WatchedProgress)]% $LOCALIZE[700013]</label>
 					<font>font20_title</font>
 					<shadowcolor>text_shadow</shadowcolor>
 					<align>left</align>
@@ -290,7 +292,8 @@
 					<left>2</left>
 					<top>161</top>
 					<width>315</width>
-					<label>$INFO[ListItem.Property(WatchedProgress)]% watched</label>
+					<!-- KODI-RD-IL CHANGES -->
+					<label>$INFO[ListItem.Property(WatchedProgress)]% $LOCALIZE[700013]</label>
 					<font>font20_title</font>
 					<shadowcolor>text_shadow</shadowcolor>
 					<align>right</align>
@@ -311,7 +314,8 @@
 					<left>2</left>
 					<top>161</top>
 					<width>315</width>
-					<label>$INFO[ListItem.Property(WatchedProgress)]% watched</label>
+					<!-- KODI-RD-IL CHANGES -->
+					<label>$INFO[ListItem.Property(WatchedProgress)]% $LOCALIZE[700013]</label>
 					<font>font20_title</font>
 					<shadowcolor>text_shadow</shadowcolor>
 					<align>right</align>
@@ -568,7 +572,8 @@
 					<left>103</left>
 					<top>215</top>
 					<width>315</width>
-					<label>$INFO[ListItem.Property(WatchedProgress)]% watched</label>
+					<!-- KODI-RD-IL CHANGES -->
+					<label>$INFO[ListItem.Property(WatchedProgress)]% $LOCALIZE[700013]</label>
 					<font>font20_title</font>
 					<shadowcolor>text_shadow</shadowcolor>
 					<align>right</align>
@@ -589,7 +594,8 @@
 					<left>103</left>
 					<top>215</top>
 					<width>315</width>
-					<label>$INFO[ListItem.Property(WatchedProgress)]% watched</label>
+					<!-- KODI-RD-IL CHANGES -->
+					<label>$INFO[ListItem.Property(WatchedProgress)]% $LOCALIZE[700013]</label>
 					<font>font20_title</font>
 					<shadowcolor>text_shadow</shadowcolor>
 					<align>right</align>
@@ -601,7 +607,8 @@
 					<left>60</left>
 					<top>215</top>
 					<width>315</width>
-					<label>$INFO[ListItem.Property(WatchedProgress)]% watched</label>
+					<!-- KODI-RD-IL CHANGES -->
+					<label>$INFO[ListItem.Property(WatchedProgress)]% $LOCALIZE[700013]</label>
 					<font>font20_title</font>
 					<shadowcolor>text_shadow</shadowcolor>
 					<align>left</align>
@@ -612,7 +619,8 @@
 					<left>60</left>
 					<top>215</top>
 					<width>315</width>
-					<label>$INFO[ListItem.Property(WatchedProgress)]% watched</label>
+					<!-- KODI-RD-IL CHANGES -->
+					<label>$INFO[ListItem.Property(WatchedProgress)]% $LOCALIZE[700013]</label>
 					<font>font20_title</font>
 					<shadowcolor>text_shadow</shadowcolor>
 					<align>left</align>

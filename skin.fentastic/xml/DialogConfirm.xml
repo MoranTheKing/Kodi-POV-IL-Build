@@ -19,6 +19,11 @@
 				<left>30</left>
 				<top>82</top>
 				<width>855</width>
+				
+				<!-- KODI-RD-IL ADDITION -->
+				<align>right</align>
+				<!-- ##################### -->
+				
 				<height>165</height>
 				<label></label>
 				<textcolor>unfocused_text</textcolor>

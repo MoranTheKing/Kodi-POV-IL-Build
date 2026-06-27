@@ -18,84 +18,68 @@
 			<control type="panel" id="9000">
 				<include>ButtonMenuList</include>
 				<content>
+					<!-- KODI-RD-IL CHANGES -->
 					<item>
-						<label>Reload skin</label>
-						<onclick>Dialog.Close(all)</onclick>
-						<onclick>ReloadSkin()</onclick>
+						<!-- CoreELEC only - Reboot to Android TV -->
+						<label>[B][COLOR blue]$LOCALIZE[700069][/COLOR][/B]</label>
+						<onclick>System.ExecWait("/usr/sbin/rebootfromnand")</onclick>
+						<onclick>Reset()</onclick>
+						<visible>System.PathExist("/usr/sbin/rebootfromnand")</visible>
 					</item>
 					<item>
-						<label>Skin settings</label>
+						<label>[B][COLOR blue]$LOCALIZE[13012][/COLOR][/B]</label>
+						<!-- Original - <onclick>Quit()</onclick> -->
+						<!-- Force Close Kodi Script:  -->
+						<onclick>RunScript(&quot;plugin.close.kodi&quot;)</onclick>
+						<visible>System.ShowExitButton</visible>
+					</item>
+					<item>
+						<!-- Open Twilight Settings  -->
+						<label>[B][COLOR blue]$LOCALIZE[700050][/COLOR][/B]</label>
+						<onclick>Addon.OpenSettings(plugin.video.twilight)</onclick>
+					</item>
+					<item>
+						<!-- Open DarkSubs Settings  -->
+						<label>[B][COLOR blue]$LOCALIZE[700051][/COLOR][/B]</label>
+						<onclick>Addon.OpenSettings(service.subtitles.All_Subs)</onclick>
+					</item>
+					<item>
+						<!-- Clear Twilight Cache  -->
+						<label>[B][COLOR blue]$LOCALIZE[700052][/COLOR][/B]</label>
+						<onclick>PlayMedia(&quot;plugin://plugin.video.twilight/?mode=clear_all_cache&amp;isFolder=false&amp;iconImage=https%3A%2F%2Fi.imgur.com%2FRDNxy36.png&quot;)</onclick>
+					</item>
+					<item>
+						<!-- Clear DarkSubs Cache  -->
+						<label>[B][COLOR blue]$LOCALIZE[700053][/COLOR][/B]</label>
+						<onclick>RunScript(special://home/addons/service.subtitles.All_Subs/resources/modules/clean_cache_functions.py, clean_all_cache)</onclick>
+					</item>
+					<item>
+						<!-- Build Switch Skin  -->
+						<label>[B][COLOR blue]$LOCALIZE[700058][/COLOR][/B]</label>
+						<onclick>Dialog.Close(all)</onclick>
+						<onclick>PlayMedia(&quot;plugin://plugin.program.kodirealdebridisraelwizard/?mode=install&amp;action=build_switch_skin&quot;)</onclick>
+					</item>
+					<item>
+						<!-- KODI ANDORID/WINDOWS Update Check -->
+						<label>[B][COLOR blue]$LOCALIZE[700063][/COLOR][/B]</label>
+						<onclick>Dialog.Close(all)</onclick>
+						<onclick>PlayMedia(&quot;plugin://plugin.program.kodirealdebridisraelwizard/?mode=install&amp;action=kodi_version_update_check&amp;kodi_version_update_check_manual=true&quot;)</onclick>
+						<!-- Android/Windows only -->
+						<visible>System.Platform.Android | System.Platform.Windows</visible>
+					</item>
+					<item>
+						<!-- Skin settings -->
+						<label>[B][COLOR blue]$LOCALIZE[700018][/COLOR][/B]</label>
 						<onclick>Dialog.Close(all)</onclick>
 						<onclick>ActivateWindow(SkinSettings.xml)</onclick>
 					</item>
 					<item>
-						<label>Toggle debugging</label>
+						<!-- Reload skin -->
+						<label>[B][COLOR blue]$LOCALIZE[700017][/COLOR][/B]</label>
 						<onclick>Dialog.Close(all)</onclick>
-						<onclick>Skin.ToggleDebug()</onclick>
+						<onclick>ReloadSkin()</onclick>
 					</item>
-					<item>
-						<label>System information</label>
-						<onclick>Dialog.Close(all)</onclick>
-						<onclick>ActivateWindow(systeminfo)</onclick>
-					</item>
-					<item>
-						<label>$LOCALIZE[13012]</label>
-						<onclick>Quit()</onclick>
-						<visible>System.ShowExitButton</visible>
-					</item>
-					<item>
-						<label>$LOCALIZE[13016]</label>
-						<onclick>Powerdown()</onclick>
-						<visible>System.CanPowerDown</visible>
-					</item>
-					<item>
-						<label>$LOCALIZE[20150]</label>
-						<onclick>AlarmClock(shutdowntimer,Shutdown())</onclick>
-						<visible>!System.HasAlarm(shutdowntimer)</visible>
-						<visible>System.CanPowerDown | System.CanSuspend | System.CanHibernate</visible>
-					</item>
-					<item>
-						<label>$LOCALIZE[20151] $INFO[System.AlarmPos,(,)]</label>
-						<onclick>CancelAlarm(shutdowntimer)</onclick>
-						<visible>System.HasAlarm(shutdowntimer)</visible>
-					</item>
-					<item>
-						<label>$LOCALIZE[13011]</label>
-						<onclick>Suspend()</onclick>
-						<visible>System.CanSuspend</visible>
-					</item>
-					<item>
-						<label>$LOCALIZE[13010]</label>
-						<onclick>Hibernate()</onclick>
-						<visible>System.CanHibernate</visible>
-					</item>
-					<item>
-						<label>$LOCALIZE[13013]</label>
-						<onclick>Reset()</onclick>
-						<visible>System.CanReboot</visible>
-					</item>
-					<item>
-						<label>$LOCALIZE[20126] $INFO[system.profilename]</label>
-						<onclick>dialog.close(all,true)</onclick>
-						<onclick>System.LogOff</onclick>
-						<visible>System.HasLoginScreen | Integer.IsGreater(System.ProfileCount,1)</visible>
-						<visible>System.Loggedon</visible>
-					</item>
-					<item>
-						<label>$VAR[MasterModeLabel]</label>
-						<onclick>mastermode</onclick>
-						<visible>System.HasLocks</visible>
-					</item>
-					<item>
-						<label>$LOCALIZE[13017]</label>
-						<onclick>InhibitIdleShutdown(true)</onclick>
-						<visible>System.HasShutdown +!System.IdleShutdownInhibited</visible>
-					</item>
-					<item>
-						<label>$LOCALIZE[13018]</label>
-						<onclick>InhibitIdleShutdown(false)</onclick>
-						<visible>System.HasShutdown + System.IdleShutdownInhibited</visible>
-					</item>
+					<!-- ##################### -->
 				</content>
 			</control>
 		<include content="UpDownArrows">

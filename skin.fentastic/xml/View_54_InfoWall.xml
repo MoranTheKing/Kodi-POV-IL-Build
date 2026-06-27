@@ -397,7 +397,7 @@
 				<left>51</left>
 				<top>173</top>
 				<width>200</width>
-				<label>$INFO[ListItem.Property(WatchedProgress)]% watched</label>
+				<label>$INFO[ListItem.Property(WatchedProgress)]% $LOCALIZE[700013]</label>
 				<font>font20_title</font>
 				<shadowcolor>text_shadow</shadowcolor>
 				<align>left</align>
@@ -644,7 +644,8 @@
 					<left>11%</left>
 					<top>280</top>
 					<width>100%</width>
-					<label>[B]$PARAM[networks_label][/B]</label>
+					<!-- KODI-RD-IL CHANGES -->
+					<label>$PARAM[networks_label]</label>
 					<font>font12</font>
 					<textcolor>focused_text</textcolor>
 					<shadowcolor>text_shadow</shadowcolor>
@@ -671,7 +672,7 @@
 				<!-- 173 -->
 				<top>230</top>
 				<width>200</width>
-				<label>$INFO[ListItem.Property(WatchedProgress)]% watched</label>
+				<label>$INFO[ListItem.Property(WatchedProgress)]% $LOCALIZE[700013]</label>
 				<font>font20_title</font>
 				<shadowcolor>text_shadow</shadowcolor>
 				<align>left</align>
@@ -833,7 +834,7 @@
 					<left>-73</left>
 					<top>261</top>
 					<width>280</width>
-					<label>$INFO[ListItem.Property(WatchedProgress)]% watched</label>
+					<label>$INFO[ListItem.Property(WatchedProgress)]% $LOCALIZE[700013]</label>
 					<font>font20_title</font>
 					<shadowcolor>text_shadow</shadowcolor>
 					<align>right</align>
@@ -854,7 +855,7 @@
 					<left>-73</left>
 					<top>261</top>
 					<width>280</width>
-					<label>$INFO[ListItem.Property(WatchedProgress)]% watched</label>
+					<label>$INFO[ListItem.Property(WatchedProgress)]% $LOCALIZE[700013]</label>
 					<font>font20_title</font>
 					<shadowcolor>text_shadow</shadowcolor>
 					<align>right</align>
@@ -1090,7 +1091,7 @@
 					<left>-35</left>
 					<top>315</top>
 					<width>280</width>
-					<label>$INFO[ListItem.Property(WatchedProgress)]% watched</label>
+					<label>$INFO[ListItem.Property(WatchedProgress)]% $LOCALIZE[700013]</label>
 					<font>font20_title</font>
 					<shadowcolor>text_shadow</shadowcolor>
 					<align>right</align>
@@ -1111,13 +1112,14 @@
 					<left>-35</left>
 					<top>315</top>
 					<width>280</width>
-					<label>$INFO[ListItem.Property(WatchedProgress)]% watched</label>
+					<label>$INFO[ListItem.Property(WatchedProgress)]% $LOCALIZE[700013]</label>
 					<font>font20_title</font>
 					<shadowcolor>text_shadow</shadowcolor>
 					<align>right</align>
 					<visible>$PARAM[focused] + String.IsEqual(ListItem.DBtype,movie) + !String.IsEmpty(Container($PARAM[id]).ListItem.Property(WatchedProgress)) + !Integer.IsEqual(Container($PARAM[id]).ListItem.Property(WatchedProgress),0) + [Control.IsVisible(54) | Control.IsVisible(500)]</visible>
 					<include condition="$PARAM[focused]">Animation_FocusTextureFade</include>
 				</control>
+
 				<control type="label">
 					<left>40</left>
 					<top>360</top>

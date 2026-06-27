@@ -157,7 +157,8 @@
 						<bottom>0</bottom>
 						<aligny>center</aligny>
 						<scroll>true</scroll>
-						<scrollspeed>300</scrollspeed>
+						<!-- KODI-RD-IL CHANGES -->
+						<scrollspeed>20</scrollspeed>
 						<font>font52_title</font>
 						<label>$VAR[ListLabelVar]</label>
 						<shadowcolor>text_shadow</shadowcolor>
@@ -251,6 +252,12 @@
 						<height>110</height>
 						<font>font36_title</font>
 						<label>$INFO[ListItem.Label]</label>
+						
+						<!-- KODI-RD-IL ADDITION -->
+						<textcolor>yellow</textcolor>
+						<align>right</align>
+						<!-- ##################### -->
+						
 						<visible>[String.IsEqual(ListItem.DbType,movie) | String.IsEqual(ListItem.DbType,tvshow) | String.IsEqual(ListItem.DbType,season)] + !String.IsEqual(ListItem.DBType,song) + !Container.Content(addons) + String.IsEmpty(ListItem.Art(clearlogo))</visible>
 					</control>
 					<control type="image">
@@ -297,13 +304,25 @@
 					<control type="textbox">
 						<height>auto</height>
 						<font>font36_title</font>
-						<label>Season $INFO[ListItem.Season], Episode $INFO[ListItem.Episode]</label>
+						<!-- KODI-RD-IL CHANGES -->
+						<label>$LOCALIZE[700015] $INFO[ListItem.Season], $LOCALIZE[700016] $INFO[ListItem.Episode]</label>
+						<!-- ##################### -->
+						
+						<!-- KODI-RD-IL ADDITION -->
+						<align>right</align>
+						<!-- ##################### -->
+						
 						<textcolor>unfocused_text</textcolor>
 						<visible>String.IsEqual(ListItem.DbType,episode)</visible>
 					</control>
 					<control type="textbox">
 						<height>auto</height>
 						<label>$VAR[InfoPanelTop]</label>
+						
+						<!-- KODI-RD-IL ADDITION -->
+						<align>right</align>
+						<!-- ##################### -->
+						
 						<textcolor>unfocused_text</textcolor>
 					</control>
 					<control type="grouplist">
@@ -312,6 +331,11 @@
 						<itemgap>25</itemgap>
 						<aligny>center</aligny>
 						<visible>[String.IsEqual(ListItem.DBtype,movie) | String.IsEqual(ListItem.DBtype,tvshow) | String.IsEqual(ListItem.DBtype,season) | String.IsEqual(ListItem.DBtype,episode)] + !String.IsEmpty(ListItem.Genre)</visible>
+						
+						<!-- KODI-RD-IL ADDITION -->
+						<align>right</align>
+						<!-- ##################### -->
+						
 						<control type="grouplist">
 							<width>60</width>
 							<orientation>vertical</orientation>
@@ -457,6 +481,11 @@
 						<height max="295">auto</height>
 						<bottom>70</bottom>
 						<label>$VAR[InfoPanelBottom]</label>
+						
+						<!-- KODI-RD-IL ADDITION -->
+						<align>right</align>
+						<!-- ##################### -->
+						
 						<textcolor>unfocused_text</textcolor>
 						<autoscroll delay="7000" time="2000" repeat="7000">Skin.HasSetting(autoscroll)</autoscroll>
 						<visible>!Skin.HasSetting(Enable.AlternateInfo) + Skin.HasSetting(UseLandscape) + [Container.Content(movies) | Container.Content(tvshows) | Container.Content(seasons) | Container.Content(episodes)]</visible>
@@ -466,6 +495,11 @@
 						<height max="415">auto</height>
 						<bottom>70</bottom>
 						<label>$VAR[InfoPanelBottom]</label>
+						
+						<!-- KODI-RD-IL ADDITION -->
+						<align>right</align>
+						<!-- ##################### -->
+						
 						<textcolor>unfocused_text</textcolor>
 						<autoscroll delay="7000" time="2000" repeat="7000">Skin.HasSetting(autoscroll)</autoscroll>
 						<visible>!Skin.HasSetting(Enable.AlternateInfo) + !Skin.HasSetting(UseLandscape) + [Container.Content(movies) | Container.Content(tvshows) | Container.Content(seasons)]</visible>
@@ -474,6 +508,11 @@
 						<height max="335">auto</height>
 						<bottom>70</bottom>
 						<label>$VAR[InfoPanelBottom]</label>
+						
+						<!-- KODI-RD-IL ADDITION -->
+						<align>right</align>
+						<!-- ##################### -->
+						
 						<textcolor>unfocused_text</textcolor>
 						<autoscroll delay="7000" time="2000" repeat="7000">Skin.HasSetting(autoscroll)</autoscroll>
 						<visible>!Skin.HasSetting(Enable.AlternateInfo) + !Skin.HasSetting(UseLandscape) + Container.Content(episodes)</visible>
@@ -484,6 +523,11 @@
 						<height max="170">auto</height>
 						<bottom>70</bottom>
 						<label>$VAR[InfoPanelBottom]</label>
+						
+						<!-- KODI-RD-IL ADDITION -->
+						<align>right</align>
+						<!-- ##################### -->
+						
 						<textcolor>unfocused_text</textcolor>
 						<autoscroll delay="5000" time="2000" repeat="5000">Skin.HasSetting(autoscroll)</autoscroll>
 						<visible>Skin.HasSetting(Enable.AlternateInfo) + Skin.HasSetting(UseLandscape) + [Container.Content(movies) | Container.Content(seasons)]</visible>
@@ -492,6 +536,11 @@
 						<height max="90">auto</height>
 						<bottom>70</bottom>
 						<label>$VAR[InfoPanelBottom]</label>
+						
+						<!-- KODI-RD-IL ADDITION -->
+						<align>right</align>
+						<!-- ##################### -->
+						
 						<textcolor>unfocused_text</textcolor>
 						<autoscroll delay="5000" time="2000" repeat="5000">Skin.HasSetting(autoscroll)</autoscroll>
 						<visible>Skin.HasSetting(Enable.AlternateInfo) + Skin.HasSetting(UseLandscape) + Container.Content(tvshows)</visible>
@@ -500,6 +549,11 @@
 						<height max="210">auto</height>
 						<bottom>70</bottom>
 						<label>$VAR[InfoPanelBottom]</label>
+						
+						<!-- KODI-RD-IL ADDITION -->
+						<align>right</align>
+						<!-- ##################### -->
+						
 						<textcolor>unfocused_text</textcolor>
 						<autoscroll delay="5000" time="2000" repeat="5000">Skin.HasSetting(autoscroll)</autoscroll>
 						<visible>Skin.HasSetting(Enable.AlternateInfo) + Skin.HasSetting(UseLandscape) + Container.Content(episodes)</visible>
@@ -517,6 +571,11 @@
 						<height max="210">auto</height>
 						<bottom>70</bottom>
 						<label>$VAR[InfoPanelBottom]</label>
+						
+						<!-- KODI-RD-IL ADDITION -->
+						<align>right</align>
+						<!-- ##################### -->
+						
 						<textcolor>unfocused_text</textcolor>
 						<autoscroll delay="5000" time="2000" repeat="5000">Skin.HasSetting(autoscroll)</autoscroll>
 						<visible>Skin.HasSetting(Enable.AlternateInfo) + !Skin.HasSetting(UseLandscape) + [Container.Content(tvshows) | Container.Content(episodes)]</visible>
@@ -562,6 +621,12 @@
 						<height>110</height>
 						<font>font36_title</font>
 						<label>$INFO[ListItem.Label]</label>
+						
+						<!-- KODI-RD-IL ADDITION -->
+						<textcolor>yellow</textcolor>
+						<align>right</align>
+						<!-- ##################### -->
+						
 						<visible>[String.IsEqual(ListItem.DbType,movie) | String.IsEqual(ListItem.DbType,tvshow) | String.IsEqual(ListItem.DbType,season)] + !String.IsEqual(ListItem.DBType,song) + !Container.Content(addons) + !Skin.HasSetting(UseLandscape) + String.IsEmpty(ListItem.Art(clearlogo))</visible>
 					</control>
 				</control>
@@ -630,6 +695,11 @@
 							<width>540</width>
 							<bottom>80</bottom>
 							<label>$VAR[InfoPanel]</label>
+						
+							<!-- KODI-RD-IL ADDITION -->
+							<align>right</align>
+							<!-- ##################### -->
+							
 							<textcolor>unfocused_text</textcolor>
 							<autoscroll time="3000" delay="10000" repeat="10000">!System.HasModalDialog + Skin.HasSetting(AutoScroll)</autoscroll>
 							<visible>Skin.HasSetting(UseLandscape)</visible>
@@ -639,6 +709,11 @@
 							<width>525</width>
 							<bottom>115</bottom>
 							<label>$VAR[InfoPanel]</label>
+						
+							<!-- KODI-RD-IL ADDITION -->
+							<align>right</align>
+							<!-- ##################### -->
+							
 							<textcolor>unfocused_text</textcolor>
 							<autoscroll delay="10000" time="3000" repeat="10000">Skin.HasSetting(autoscroll)</autoscroll>
 							<visible>!Skin.HasSetting(UseLandscape)</visible>
@@ -662,6 +737,11 @@
 							<bottom>80</bottom>
 							<autoscroll time="3000" delay="7000" repeat="5000">!System.HasModalDialog + Skin.HasSetting(AutoScroll)</autoscroll>
 							<label>$VAR[InfoPanelEpisode]</label>
+						
+							<!-- KODI-RD-IL ADDITION -->
+							<align>right</align>
+							<!-- ##################### -->
+							
 							<textcolor>unfocused_text</textcolor>
 						</control>
 						<control type="textbox">
@@ -671,7 +751,14 @@
 							<height>110</height>
 							<font>font36_title</font>
 							<textcolor>unfocused_text</textcolor>
-							<label>Season $INFO[ListItem.Season], Episode $INFO[ListItem.Episode]</label>
+							<!-- KODI-RD-IL CHANGES -->
+							<label>$LOCALIZE[700015] $INFO[ListItem.Season], $LOCALIZE[700016] $INFO[ListItem.Episode]</label>
+							<!-- ##################### -->
+						
+							<!-- KODI-RD-IL ADDITION -->
+							<align>right</align>
+							<!-- ##################### -->
+							
 							<visible>String.IsEqual(ListItem.DbType,episode)</visible>
 						</control>
 					</control>

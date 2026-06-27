@@ -2,7 +2,7 @@
 <addon id="skin.fentastic" version="1.0.25" name="FENtastic"
 	provider-name="Ivar Brandt">
 	<requires>
-		<import addon="xbmc.gui" version="5.17.0" />
+		<!-- <import addon="xbmc.gui" version="5.17.0" /> -->
 		<import addon="script.fentastic.helper" />
 	</requires>
 	<extension point="xbmc.gui.skin" debugging="false">
@@ -23,9 +23,6 @@
 		<assets>
 			<icon>resources/icon.png</icon>
 			<fanart>resources/fanart.jpg</fanart>
-			<screenshot>resources/images/customizable_widgets.jpg</screenshot>
-			<screenshot>resources/images/infopanel.jpg</screenshot>
-			<screenshot>resources/images/viewtypes1.jpg</screenshot>
 		</assets>
 		<summary lang="en_GB">FENtastic skin by Ivar Brandt (Estuary MOD)</summary>
 		<summary lang="en_NZ">FENtastic skin by Ivar Brandt (Estuary MOD)</summary>

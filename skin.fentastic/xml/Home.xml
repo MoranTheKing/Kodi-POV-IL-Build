@@ -845,8 +845,30 @@
 						<focusedlayout height="95">
 							<control type="group">
 								<animation effect="fade" start="100" end="0" time="0">UnFocus</animation>
+								<!-- KODI-RD-IL ADDITION - FOCUS MENU BLUE BACKGRUOND -->
+								<control type="image">
+									<visible>!Skin.HasSetting(show_widget_menu_border)</visible>
+									<left>0</left>
+									<top>0</top>
+									<width>395</width>
+									<height>95</height>
+									<texture colordiffuse="button_focus">masks/categorywidget.png</texture>
+									<animation effect="fade" start="100" end="0" time="0" condition="[!Control.HasFocus(9000) + !ControlGroup(700).HasFocus] | System.HasActiveModalDialog">Conditional</animation>
+								</control>
+								<!-- ########### -->
 							</control>
 							<!-- SideMenu Focused Icons -->
+							
+							<!-- KODI-RD-IL ADDITION - MENU ICON -->
+							<control type="image">
+								<left>5</left>
+								<top>1</top>
+								<width>95</width>
+								<height>95</height>
+								<texture>$INFO[ListItem.Art(thumb)]</texture>
+							</control>
+							<!-- ########### -->
+							
 							<control type="label">
 								<include>FocusBounce</include>
 								<left>65</left>
@@ -854,6 +876,11 @@
 								<height>95</height>
 								<width>315</width>
 								<aligny>center</aligny>
+								
+								<!-- KODI-RD-IL ADDITION -->
+								<align>right</align>
+								<!-- ########### -->
+								
 								<font>font45</font>
 								<textcolor>darkgrey</textcolor>
 								<label>$INFO[ListItem.Label]</label>
@@ -867,6 +894,11 @@
 								<height>95</height>
 								<width>315</width>
 								<aligny>center</aligny>
+								
+								<!-- KODI-RD-IL ADDITION -->
+								<align>right</align>
+								<!-- ########### -->
+								
 								<font>font52_title</font>
 								<label>$INFO[ListItem.Label]</label>
 								<textcolor>unfocused_text</textcolor>
@@ -875,12 +907,28 @@
 							</control>
 						</focusedlayout>
 						<itemlayout height="90">
+						
+						<!-- KODI-RD-IL ADDITION - MENU ICON -->
+						<control type="image">
+							<left>5</left>
+							<top>1</top>
+							<width>95</width>
+							<height>95</height>
+							<texture>$INFO[ListItem.Art(thumb)]</texture>
+						</control>
+						<!-- ########### -->
+						
 							<control type="label">
 								<left>65</left>
 								<top>0</top>
 								<height>95</height>
 								<width>315</width>
 								<aligny>center</aligny>
+								
+								<!-- KODI-RD-IL ADDITION -->
+								<align>right</align>
+								<!-- ########### -->
+								
 								<font>font45</font>
 								<textcolor>darkgrey</textcolor>
 								<label>$INFO[ListItem.Label]</label>
@@ -923,7 +971,10 @@
 								<visible>!Skin.HasSetting(HomeMenuNoMusicVideoButton)</visible>
 							</item>
 							<item>
-								<label>Live TV</label>
+								<!-- KODI-RD-IL CHANGES -->
+								<!-- <label>Live TV</label> -->
+								<label>$LOCALIZE[19020]</label>
+								<!-- ##################### -->
 								<property name="menu_id">$NUMBER[12000]</property>
 								<onclick>ActivateWindow(TVGuide)</onclick>
 								<thumb>icons/sidemenu/livetv.png</thumb>
@@ -1061,12 +1112,20 @@
 					</control>
 					<control type="textbox">
 						<top>75</top>
-						<left>30</left>
+						<!-- KODI-RD-IL CHANGES -->
+						<left>10</left>
 						<width>430</width>
 						<aligny>center</aligny>
 						<height>98</height>
 						<font>font36_title</font>
-						<label>$INFO[ListItem.Label]</label>
+						<!-- KODI-RD-IL CHANGES -->
+						<label>[COLOR yellow]$INFO[ListItem.Label][/COLOR]</label>
+						<!-- ##################### -->
+						
+						<!-- KODI-RD-IL ADDITION -->
+						<align>right</align>
+						<!-- ##################### -->
+						
 						<visible>String.IsEmpty(ListItem.Art(clearlogo))</visible>
 					</control>
 					<control type="group">
@@ -1077,6 +1136,11 @@
 							<width>410</width>
 							<bottom>60</bottom>
 							<label>$VAR[InfoPanel]</label>
+						
+							<!-- KODI-RD-IL ADDITION -->
+							<align>right</align>
+							<!-- ##################### -->
+							
 							<textcolor>unfocused_text</textcolor>
 							<autoscroll delay="10000" time="3000" repeat="10000">Skin.HasSetting(autoscroll)</autoscroll>
 						</control>
@@ -1086,6 +1150,11 @@
 							<width>410</width>
 							<bottom>60</bottom>
 							<label>$VAR[InfoPanelEpisode]</label>
+						
+							<!-- KODI-RD-IL ADDITION -->
+							<align>right</align>
+							<!-- ##################### -->
+							
 							<textcolor>unfocused_text</textcolor>
 							<autoscroll delay="10000" time="3000" repeat="10000">Skin.HasSetting(autoscroll)</autoscroll>
 						</control>
@@ -1097,7 +1166,14 @@
 							<height>110</height>
 							<bottom>60</bottom>
 							<font>font36_title</font>
-							<label>Season $INFO[ListItem.Season], Episode $INFO[ListItem.Episode]</label>
+							<!-- KODI-RD-IL CHANGES -->
+							<label>$LOCALIZE[700015] $INFO[ListItem.Season], $LOCALIZE[700016] $INFO[ListItem.Episode]</label>
+							<!-- ##################### -->
+						
+							<!-- KODI-RD-IL ADDITION -->
+							<align>right</align>
+							<!-- ##################### -->
+							
 							<visible>String.IsEqual(ListItem.DbType,episode)</visible>
 						</control>
 					</control>
@@ -1158,25 +1234,30 @@
 				<animation effect="slide" end="0,-90" time="300" tween="sine" easing="inout" condition="$EXP[infodialog_active]">conditional</animation>
 				<animation effect="fade" start="0" end="100" time="300">WindowOpen</animation>
 				<animation effect="fade" start="100" end="0" time="200">WindowClose</animation>
-				<top>35</top>
-				<left>35</left>
-        <control type="image">
-          <left>19</left>
-          <top>0</top>
-          <aspectratio>keep</aspectratio>
-          <width>130</width>
-          <height>56</height>
-          <texture colordiffuse="accent_color">special://skin/media/logos/K-logo.png</texture>
-        </control>
-        <control type="image">
-          <left>59</left>
-          <top>0</top>
-          <aspectratio>keep</aspectratio>
-          <width>192</width>
-          <height>56</height>
-          <texture colordiffuse="unfocused_text">special://skin/media/logos/letters.png</texture>
-        </control>
+				<!-- KODI-RD-IL CHANGES -->
+				<top>30</top>
+				<left>90</left>
+		<!-- KODI-RD-IL ADDITION -->
+		<control type="image">
+			<left>-45</left>
+			<top>-70</top>
+			<aspectratio>keep</aspectratio>
+			<width>350</width>
+			<height>208</height>
+			<texture>special://skin/media/kodirdil/group_logo/kodirdil-vendor_logo.png</texture>
+		</control>
+		<!-- ##################### -->
 			</control>
+		<!-- KODI-RD-IL ADDITION -->
+		<control type="label">
+			<description>KODI-RD-IL - Kodi Version</description>
+			<left>15</left>
+			<bottom>0</bottom>
+			<height>50</height>
+			<font>font25_title</font>
+			<label>$LOCALIZE[700062]: $INFO[System.BuildVersionShort]</label>
+		</control>
+		<!-- ##################### -->
 		</control>
 	</controls>
 </window>

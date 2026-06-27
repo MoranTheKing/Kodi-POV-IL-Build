@@ -6,12 +6,12 @@ from xbmc import executebuiltin, getInfoLabel
 
 def person_search(params):
     return executebuiltin(
-        "RunPlugin(plugin://plugin.video.fen/?mode=person_search_choice&query=%s)"
+        "RunPlugin(plugin://plugin.video.twilight/?mode=person_search_choice&query=%s)"
         % params["query"]
     )
 
 
 def extras(params):
     return executebuiltin(
-        "RunPlugin(%s)" % getInfoLabel("ListItem.Property(fen.extras_params)")
+        "RunPlugin(%s)" % getInfoLabel("ListItem.Property(twilight.extras_params)")
     )

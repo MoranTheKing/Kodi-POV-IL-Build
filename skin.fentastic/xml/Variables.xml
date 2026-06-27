@@ -40,8 +40,10 @@
 	<variable name="NowPlayingPosterVar">
 		<value condition="!String.IsEmpty(Player.Art(poster))">$INFO[Player.Art(poster)]</value>
 		<value condition="!String.IsEmpty(Player.Art(tvshow.poster))">$INFO[Player.Art(tvshow.poster)]</value>
-		<value condition="String.IsEmpty(Player.Icon) + VideoPlayer.Content(livetv)">DefaultTVShows.png</value>
-		<value>$INFO[Player.Icon]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(Player.Icon)">$INFO[Player.Icon]</value>
+		<value>DefaultTVShows.png</value>
+		<!-- ##################### -->
 	</variable>
 	<variable name="ShiftThumbVar">
 		<value condition="!String.IsEmpty(Listitem.Art(poster))">$INFO[Listitem.Art(poster)]</value>
@@ -104,8 +106,12 @@
 		<value>$INFO[ListItem.Label2]</value>
 	</variable>
 	<variable name="PlotTextBoxVar">
-		<value condition="!String.IsEmpty(ListItem.PlotOutline)">$INFO[ListItem.PlotOutline]</value>
-		<value>$INFO[ListItem.Plot]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<!-- <value condition="!String.IsEmpty(ListItem.PlotOutline)">$INFO[ListItem.PlotOutline]</value> -->
+		<!-- <value>$INFO[ListItem.Plot]</value> -->
+		<value condition="!String.IsEmpty(ListItem.PlotOutline)">$INFO[ListItem.PlotOutline][CR]]$INFO[ListItem.Genre]</value>
+		<value condition="!String.IsEmpty(ListItem.Genre) | !String.IsEmpty(ListItem.Plot)">[B][COLOR button_focus]$LOCALIZE[70008]: [/COLOR][/B] [I]$INFO[ListItem.Genre][/I][CR][B]$INFO[ListItem.Plot][/B]</value>
+		<!-- ##################### -->
 	</variable>
 	<variable name="ShiftLeftTextBoxVar">
 		<value condition="Window.IsActive(pictures)">$INFO[ListItem.Property(description),,[CR]]$INFO[ListItem.PictureDatetime,[COLOR button_focus]$LOCALIZE[552]:  [/COLOR],[CR]]$INFO[ListItem.PictureResolution,[COLOR button_focus]$LOCALIZE[169]:  [/COLOR],[CR]]$INFO[ListItem.PictureCamMake,[COLOR button_focus]$LOCALIZE[31041]:  [/COLOR],[CR]]$INFO[ListItem.PictureCamModel,[COLOR button_focus]$LOCALIZE[21823]:  [/COLOR],[CR]]</value>
@@ -344,9 +350,13 @@
 		<value condition="Control.HasFocus(70043)">$LOCALIZE[19033]</value>
 		<value condition="Control.HasFocus(70044)">$LOCALIZE[298]</value>
 		<value condition="Control.HasFocus(70045)">$LOCALIZE[31106]</value>
-		<value condition="Control.HasFocus(70046)">$LOCALIZE[24012]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="Control.HasFocus(70046)">[B]$LOCALIZE[24012][/B]</value>
+		<!-- ##################### -->
 		<value condition="Control.HasFocus(70047)">$LOCALIZE[36501]</value>
-		<value condition="Control.HasFocus(70048)">$LOCALIZE[5]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="Control.HasFocus(70048)">[B]$LOCALIZE[5][/B]</value>
+		<!-- ##################### -->
 		<value condition="Control.HasFocus(70050)">$LOCALIZE[29900]</value>
 		<value condition="Control.HasFocus(70051)">$LOCALIZE[31066]</value>
 		<value condition="Control.HasFocus(70052)">$LOCALIZE[31033]$INFO[MusicPlayer.UserRating, : ]</value>
@@ -354,6 +364,18 @@
 		<value condition="Control.HasFocus(70054) + Playlist.IsRandom">$LOCALIZE[590]: $LOCALIZE[16041]</value>
 		<value condition="Control.HasFocus(70054)">$LOCALIZE[590]: $LOCALIZE[16039]</value>
 		<value condition="Control.HasFocus(70055)">$LOCALIZE[24013]</value>
+		
+		<!-- KODI-RD-IL ADDITION -->
+		<value condition="Control.HasFocus(599)">[B]Zoom In[/B]</value>
+		<value condition="Control.HasFocus(598)">[B]Zoom Out[/B]</value>
+		<value condition="Control.HasFocus(700450)">[B]$LOCALIZE[700060][/B]</value>
+		<value condition="Control.HasFocus(700451)">[B]$LOCALIZE[700061][/B]</value>
+		<value condition="Control.HasFocus(700452)">[B]$LOCALIZE[700056][/B]</value>
+		<value condition="Control.HasFocus(700453)">[B]$LOCALIZE[700055][/B]</value>
+		<value condition="Control.HasFocus(700455)">[B]$LOCALIZE[700045][/B]</value>
+		<value condition="Control.HasFocus(700456)">[B]$LOCALIZE[700059][/B]</value>
+		<!-- ##################### -->
+		
 	</variable>
 	<variable name="SkinSettingsHelpTextVar">
 		<value condition="Container(9000).HasFocus(1)">$LOCALIZE[31129]</value>
@@ -681,7 +703,9 @@
 
 	<variable name="CustomBackgroundImage">
 		<value condition="!String.IsEmpty(Skin.String(CustomBackground))">$INFO[Skin.String(CustomBackground)]</value>
-		<value>special://skin/extras/backgrounds/redblur.jpg</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<!-- <value>special://skin/extras/backgrounds/redblur.jpg</value> -->
+		<value>special://skin/media/kodirdil/skin_backgrounds/lightning_bg1.jpg</value>
 	</variable>
 
 	<variable name="ClearlogoVar">
@@ -721,7 +745,8 @@
 	</variable>
 
 	<variable name="CurrentSearchProviderVar">
-    <value condition="String.IsEqual(Skin.String(current_search_provider),0)">FEN</value>
+	<!-- KODI-RD-IL CHANGES -->
+    <value condition="String.IsEqual(Skin.String(current_search_provider),0)">Twilight</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),1)">FEN Light</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),2)">Umbrella</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),3)">POV</value>
@@ -739,200 +764,232 @@
 	</variable>
 
 	<variable name="TRAKTButtonActionsVar">
-    <value condition="String.IsEqual(Skin.String(current_search_provider),0)">ActivateWindow(10025,plugin://plugin.video.fen/?&amp;mode=navigator.trakt_lists,return)</value>
+    <value condition="String.IsEqual(Skin.String(current_search_provider),0)">ActivateWindow(10025,plugin://plugin.video.twilight/?&amp;mode=navigator.trakt_lists,return)</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),1)">ActivateWindow(10025,plugin://plugin.video.fenlight/?&amp;mode=navigator.my_content&amp;name=My%20Lists,return)</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),2)">ActivateWindow(10025,plugin://plugin.video.umbrella/?action=trakt_Navigator,return)</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),3)">ActivateWindow(10025,plugin://plugin.video.pov/?mode=navigator.my_content&amp;name=32454,return)</value>
-		<value>ActivateWindow(10025,plugin://plugin.video.fen/?&amp;mode=navigator.trakt_lists,return)</value>
+		<value>ActivateWindow(10025,plugin://plugin.video.twilight/?&amp;mode=navigator.trakt_lists,return)</value>
 	</variable>
 
 	<variable name="KeywordMoviesLabelVar">
-    <value condition="String.IsEqual(Skin.String(current_search_provider),0) | String.IsEqual(Skin.String(current_search_provider),3)">IMDb Keywords (Movies)</value>
+	<!-- KODI-RD-IL CHANGES -->
+    <!-- <value condition="String.IsEqual(Skin.String(current_search_provider),0) | String.IsEqual(Skin.String(current_search_provider),3)">IMDb Keywords (Movies)</value> -->
+    <value condition="String.IsEqual(Skin.String(current_search_provider),0) | String.IsEqual(Skin.String(current_search_provider),3)">[B]$LOCALIZE[700023][/B]</value>
+	<!-- ##################### -->
     <value condition="String.IsEqual(Skin.String(current_search_provider),1)">TMDb Keywords (Movies)</value>
 	</variable>
 
 	<variable name="KeywordTVShowsLabelVar">
-    <value condition="String.IsEqual(Skin.String(current_search_provider),0) | String.IsEqual(Skin.String(current_search_provider),3)">IMDb Keywords (TV Shows)</value>
+	<!-- KODI-RD-IL CHANGES -->
+    <!-- <value condition="String.IsEqual(Skin.String(current_search_provider),0) | String.IsEqual(Skin.String(current_search_provider),3)">IMDb Keywords (TV Shows)</value> -->
+    <value condition="String.IsEqual(Skin.String(current_search_provider),0) | String.IsEqual(Skin.String(current_search_provider),3)">[B]$LOCALIZE[700024][/B]</value>
+	<!-- ##################### -->
     <value condition="String.IsEqual(Skin.String(current_search_provider),1)">TMDb Keywords (TV Shows)</value>
 	</variable>
 
 	<!-- SEARCH PROVIDER VARIABLES -->
 	<variable name="SearchProviderMoviesVar">
-    <value condition="String.IsEqual(Skin.String(current_search_provider),0)">plugin://plugin.video.fen/?mode=build_movie_list&amp;action=tmdb_movies_search&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
+    <value condition="String.IsEqual(Skin.String(current_search_provider),0)">plugin://plugin.video.twilight/?mode=build_movie_list&amp;action=tmdb_movies_search&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),1)">plugin://plugin.video.fenlight/?mode=build_movie_list&amp;action=tmdb_movies_search&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),2)">plugin://plugin.video.umbrella/?action=movieSearchterm&amp;name=$INFO[Skin.String(SearchInputEncoded)]</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),3)">plugin://plugin.video.pov/?mode=build_movie_list&amp;action=tmdb_movies_search&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
 		<value condition="String.IsEqual(Skin.String(current_search_provider),4)">plugin://plugin.video.seren/?action=moviesSearchResults&amp;actionArgs=$INFO[Skin.String(SearchInputEncoded)]</value>
-    <value>plugin://plugin.video.fen/?mode=build_movie_list&amp;action=tmdb_movies_search&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
+    <value>plugin://plugin.video.twilight/?mode=build_movie_list&amp;action=tmdb_movies_search&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
 	</variable>
 	<variable name="SearchProviderTVShowsVar">
-    <value condition="String.IsEqual(Skin.String(current_search_provider),0)">plugin://plugin.video.fen/?mode=build_tvshow_list&amp;action=tmdb_tv_search&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
+    <value condition="String.IsEqual(Skin.String(current_search_provider),0)">plugin://plugin.video.twilight/?mode=build_tvshow_list&amp;action=tmdb_tv_search&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),1)">plugin://plugin.video.fenlight/?mode=build_tvshow_list&amp;action=tmdb_tv_search&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),2)">plugin://plugin.video.umbrella/?action=tvSearchterm&amp;name=$INFO[Skin.String(SearchInputEncoded)]</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),3)">plugin://plugin.video.pov/?mode=build_tvshow_list&amp;action=tmdb_tv_search&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
 		<value condition="String.IsEqual(Skin.String(current_search_provider),4)">plugin://plugin.video.seren/?action=showsSearchResults&amp;actionArgs=$INFO[Skin.String(SearchInputEncoded)]</value>
-		<value>plugin://plugin.video.fen/?mode=build_tvshow_list&amp;action=tmdb_tv_search&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
+		<value>plugin://plugin.video.twilight/?mode=build_tvshow_list&amp;action=tmdb_tv_search&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
 	</variable>
 	<variable name="SearchProviderCollectionsVar">
-		<value conditiom="String.IsEqual(Skin.String(current_search_provider),0)">plugin://plugin.video.fen/?mode=build_movie_list&amp;action=tmdb_movies_search_sets&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
+		<value conditiom="String.IsEqual(Skin.String(current_search_provider),0)">plugin://plugin.video.twilight/?mode=build_movie_list&amp;action=tmdb_movies_search_sets&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),3)">plugin://plugin.video.pov/?mode=build_movie_list&amp;action=tmdb_movies_search_collections&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
-    <value>plugin://plugin.video.fen/?mode=build_movie_list&amp;action=tmdb_movies_search_sets&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
+    <value>plugin://plugin.video.twilight/?mode=build_movie_list&amp;action=tmdb_movies_search_sets&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
 	</variable>
 	<variable name="SearchProviderPeopleVar">
-		<value condition="String.IsEqual(Skin.String(current_search_provider),0)">plugin://plugin.video.fen/?mode=person_direct.search&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
+		<value condition="String.IsEqual(Skin.String(current_search_provider),0)">plugin://plugin.video.twilight/?mode=person_direct.search&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),1)">plugin://plugin.video.fenlight/?mode=person_direct.search&amp;key_id=$INFO[Skin.String(SearchInputEncoded)]</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),3)">plugin://plugin.video.pov/?mode=get_search_term&amp;search_type=people&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
-    <value>plugin://plugin.video.fen/?mode=person_direct.search&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
+    <value>plugin://plugin.video.twilight/?mode=person_direct.search&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
 	</variable>
 	<variable name="SearchProviderKeywordMoviesVar">
-		<value condition="String.IsEqual(Skin.String(current_search_provider),0)">plugin://plugin.video.fen/?mode=build_movie_list&amp;action=imdb_keywords_list_contents&amp;list_id=$INFO[Skin.String(SearchInputEncoded)]</value>
+		<value condition="String.IsEqual(Skin.String(current_search_provider),0)">plugin://plugin.video.twilight/?mode=build_movie_list&amp;action=imdb_keywords_list_contents&amp;list_id=$INFO[Skin.String(SearchInputEncoded)]</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),1)">plugin://plugin.video.fenlight/?mode=build_movie_list&amp;action=tmdb_movie_keyword_results_direct&amp;key_id=$INFO[Skin.String(SearchInputEncoded)]</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),3)">plugin://plugin.video.pov/?mode=imdb_build_keyword_results&amp;media_type=movie&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
-    <value>plugin://plugin.video.fen/?mode=build_movie_list&amp;action=imdb_keywords_list_contents&amp;list_id=$INFO[Skin.String(SearchInputEncoded)]</value>
+    <value>plugin://plugin.video.twilight/?mode=build_movie_list&amp;action=imdb_keywords_list_contents&amp;list_id=$INFO[Skin.String(SearchInputEncoded)]</value>
 	</variable>
 	<variable name="SearchProviderKeywordTVShowsVar">
-		<value condition="String.IsEqual(Skin.String(current_search_provider),0)">plugin://plugin.video.fen/?mode=build_tvshow_list&amp;action=imdb_keywords_list_contents&amp;list_id=$INFO[Skin.String(SearchInputEncoded)]</value>
+		<value condition="String.IsEqual(Skin.String(current_search_provider),0)">plugin://plugin.video.twilight/?mode=build_tvshow_list&amp;action=imdb_keywords_list_contents&amp;list_id=$INFO[Skin.String(SearchInputEncoded)]</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),1)">plugin://plugin.video.fenlight/?mode=build_tvshow_list&amp;action=tmdb_tv_keyword_results_direct&amp;key_id=$INFO[Skin.String(SearchInputEncoded)]</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),3)">plugin://plugin.video.pov/?mode=imdb_build_keyword_results&amp;media_type=tvshow&amp;query=$INFO[Skin.String(SearchInputEncoded)]</value>
-    <value>plugin://plugin.video.fen/?mode=build_tvshow_list&amp;action=imdb_keywords_list_contents&amp;list_id=$INFO[Skin.String(SearchInputEncoded)]</value>
+    <value>plugin://plugin.video.twilight/?mode=build_tvshow_list&amp;action=imdb_keywords_list_contents&amp;list_id=$INFO[Skin.String(SearchInputEncoded)]</value>
 	</variable>
 	<variable name="SearchProviderTRAKTListsVar">
-		<value condition="String.IsEqual(Skin.String(current_search_provider),0)">plugin://plugin.video.fen/?mode=trakt.list.search_trakt_lists&amp;query=$INFO[Skin.String(SearchInputTraktEncoded)]</value>
+		<value condition="String.IsEqual(Skin.String(current_search_provider),0)">plugin://plugin.video.twilight/?mode=trakt.list.search_trakt_lists&amp;query=$INFO[Skin.String(SearchInputTraktEncoded)]</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),1)">plugin://plugin.video.fenlight/?mode=trakt.list.search_trakt_lists&amp;query=$INFO[Skin.String(SearchInputTraktEncoded)]</value>
     <value condition="String.IsEqual(Skin.String(current_search_provider),3)">plugin://plugin.video.pov/?mode=build_trakt_list.search_trakt_lists&amp;search_title=$INFO[Skin.String(SearchInputTraktEncoded)]</value>
-    <value>plugin://plugin.video.fen/?mode=trakt.list.search_trakt_lists&amp;query=$INFO[Skin.String(SearchInputTraktEncoded)]</value>
+    <value>plugin://plugin.video.twilight/?mode=trakt.list.search_trakt_lists&amp;query=$INFO[Skin.String(SearchInputTraktEncoded)]</value>
 	</variable>
 
 	<!-- RATINGS INFOPANEL VARIABLES -->
 	<!-- Released -->
 	<variable name="RI_Year">
 		<value condition="!String.IsEmpty(ListItem.Year) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Year]</value>
-		<value condition="!String.IsEmpty(ListItem.Year) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Year,[B]Released: [/B]][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Year) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Year,[COLOR button_focus][B]$LOCALIZE[70007]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<!-- Aired -->
 	<variable name="RI_Aired">
 		<value condition="!String.IsEmpty(ListItem.Premiered) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Premiered]</value>
-		<value condition="!String.IsEmpty(ListItem.Premiered) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Premiered,[B]Aired: [/B]][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Premiered) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Premiered,[COLOR button_focus][B]$LOCALIZE[700065]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<!-- MPAA Rating -->
 	<variable name="RI_Mpaa_Season">
 		<value condition="!String.IsEmpty(ListItem.Mpaa) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Mpaa]</value>
-		<value condition="!String.IsEmpty(ListItem.Mpaa) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Mpaa,[B]Rated: [/B]][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Mpaa) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Mpaa,[COLOR button_focus][B]$LOCALIZE[700042]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<variable name="RI_Mpaa">
 		<value condition="!String.IsEmpty(ListItem.Mpaa) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Mpaa,[B] • [/B]]</value>
-		<value condition="!String.IsEmpty(ListItem.Mpaa) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Mpaa,[B]Rated: [/B]][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Mpaa) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Mpaa,[COLOR button_focus][B]$LOCALIZE[700042]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<!-- Genre -->
 	<variable name="RI_Genre">
 		<value condition="!String.IsEmpty(ListItem.Genre) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Genre,[B] • [/B]]</value>
-		<value condition="!String.IsEmpty(ListItem.Genre) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Genre,[B]Genre: [/B]][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Genre) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Genre,[COLOR button_focus][B]$LOCALIZE[70008]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<!-- Director -->
 	<variable name="RI_Director">
 		<value condition="!String.IsEmpty(ListItem.Director) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Director,[B] • [/B]]</value>
-		<value condition="!String.IsEmpty(ListItem.Director) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Director,[B]Director: [/B]][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Director) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Director,[COLOR button_focus][B]$LOCALIZE[700010]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<!-- Network -->
 	<variable name="RI_Network">
 		<value condition="!String.IsEmpty(ListItem.Studio) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Studio,[B] • [/B]]</value>
-		<value condition="!String.IsEmpty(ListItem.Studio) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Studio,[B]Network: [/B]][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Studio) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Studio,[COLOR button_focus][B]$LOCALIZE[705]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<!-- Total Seasons -->
 	<variable name="RI_TotalSeasons">
 		<value condition="!String.IsEmpty(ListItem.Property(TotalSeasons)) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Property(TotalSeasons),[B] • [/B], seasons]</value>
-		<value condition="!String.IsEmpty(ListItem.Property(TotalSeasons)) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Property(TotalSeasons),[B]Seasons: [/B]][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Property(TotalSeasons)) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Property(TotalSeasons),[COLOR button_focus][B]$LOCALIZE[7000151]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<!-- Status -->
 	<variable name="RI_Status">
 		<value condition="!String.IsEmpty(ListItem.Status) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Status,[B] • [/B]]</value>
-		<value condition="!String.IsEmpty(ListItem.Status) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Status,[B]Status: [/B]][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Status) + Skin.HasSetting(Enable.AlternateInfo)">$VAR[SetHebStatus,[COLOR button_focus][B]$LOCALIZE[700014]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<!-- Runtime -->
 	<variable name="RI_Runtime">
 		<value condition="!String.IsEmpty(ListItem.Duration) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Duration(h),[B] • [/B], hr] $INFO[ListItem.Duration(m),, mins]</value>
-		<value condition="!String.IsEmpty(ListItem.Duration) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Duration(h),[B]Runtime: [/B], hr] $INFO[ListItem.Duration(m),, mins][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Duration) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Duration(h),[COLOR button_focus][B]$LOCALIZE[700039]: [/B][/COLOR], $LOCALIZE[700066]] $INFO[ListItem.Duration(m),, $LOCALIZE[700067]][CR]</value>
 	</variable>
 	<!-- Runtime Episodes -->
 	<variable name="RI_RuntimeEpisodes">
 		<value condition="!String.IsEmpty(ListItem.Duration) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Duration(mins),[B] • [/B], mins]</value>
-		<value condition="!String.IsEmpty(ListItem.Duration) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Duration(mins),[B]Runtime: [/B], mins][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Duration) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Duration(mins),[COLOR button_focus][B]$LOCALIZE[700039]: [/B][/COLOR], $LOCALIZE[700067]][CR]</value>
 	</variable>
 	<!-- Ends at: -->
 	<variable name="RI_Endsat">
 		<value condition="!String.IsEmpty(ListItem.EndTime) + !String.IsEmpty(ListItem.Duration) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.EndTime,[B] • [/B]$LOCALIZE[31080]: ]</value>
-		<value condition="!String.IsEmpty(ListItem.EndTime) + !String.IsEmpty(ListItem.Duration) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.EndTime,[B]$LOCALIZE[31080]: [/B]]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.EndTime) + !String.IsEmpty(ListItem.Duration) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.EndTime,[COLOR button_focus][B]$LOCALIZE[31080]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<!-- Plot -->
 	<variable name="RI_Plot">
-		<value condition="!String.IsEmpty(ListItem.Plot)">$INFO[ListItem.Plot]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Plot)">[B]$INFO[ListItem.Plot][/B]</value>
 	</variable>
 
 	<!-- INFOPANEL VARIABLES -->
 	<!-- Released -->
 	<variable name="_Year">
 		<value condition="!String.IsEmpty(ListItem.Year) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Year]</value>
-		<value condition="!String.IsEmpty(ListItem.Year) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Year,[B]Released: [/B]][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Year) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Year,[COLOR button_focus][B]$LOCALIZE[70007]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<!-- Aired -->
 	<variable name="_Aired">
 		<value condition="!String.IsEmpty(ListItem.Premiered) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Premiered]</value>
-		<value condition="!String.IsEmpty(ListItem.Premiered) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Premiered,[B]Aired: [/B]][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Premiered) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Premiered,[COLOR button_focus][B]$LOCALIZE[700065]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<!-- MPAA Rating -->
 	<variable name="_Mpaa_Season">
 		<value condition="!String.IsEmpty(ListItem.Mpaa) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Mpaa]</value>
-		<value condition="!String.IsEmpty(ListItem.Mpaa) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Mpaa,[B]Rated: [/B]][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Mpaa) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Mpaa,[COLOR button_focus][B]$LOCALIZE[700042]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<variable name="_Mpaa">
 		<value condition="!String.IsEmpty(ListItem.Mpaa) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Mpaa,[B] • [/B]]</value>
-		<value condition="!String.IsEmpty(ListItem.Mpaa) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Mpaa,[B]Rated: [/B]][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Mpaa) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Mpaa,[COLOR button_focus][B]$LOCALIZE[700042]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<!-- Genre -->
 	<variable name="_Genre">
 		<value condition="!String.IsEmpty(ListItem.Genre) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Genre,[B] • [/B]]</value>
-		<value condition="!String.IsEmpty(ListItem.Genre) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Genre,[B]Genre: [/B]][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Genre) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Genre,[COLOR button_focus][B]$LOCALIZE[70008]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<!-- Director -->
 	<variable name="_Director">
 		<value condition="!String.IsEmpty(ListItem.Director) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Director,[B] • [/B]]</value>
-		<value condition="!String.IsEmpty(ListItem.Director) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Director,[B]Director: [/B]][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Director) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Director,[COLOR button_focus][B]$LOCALIZE[700010]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<!-- Network -->
 	<variable name="_Network">
 		<value condition="!String.IsEmpty(ListItem.Studio) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Studio,[B] • [/B]]</value>
-		<value condition="!String.IsEmpty(ListItem.Studio) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Studio,[B]Network: [/B]][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Studio) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Studio,[COLOR button_focus][B]$LOCALIZE[705]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<!-- Total Seasons -->
 	<variable name="_TotalSeasons">
 		<value condition="!String.IsEmpty(ListItem.Property(TotalSeasons)) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Property(TotalSeasons),[B] • [/B], seasons]</value>
-		<value condition="!String.IsEmpty(ListItem.Property(TotalSeasons)) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Property(TotalSeasons),[B]Seasons: [/B]][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Property(TotalSeasons)) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Property(TotalSeasons),[COLOR button_focus][B]$LOCALIZE[7000151]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<!-- Status -->
 	<variable name="_Status">
 		<value condition="!String.IsEmpty(ListItem.Status) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Status,[B] • [/B]]</value>
-		<value condition="!String.IsEmpty(ListItem.Status) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Status,[B]Status: [/B]][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Status) + Skin.HasSetting(Enable.AlternateInfo)">$VAR[SetHebStatus,[COLOR button_focus][B]$LOCALIZE[700014]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<!-- Runtime -->
 	<variable name="_Runtime">
 		<value condition="!String.IsEmpty(ListItem.Duration) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Duration(h),[B] • [/B], hr] $INFO[ListItem.Duration(m),, mins]</value>
-		<value condition="!String.IsEmpty(ListItem.Duration) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Duration(h),[B]Runtime: [/B], hr] $INFO[ListItem.Duration(m),, mins][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Duration) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Duration(h),[COLOR button_focus][B]$LOCALIZE[700039]: [/B][/COLOR], $LOCALIZE[700066]] $INFO[ListItem.Duration(m),, $LOCALIZE[700067]][CR]</value>
 	</variable>
 	<!-- Runtime Episodes -->
 	<variable name="_RuntimeEpisodes">
 		<value condition="!String.IsEmpty(ListItem.Duration) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Duration(mins),[B] • [/B], mins]</value>
-		<value condition="!String.IsEmpty(ListItem.Duration) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Duration(mins),[B]Runtime: [/B], mins][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.Duration) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Duration(mins),[COLOR button_focus][B]$LOCALIZE[700039]: [/B][/COLOR], $LOCALIZE[700067]][CR]</value>
 	</variable>
 	<!-- Ends at: -->
 	<variable name="_Endsat">
 		<value condition="!String.IsEmpty(ListItem.EndTime) + !String.IsEmpty(ListItem.Duration) + !Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.EndTime,[B] • [/B]$LOCALIZE[31080]: ]</value>
-		<value condition="!String.IsEmpty(ListItem.EndTime) + !String.IsEmpty(ListItem.Duration) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.EndTime,[B]$LOCALIZE[31080]: [/B]][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="!String.IsEmpty(ListItem.EndTime) + !String.IsEmpty(ListItem.Duration) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.EndTime,[COLOR button_focus][B]$LOCALIZE[31080]: [/B][/COLOR]][CR]</value>
 	</variable>
 	<!-- Plot -->
 	<variable name="_Plot">
-		<value condition="String.IsEqual(ListItem.DBtype,movie) + String.IsEmpty(ListItem.Genre)">$INFO[ListItem.Plot][CR]</value>
+		<!-- KODI-RD-IL CHANGES -->
+		<value condition="String.IsEqual(ListItem.DBtype,movie) + String.IsEmpty(ListItem.Genre)">[B]$INFO[ListItem.Plot][/B][CR]</value>
 		<value condition="!String.IsEmpty(ListItem.Plot) + !Skin.HasSetting(Enable.AlternateInfo)">[CR]$INFO[ListItem.Plot][CR]</value>
-		<value condition="!String.IsEmpty(ListItem.Plot) + Skin.HasSetting(Enable.AlternateInfo)">$INFO[ListItem.Plot][CR]</value>
+		<value condition="!String.IsEmpty(ListItem.Plot) + Skin.HasSetting(Enable.AlternateInfo)">[B]$INFO[ListItem.Plot][/B][CR]</value>
 	</variable>
 
 	<variable name="InfoPanelTop">
@@ -968,5 +1025,65 @@
 	<variable name="InfoPanelEpisode">
 		<value condition="!ListItem.IsCollection + String.IsEqual(ListItem.DBtype,episode)">$VAR[_Aired]$VAR[_Mpaa]$VAR[_Network]$VAR[_RuntimeEpisodes]$VAR[_Endsat][CR]$VAR[_Plot][CR]</value>
 	</variable>
+	
+	<!-- KODI-RD-IL ADDITION -->
+	<variable name="BoxFrame">
+		<value>kodirdil/overlays/</value>
+	</variable>
+	
+	<!-- Custom_1122_PlayerPauseWindow.xml - Playing Label -->
+	<variable name="NowPlayingLabelVar">
+		<value condition="!String.IsEmpty(VideoPlayer.TvShowTitle)">$INFO[VideoPlayer.TvShowTitle]</value>
+		<value>$INFO[VideoPlayer.Title]</value>
+	</variable>
+	
+	<!-- Custom_1122_PlayerPauseWindow.xml - Playing Fanart -->
+	<variable name="NowPlayingFanartVar">
+		<value condition="!String.IsEmpty(Player.Art(fanart))">$INFO[Player.Art(fanart)]</value>
+		<value condition="!String.IsEmpty(Player.Art(tvshow.fanart))">$INFO[Player.Art(tvshow.fanart)]</value>
+		<value condition="!String.IsEmpty(Player.Icon)">$INFO[Player.Icon]</value>
+		<value condition="!String.IsEmpty(Player.Icon)">$INFO[Player.Icon]</value>
+		<value>DefaultNoPreview.png</value>
+	</variable>
+	
+	  <!--set your label flag -->
+  	<variable name="NoLabelFlagFound">
+	<value>$INFO[Player.Process(VideoFPS)]</value>
+	</variable>
+	
+	<variable name="SetLabelflag">
+	<value condition="!String.IsEmpty(Player.Process(VideoFPS)">$VAR[NoLabelFlagFound]</value>
+	</variable>
+	
+	<variable name="NextPreviousIndicator">
+		<value>kodirdil/arrows/circle-down.png</value>
+	</variable>
+	
+	<!-- Clear Art Logo for Poster View Type -->	
+	<variable name="ClearArtLogo">
+		<value condition="!String.IsEmpty(ListItem.Art(clearlogo)">$INFO[ListItem.Art(clearlogo)]</value>
+		<value condition="String.IsEmpty(ListItem.Art(clearlogo)">$INFO[ListItem.Art(clearart)]</value>
+	</variable>
+	
+	<!-- Seasons Label -->	
+	<variable name="SeasonCorrectLabel">
+		<value condition="Integer.IsEqual(ListItem.Property(TotalSeasons),1)">$LOCALIZE[700015]</value>
+		<value condition="!Integer.IsEqual(ListItem.Property(TotalSeasons),1)">$LOCALIZE[7000151]</value>
+	</variable>
+	
+	<!-- TV Show InfoPanel Status Hebrew Translation -->
+	<variable name="SetHebStatus">
+		<value condition="String.IsEqual(ListItem.Status,returning series)">$LOCALIZE[700027]</value>
+		<value condition="String.IsEqual(ListItem.Status,in production)">$LOCALIZE[700028]</value>
+		<value condition="String.IsEqual(ListItem.Status,planned)">$LOCALIZE[700029]</value>
+		<value condition="String.IsEqual(ListItem.Status,canceled)">$LOCALIZE[700030]</value>
+		<value condition="String.IsEqual(ListItem.Status,ended)">$LOCALIZE[700031]</value>
+	</variable>
+	
+	<!-- Episode Prefix -->	
+	<variable name="Episode_prefix">
+		<value condition="VideoPlayer.Content(episodes)">[B][COLOR white]$LOCALIZE[700015][/COLOR] [COLOR button_focus]$INFO[VideoPlayer.Season][/COLOR][/B] / [B][COLOR white]$LOCALIZE[700016][/COLOR] [COLOR button_focus]$INFO[VideoPlayer.Episode][/COLOR][/B]</value>
+	</variable>
+	<!-- ##################### -->
 	
 </includes>

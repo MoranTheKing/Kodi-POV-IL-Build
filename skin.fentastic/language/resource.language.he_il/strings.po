@@ -747,3 +747,363 @@ msgstr "מערכת"
 #~ msgctxt "#31138"
 #~ msgid "Player process info"
 #~ msgstr "מידע על תהליך הנגן"
+
+################################################################
+
+# KODI-RD-IL CUSTOM ADDITIONS:
+
+# Voice Search - ButtonDialogKeyboard.xml:
+
+msgctxt "#70000"
+msgid "Voice Search"
+msgstr "חיפוש קולי"
+
+# Search Button - Custom_1107_SearchDialog.xml:
+
+msgctxt "#70001"
+msgid "Search movies"
+msgstr "חיפוש סרט"
+
+msgctxt "#70002"
+msgid "Search shows"
+msgstr "חיפוש סדרה"
+
+msgctxt "#70003"
+msgid "Search by year"
+msgstr "חיפוש לפי שנה"
+
+msgctxt "#70004"
+msgid "Search actors/actresses"
+msgstr "חיפוש שחקן"
+
+msgctxt "#70005"
+msgid "Search movie collections"
+msgstr "חיפוש קולקציית סרטים"
+
+msgctxt "#70006"
+msgid "Search Trakt list"
+msgstr "חיפוש רשימת Trakt"
+
+# InfoPanel - Variables.xml:
+
+msgctxt "#70007"
+msgid "Released"
+msgstr "שנת יציאה"
+
+# (Also for Poster View Type):
+
+msgctxt "#70008"
+msgid "Genre"
+msgstr "ז'אנר"
+
+# Continue InfoPanel - Variables.xml:
+
+msgctxt "#700010"
+msgid "Director"
+msgstr "במאי"
+
+msgctxt "#700011"
+msgid "episodes"
+msgstr "פרקים"
+
+# For Episodes (In Hebrew "watched" spelled differently for movies or shows)
+msgctxt "#700012"
+msgid "watched"
+msgstr "נצפו"
+
+# For Movie (In Hebrew "watched" spelled differently for movies or shows)
+msgctxt "#700013"
+msgid "watched"
+msgstr "נצפה"
+
+msgctxt "#700014"
+msgid "Status"
+msgstr "סטטוס"
+
+# Episode List + Poster View - View_50_List.xml + View_51_Poster.xml:
+
+msgctxt "#700015"
+msgid "Season"
+msgstr "עונה"
+
+msgctxt "#7000151"
+msgid "Seasons"
+msgstr "עונות"
+
+msgctxt "#700016"
+msgid "Episode"
+msgstr "פרק"
+
+msgctxt "#7000161"
+msgid "Episodes"
+msgstr "פרקים"
+
+# Power Button - DialogButtonMenu.xml:
+
+msgctxt "#700017"
+msgid "Reload skin"
+msgstr "רענן סקין"
+
+msgctxt "#700018"
+msgid "Skin settings"
+msgstr "הגדרות סקין"
+
+# FENtastic Search Results Window - Custom_1121_SearchResults.xml:
+
+msgctxt "#700019"
+msgid "Recent searches"
+msgstr "חיפושים אחרונים"
+
+msgctxt "#700020"
+msgid "Search results for"
+msgstr "תוצאות חיפוש עבור"
+
+msgctxt "#700021"
+msgid "Collections"
+msgstr "קולקציית סרטים"
+
+msgctxt "#700022"
+msgid "Actors/Actresses"
+msgstr "שחקנים"
+
+msgctxt "#700023"
+msgid "IMDb Keywords (Movies)"
+msgstr "מילות מפתח IMDb (סרטים)"
+
+msgctxt "#700024"
+msgid "IMDb Keywords (TV Shows)"
+msgstr "מילות מפתח IMDb (סדרות)"
+
+msgctxt "#700025"
+msgid "TRAKT Lists"
+msgstr "רשימות Trakt"
+
+# FENtastic Idan Plus Widgets Menu - script.fentastic.helper - cpath_maker.py
+
+msgctxt "#700026"
+msgid "[B]Idan Plus[/B]"
+msgstr "[B]עידן פלוס[/B]"
+
+# Continue InfoPanel - Status Label Hebrew Translation For TV Shows - Variables.xml
+
+msgctxt "#700027"
+msgid "Returning Series"
+msgstr "משודרת"
+
+msgctxt "#700028"
+msgid "In Production"
+msgstr "בהפקה"
+
+msgctxt "#700029"
+msgid "Planned"
+msgstr "בתכנון"
+
+msgctxt "#700030"
+msgid "Canceled"
+msgstr "בוטלה"
+
+msgctxt "#700031"
+msgid "Ended"
+msgstr "הסתיימה"
+
+# DialogSeekVideoOSD in Player - VideoOSD.XML
+
+# msgctxt "#700032"
+# msgid "Show Seek Steps Window"
+# msgstr "הצג חלון לקפיצות זמן מהירות"
+
+# msgctxt "#700033"
+# msgid "Forward Seek Steps"
+# msgstr "דלג קדימה"
+
+# msgctxt "#700034"
+# msgid "Rewind Seek Steps"
+# msgstr "דלג אחורה"
+
+# msgctxt "#700035"
+# msgid "Mins"
+# msgstr "דקות"
+
+# Zoom Toggle Buttons in Player - VideoOSD.XML
+
+msgctxt "#700036"
+msgid "Show Zoom Toggle Buttons"
+msgstr "הצג כפתורי זום לוידאו"
+
+msgctxt "#700037"
+msgid "IN"
+msgstr "IN"
+
+msgctxt "#700038"
+msgid "OUT"
+msgstr "OUT"
+
+# Episode List - Variables.xml
+
+msgctxt "#700039"
+msgid "Duration"
+msgstr "אורך"
+
+# Player OSD Pause Window - Custom_1122_PlayerPauseWindow.xml
+
+msgctxt "#700040"
+msgid "Paused"
+msgstr "מושהה"
+
+# Player Label Empty While Pausing Pause Window - Custom_1122_PlayerPauseWindow.xml
+
+msgctxt "#700041"
+msgid "Info Not Available"
+msgstr "מידע לא זמין"
+
+# Continue InfoPanel - Variables.xml:
+
+msgctxt "#700042"
+msgid "Age Limit"
+msgstr "הגבלת גיל"
+
+# Idan Plus Channels Button VideoOSD.xml + Custom_1123_IdanPlusChannelsAndRadios.xml
+
+msgctxt "#700043"
+msgid "Idan Plus Channels"
+msgstr "ערוצי עידן"
+
+msgctxt "#700044"
+msgid "Radio Channels"
+msgstr "ערוצי רדיו"
+
+msgctxt "#700045"
+msgid "Idan Plus And Radio Channels"
+msgstr "ערוצי עידן פלוס / ערוצי רדיו"
+
+# ShowPlayerPauseWindow Seting - Custom_1101_SettingsList.xml
+
+msgctxt "#700046"
+msgid "Show information window on playback pause"
+msgstr "הצג חלון מידע בעצירת הניגון"
+
+# Continue FENtastic Search Results Window - Custom_1121_SearchResults.xml:
+
+msgctxt "#700047"
+msgid "[B]Your search history is currently empty. Would you like to perform a new search or return to the home screen?[/B]"
+msgstr "[B]היסטוריית החיפוש שלך ריקה כרגע. האם אתה מעוניין לבצע חיפוש חדש או לחזור למסך הבית?[/B]"
+
+msgctxt "#700048"
+msgid "[B]New search[/B]"
+msgstr "[B]חיפוש חדש[/B]"
+
+msgctxt "#700049"
+msgid "[B]Return to the home screen[/B]"
+msgstr "[B]חזרה למסך הבית[/B]"
+
+# Twilight + DarkSubs Setting / CLear Cache In Power Menu - DialogButtonMenu.xml
+
+msgctxt "#700050"
+msgid "Open Twilight Settings"
+msgstr "הגדרות Twilight"
+
+msgctxt "#700051"
+msgid "Open DarkSubs Settings"
+msgstr "הגדרות DarkSubs"
+
+msgctxt "#700052"
+msgid "Clear Twilight Cache"
+msgstr "ניקוי קאש Twilight"
+
+msgctxt "#700053"
+msgid "Clear DarkSubs Cache"
+msgstr "ניקוי קאש DarkSubs"
+
+# Episodes Playlist Button - VideoOSD.xml
+
+msgctxt "#700054"
+msgid "Episodes List"
+msgstr "רשימת פרקים"
+
+# Twilight Switch Video Source Button - VideoOSD.xml
+
+msgctxt "#700055"
+msgid "Switch Source"
+msgstr "החלף מקור"
+
+# Switch to next Audio track Button - VideoOSD.xml
+
+msgctxt "#700056"
+msgid "Switch Audio track"
+msgstr "החלף ערוץ שמע"
+
+# ChooseSubtitlesButtonOpensKodiWindow Seting - Custom_1101_SettingsList.xml
+
+msgctxt "#700057"
+msgid "\"Choose subtitles\" button opens Kodi window"
+msgstr "\"בחירת כתוביות\" פותח את החלון של קודי"
+
+# Build Switch Skin In Power Menu - DialogButtonMenu.xml
+
+msgctxt "#700058"
+msgid "Switch Skin"
+msgstr "החלף סקין"
+
+# Twilight Next Episode Button - VideoOSD.xml
+
+msgctxt "#700059"
+msgid "Next Episode"
+msgstr "לפרק הבא"
+
+# Kodi Manual Sync Subtitles - VideoOSD.xml
+
+msgctxt "#700060"
+msgid "Sync Subtitles"
+msgstr "סנכרון כתוביות"
+
+# DarkSubs Subtitles Window Button - VideoOSD.xml
+
+msgctxt "#700061"
+msgid "Choose Subtitles (DarkSubs)"
+msgstr "בחירת כתוביות (DarkSubs)"
+
+# Kodi Version - Home.xml
+
+msgctxt "#700062"
+msgid "Kodi Version"
+msgstr "גרסת קודי"
+
+# Kodi Update Check In Power Menu - DialogButtonMenu.xml
+
+msgctxt "#700063"
+msgid "Update Kodi Version"
+msgstr "עדכון גרסת קודי"
+
+# FENtastic Search Results Window - Custom_1121_SearchResults.xml:
+
+msgctxt "#700064"
+msgid "Search provider"
+msgstr "חיפוש דרך"
+
+# InfoPanel - Variables.xml:
+
+msgctxt "#700065"
+msgid "Aired"
+msgstr "שודר לראשונה"
+
+msgctxt "#700066"
+msgid "hr"
+msgstr "שעות"
+
+msgctxt "#700067"
+msgid "mins"
+msgstr "דקות"
+
+#: Show Widget Menu button_focus Border - SkinSettings.xml
+
+msgctxt "#700068"
+msgid "Show widget menu name colored border"
+msgstr "הראה מסגרת בצבע מסביב לשם התפריט"
+
+# Kodi CoreELEC Reboot In Power Menu - DialogButtonMenu.xml
+
+msgctxt "#700069"
+msgid "CoreELEC - Reboot to Android TV"
+msgstr "CoreELEC - ריבוט לאנדרואיד טיוי"
+
+################################################################
