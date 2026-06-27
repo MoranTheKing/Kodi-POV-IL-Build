@@ -3,15 +3,15 @@
   "name": "Kodi POV IL Build",
   "repo": "MoranTheKing/Kodi-POV-IL-Build",
   "release_tag": "addons-latest",
-  "generated": "2026-06-27T22:06:20Z",
+  "generated": "2026-06-27T22:34:24Z",
   "manifest_url": "https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL-Build/main/manifest.json",
   "config": {
-    "config_version": "2.0.3",
-    "filename": "config-2.0.3.zip",
-    "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/config-2.0.3.zip",
-    "size": 27925,
-    "sha256": "949fab3e15f52041f4539d28e60f80910830d12d36e0e09fbd99e5fc5d51dd63",
-    "updated": "2026-06-27T22:06:20Z"
+    "config_version": "2.0.4",
+    "filename": "config-2.0.4.zip",
+    "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/config-2.0.4.zip",
+    "size": 27922,
+    "sha256": "88276cb647b19bed217e4ee19d32c3b45765beb0f748b0ce4eee3597c293f266",
+    "updated": "2026-06-27T22:34:24Z"
   },
   "addons": {
     "plugin.program.autocompletion": {
@@ -39,13 +39,13 @@
     "plugin.program.orderfavourites-hebrew": {
       "id": "plugin.program.orderfavourites-hebrew",
       "name": "מועדפים ואייקונים",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "type": "plugin",
-      "filename": "plugin.program.orderfavourites-hebrew-1.3.0.zip",
-      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.orderfavourites-hebrew-1.3.0.zip",
-      "size": 12877963,
-      "sha256": "c74098b2fdf2a82df4c495ea3483a76df239cdb80b9bda0b6816b7184ab3000e",
-      "updated": "2026-06-27T22:06:20Z"
+      "filename": "plugin.program.orderfavourites-hebrew-1.4.0.zip",
+      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.orderfavourites-hebrew-1.4.0.zip",
+      "size": 12978304,
+      "sha256": "7af763fc0d8443c2ec30538ba6038b4fcf06d56ca61b9ead1769132e35d1fc87",
+      "updated": "2026-06-27T22:34:24Z"
     },
     "repository.Fishenzon": {
       "id": "repository.Fishenzon",
