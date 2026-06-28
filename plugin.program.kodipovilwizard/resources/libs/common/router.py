@@ -180,26 +180,18 @@ class Router:
         elif mode == 'nettools':  # Maintenance -> Misc Maintenance -> Network Tools
             menu.net_tools()
             self._finish(handle)
-        elif mode == 'runspeedtest':  # Maintenance -> Misc Maintenance -> Network Tools -> Speed Test -> Run Speed Test
-            menu.run_speed_test()
-            xbmc.executebuiltin('Container.Refresh()')
-        elif mode == 'clearspeedtest':  # Maintenance -> Misc Maintenance -> Network Tools -> Speed Test -> Clear Results
-            menu.clear_speed_test()
-            xbmc.executebuiltin('Container.Refresh()')
-        elif mode == 'viewspeedtest':  # Maintenance -> Misc Maintenance -> Network Tools -> Speed Test -> any previous test
-            menu.view_speed_test(name)
-            xbmc.executebuiltin('Container.Refresh()')
-        elif mode == 'viewIP':  # Maintenance -> Misc Maintenance -> Network Tools -> View IP Address & MAC Address
+        elif mode == 'viewIP':
             menu.view_ip()
             self._finish(handle)
-        elif mode == 'speedtest': 
-            xbmc.executebuiltin('InstallAddon("script.speedtester")')
-            xbmc.executebuiltin('RunAddon("script.speedtester")')
-        ############KODI-RD-IL##############
-        elif mode == 'build_speed_test': # KODI-RD-IL Real Debrid Speed Test
-            from resources.libs.wizard import build_speed_test
-            build_speed_test()
-        ####################################
+        elif mode == 'rd_speedtest':
+            from resources.libs.wizard import real_debrid_speedtest
+            real_debrid_speedtest()
+        elif mode == 'standard_speedtest':
+            from resources.libs.wizard import standard_speedtest
+            standard_speedtest()
+        elif mode == 'build_speed_test':
+            from resources.libs.wizard import speedtest_dialog
+            speedtest_dialog()
         elif mode == 'apk':  # APK Installer
             menu.apk_menu(url)
             self._finish(handle)

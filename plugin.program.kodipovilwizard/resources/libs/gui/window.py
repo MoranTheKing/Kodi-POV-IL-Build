@@ -212,33 +212,6 @@ def show_apk_warning(apk):
     del popup
 
 
-def show_speed_test(img):
-    class SpeedTest(xbmcgui.WindowXMLDialog):
-
-        def __init__(self, *args, **kwargs):
-            self.imgfile = kwargs['img']
-
-        def onInit(self):
-            self.imagespeed = 101
-            self.button = 201
-            self.show_dialog()
-
-        def show_dialog(self):
-            self.setFocus(self.getControl(self.button))
-            self.getControl(self.imagespeed).setImage(self.imgfile)
-
-        def onClick(self, controlid):
-            self.close()
-
-        def onAction(self, action):
-            if action.getId() in BACK_ACTIONS:
-                self.close()
-
-    popup = SpeedTest('SpeedTest.xml', CONFIG.ADDON_PATH, 'Default', img=img)
-    popup.doModal()
-    del popup
-
-
 def show_save_data_settings():
     class FirstRun(xbmcgui.WindowXMLDialog):
 
