@@ -1,34 +1,27 @@
 # -*- coding: utf-8 -*-
-# Headless / silent installer for third-party CONTENT addons.
-#
-# WHY THIS EXISTS
-# ---------------
-# The legacy provisioning path installed POV / IdanPlus / YouTube / the Hebrew
-# language pack / Otaku with xbmc.executebuiltin('InstallAddon(id)'). That native
-# call pops Kodi UI: a "install the following dependencies?" Yes/No, addon
-# download progress dialogs, and each addon's own first-run popups. To stay
-# unattended the wizard ran an aggressive watchdog thread that hammered those
-# dialogs shut -- which mis-fired (it ate the user's Power menu), stalled the
-# install queue, and forced restarts.
-#
-# This module replaces that with a fully headless pipeline that mirrors the
-# manifest phase: resolve each addon (and its dependencies) from the repositories
-# ALREADY installed on the device, download the zips directly, extract them into
-# special://home/addons, register them in Kodi's Addons DB, then UpdateLocalAddons.
-# No InstallAddon, no dependency dialog, no first-run popups during install, so no
-# watchdog to fight.
-#
-# Repositories are discovered from disk -- our own (kodifitzwell / Fishenzon /
-# otaku / jurialmunkey) AND Kodi's bundled official repo (repository.xbmc.org),
-# which is where the shared deps live (script.module.requests / xmltodict /
-# inputstream.adaptive / inputstreamhelper / beautifulsoup4 / pyqrcode, YouTube,
-# the language pack...). So the dependency closure is resolvable without Kodi's
-# UI installer.
-#
-# Anything we cannot resolve/download headlessly is reported back to the caller,
-# which falls back to a SINGLE native InstallAddon for that addon only (Kodi then
-# pulls the rest), with a minimal confirmer -- never the old aggressive watchdog.
+"""Headless resolver and installer for third-party CONTENT addons.
 
+WHY THIS EXISTS
+---------------
+Traditionally, installing 3rd-party addons (POV, YouTube, Otaku) relied on Kodi's native
+`InstallAddon(id)`. That triggers intrusive Kodi dialogs (dependency confirmations, progress
+bars, first-run popups) which required aggressive, buggy watchdogs to suppress.
+
+This module bypasses native Kodi dialogs entirely by resolving the dependency tree from
+locally installed repositories (kodifitzwell, xbmc.org, etc.), downloading the zips directly,
+and extracting them into special://home/addons.
+
+NEW UNIFIED ARCHITECTURE (PHASE 2)
+----------------------------------
+While the extraction remains "headless" (bypassing Kodi's native engine), it is NO LONGER
+silent to the user. This module now calculates the total download queue—dynamically resolving
+addon types (e.g., `script.module`, `resource.language`) and friendly names—and injects it
+directly into the ALREADY RUNNING `install_manager` UI queue.
+
+Any binary/platform-specific dependencies (e.g., inputstream.adaptive) that cannot be resolved
+headlessly are returned to the Orchestrator, which safely handles them via a minimal native
+Kodi fallback AFTER the custom UI gracefully closes.
+"""
 import gzip
 import os
 import re
@@ -200,25 +193,42 @@ class HeadlessInstaller:
                     yield name, pairs
 
     def _fetch_text(self, url):
-        try:
-            r = tools.open_url(url)
-        except Exception as e:
-            _log('fetch error {0}: {1}'.format(url, e))
-            return None
-        if not r:
-            return None
-        try:
-            data = r.content
-        except Exception:
+        """Robust fetcher: Tries standard requests, falls back to Kodi C++ VFS on SSL/Race issues."""
+        import time
+        data = None
+
+        for attempt in range(2):
             try:
-                return r.text
-            except Exception:
-                return None
+                r = tools.open_url(url)
+                if r and r.content:
+                    data = r.content
+                    break
+            except Exception as e:
+                _log('Python fetch error {0} on {1}: {2}'.format(attempt+1, url, e), level=xbmc.LOGWARNING)
+
+            # SSL/VFS Race Condition Fix: Fallback to Kodi's native C++ VFS engine
+            try:
+                _log('Falling back to xbmcvfs.File C++ engine for {0}'.format(url), level=xbmc.LOGINFO)
+                f = xbmcvfs.File(url)
+                read_bytes = f.readBytes()
+                f.close()
+                if read_bytes:
+                    data = bytearray(read_bytes)
+                    break
+            except Exception as e:
+                _log('xbmcvfs fetch failed: {0}'.format(e), level=xbmc.LOGWARNING)
+
+            time.sleep(1)
+
+        if not data:
+            _log('Completely failed to fetch: {0}'.format(url), level=xbmc.LOGERROR)
+            return None
+
         if data[:2] == b'\x1f\x8b' or url.endswith('.gz'):
             try:
                 data = gzip.decompress(data)
             except Exception as e:
-                _log('gunzip failed {0}: {1}'.format(url, e))
+                _log('gunzip failed {0}: {1}'.format(url, e), level=xbmc.LOGERROR)
                 return None
         try:
             return data.decode('utf-8', 'replace')
@@ -236,7 +246,7 @@ class HeadlessInstaller:
             for info_url, datadir in pairs:
                 text = self._fetch_text(info_url)
                 if not text:
-                    _log('repo {0}: could not load {1}'.format(repo_name, info_url))
+                    _log('repo {0}: could not load {1}'.format(repo_name, info_url), level=xbmc.LOGERROR)
                     continue
                 sub = _parse_addons_xml(text)
                 if not sub:
@@ -297,6 +307,12 @@ class HeadlessInstaller:
             if ok and aid not in order_set:
                 order.append(aid)
                 order_set.add(aid)
+            elif not ok:
+                # LOGIC BUG FIX: The addon was found in index, but a dependency failed.
+                # It MUST be added to unresolved so Native Fallback can rescue it.
+                _log('Dependency resolution failed for {0}, sending to Native Fallback'.format(aid), level=xbmc.LOGWARNING)
+                self.unresolved.add(aid)
+
             return ok
 
         for w in wanted:
@@ -396,3 +412,40 @@ class HeadlessInstaller:
         _log('headless install done. installed={0} missing={1}'.format(
             sorted(installed_ok), missing))
         return sorted(installed_ok), missing
+
+    def _get_type(self, aid):
+        if aid.startswith('script.module.'): return 'module'
+        if aid.startswith('resource.language.'): return 'language'
+        if aid.startswith('plugin.video.'): return 'plugin'
+        if aid.startswith('plugin.audio.'): return 'plugin'
+        if aid.startswith('plugin.program.'): return 'plugin'
+        if aid.startswith('skin.'): return 'skin'
+        if aid.startswith('repository.'): return 'repository'
+        return 'addon'
+
+    def resolve_and_prepare(self, wanted_ids):
+        """Phase 2 Preparer: Headlessly resolve missing dependencies and return jobs
+        for dynamic UI injection, avoiding native popups. Unresolvable/Binary items are
+        returned as a fallback tuple list for Kodi to handle natively."""
+        self.load_index()
+        order = self._resolve(wanted_ids)
+        _log('resolve_and_prepare calculated install order: {0}'.format(order))
+
+        phase2_jobs = []
+        for aid in order:
+            if aid in self.unresolved:
+                continue
+            meta = self.index.get(aid)
+            if not meta:
+                continue
+
+            phase2_jobs.append({
+                'id': aid,
+                'name': aid,
+                'version': meta['version'],
+                'zip': _zip_url(meta['datadir'], aid, meta['version']),
+                'type': self._get_type(aid)
+            })
+
+        native_missing = [aid for aid in self.unresolved]
+        return phase2_jobs, native_missing

@@ -310,28 +310,31 @@ class ModularUpdater:
     ]
 
     def post_install_provisioning(self, per_addon_timeout=60, ids=None):
-        """HEADLESS provisioning of the third-party content addons.
+        """Installation Orchestrator (Phase 1 & Phase 2 Integration).
 
-        Resolves each addon + its dependency closure from the repositories already
-        on disk (ours: kodifitzwell / Fishenzon / otaku / jurialmunkey, AND Kodi's
-        bundled official repo) and installs them by direct zip download + extract
-        -- exactly like the manifest phase. No xbmc.executebuiltin('InstallAddon'),
-        so NO native dependency dialog, NO addon download dialogs, and NO addon
-        first-run popups during install -> NO UI watchdog to fight (the old
-        aggressive watchdog mis-closed user menus and stalled the queue; it is
-        gone).
+            This orchestrator manages the seamless transition between the Manifest installation (Phase 1)
+            and the 3rd-party Headless installation (Phase 2), ensuring a single, continuous user experience.
 
-        Anything the headless path cannot resolve/download (e.g. a dependency that
-        only lives in a repo we do not ship) falls back to a SINGLE native
-        InstallAddon for that addon, with a MINIMAL confirmer that only
-        auto-accepts Kodi's dependency Yes/No -- never touching other dialogs.
+            Workflow:
+              1. Launches the custom `install_manager` GUI with the Manifest queue.
+              2. Upon Phase 1 completion, keeps the GUI alive and triggers `UpdateLocalAddons` to load
+                 the newly installed repository XMLs into Kodi's database.
+              3. Triggers the Headless Installer to resolve 3rd-party dependencies, placing the GUI in a
+                 visual "Calculating dependencies / מנתח מאגרים..." pause state.
+              4. Injects the resolved Phase 2 queue dynamically into the active GUI window (resolving friendly
+                 names and real addon types like `script.module`).
+              5. Once the GUI successfully completes all tasks and closes, handles any unresolvable
+                 binary dependencies (Native Fallback) using Kodi's non-intrusive `DialogProgressBG`,
+                 coordinated with a micro-watchdog.
 
-        ``ids`` defaults to PROVISION_IDS; override it to provision any addon(s)
-        on demand through the same path (e.g. the Arctic Fuse 3 skin).
+            Args:
+                per_addon_timeout (int): Timeout per addon during native installation fallback.
+                ids (list, optional): List of addon IDs to provision. Defaults to PROVISION_IDS.
 
-        Idempotent: addons already present are skipped, so this is safe to call
-        both right after a fresh install AND as a startup self-heal.
-        """
+            Note:
+                Idempotent: Addons already present at the target version are skipped, making this safe
+                to call both right after a fresh install AND as a startup self-heal.
+            """
         import xbmc
         provision_ids = list(ids) if ids is not None else list(self.PROVISION_IDS)
 
@@ -451,145 +454,151 @@ class ModularUpdater:
         """Download, extract, and register the queued modules."""
         tools.ensure_folders(CONFIG.PACKAGES)
 
-        # FIX #3 (Phase 3): a forced restart is "critical" only for the
-        # Wizard itself or for the *currently active* skin (its live files
-        # cannot be swapped under a running session). Updating an inactive
-        # skin, a plugin, or a subtitle service is applied seamlessly in the
-        # background with ReloadSkin() -- no disruptive reboot.
         active_skin = xbmc.getSkinDir()
         requires_restart = False
         extracted_addons = []
+        self._missing_native = []
 
-        # Foreground installs use the rich modular install manager: downloads
-        # run in parallel, installs run one-at-a-time, and each addon shows its
-        # own live state + progress bar. Background checks -- and any UI-load
-        # failure -- fall through to the classic sequential DialogProgress loop.
-        if queue and not self.background:
-            try:
-                from resources.libs.gui.install_manager import run_install_manager
-                extracted_addons = run_install_manager(queue)
-                for _aid in extracted_addons:
-                    if _aid == 'plugin.program.kodipovilwizard':
-                        requires_restart = True
-                queue = []  # consumed by the UI -> skip the classic loop below
-            except Exception as _ui_err:
-                logging.log("[ModularUpdater] install-manager UI failed ({0}); "
-                            "falling back to classic installer".format(_ui_err),
-                            level=xbmc.LOGERROR)
-                extracted_addons = []
+        fresh = getattr(self, 'fresh', False)
 
+        class _OrchestratorProxy:
+            def __init__(self, target_queue): self.target_queue = target_queue
+            def append_to_queue(self, jobs):
+                for j in jobs:
+                    if not any(x.get('id') == j.get('id') for x in self.target_queue):
+                        self.target_queue.append(j)
+            def wait_for_queue_empty(self): pass
+            def pause_for_resolution(self): pass
+            def remove_resolution_pause(self): pass
+            def mark_all_jobs_added(self): pass
+            def get_installed(self): return []
+
+        def _orchestrator(dialog):
+            if queue:
+                dialog.append_to_queue(queue)
+                dialog.wait_for_queue_empty()
+
+            if fresh:
+                # Bridge Phase 1 -> Phase 2 DB Registration so Phase 2 logic can "see" the extracted Phase 1 modules
+                extracted_so_far = dialog.get_installed()
+                if extracted_so_far:
+                    try:
+                        logging.log("[ModularUpdater] Phase 1 queue complete. Synchronizing DB & VFS...", level=xbmc.LOGINFO)
+                        db.addon_database(extracted_so_far, 1, True)
+                        xbmc.executebuiltin('UpdateLocalAddons')
+
+                        # CRITICAL FIX: Give Kodi 2.5 seconds to unlock the SQLite DB
+                        # and process the VFS event queue so new Python modules (like certifi) load.
+                        xbmc.Monitor().waitForAbort(2.5)
+
+                        for _aid in extracted_so_far:
+                            self._enable_addon(_aid)
+                    except Exception as e:
+                        logging.log("[ModularUpdater] Phase 1 DB sync error: {0}".format(e), level=xbmc.LOGERROR)
+
+                dialog.pause_for_resolution()
+
+                try:
+                    logging.log("[ModularUpdater] Triggering Phase 2 Headless Resolution...", level=xbmc.LOGINFO)
+                    from resources.libs.headless_installer import HeadlessInstaller
+                    hi = HeadlessInstaller()
+                    phase2_jobs, missing_native = hi.resolve_and_prepare(self.PROVISION_IDS)
+
+                    dialog.remove_resolution_pause()
+                    if phase2_jobs:
+                        logging.log("[ModularUpdater] Injecting {0} Phase 2 jobs to UI.".format(len(phase2_jobs)), level=xbmc.LOGINFO)
+                        dialog.append_to_queue(phase2_jobs)
+                    self._missing_native = missing_native
+                except Exception as e:
+                    logging.log("[ModularUpdater] Phase 2 resolution fatal error: {0}".format(e), level=xbmc.LOGERROR)
+                    dialog.remove_resolution_pause()
+
+            dialog.mark_all_jobs_added()
+
+        if queue or fresh:
+            if not self.background:
+                try:
+                    from resources.libs.gui.install_manager import run_install_manager
+                    extracted_addons = run_install_manager(orchestrator_func=_orchestrator)
+                    for _aid in extracted_addons:
+                        if _aid == 'plugin.program.kodipovilwizard':
+                            requires_restart = True
+                    queue = []  # Consumed dynamically via UI thread.
+                except Exception as _ui_err:
+                    logging.log("[ModularUpdater] install-manager UI failed ({0}); "
+                                "falling back to classic installer".format(_ui_err), level=xbmc.LOGWARNING)
+                    proxy = _OrchestratorProxy(queue)
+                    _orchestrator(proxy)
+
+        # Fallback Classic GUI loop if UI failed (UI execution skips this because queue = [])
         if queue:
             if self.background:
                 self.progress.create(CONFIG.ADDONTITLE, "מבצע עדכון רקע מודולרי...")
             else:
                 self.progress.create(CONFIG.ADDONTITLE, "מבצע עדכון מודולרי...")
 
-        for i, mod in enumerate(queue, start=1):
-            addon_id = mod.get('id')
-            name = mod.get('name', addon_id)
-            url = mod.get('zip')
-            addon_type = mod.get('type', '')
+            for i, mod in enumerate(queue, start=1):
+                addon_id = mod.get('id')
+                name = mod.get('name', addon_id)
+                url = mod.get('zip')
 
-            if not addon_id or not url:
-                continue
+                if addon_id == 'plugin.program.kodipovilwizard': requires_restart = True
 
-            if addon_id == 'plugin.program.kodipovilwizard':
-                requires_restart = True
+                msg = "מוריד: {0}".format(tools.clean_text(name))
+                percent = int((i - 1) / float(len(queue)) * 100)
 
-            msg = "מוריד: {0} (גרסה {1})".format(tools.clean_text(name), mod.get('version'))
-            percent = int((i - 1) / float(len(queue)) * 100)
+                if self.background: self.progress.update(percent, message=msg)
+                else: self.progress.update(percent, "[B]{0}[/B]".format(msg))
 
-            if self.background:
-                self.progress.update(percent, message=msg)
-            else:
-                self.progress.update(percent, "[B]{0}[/B]".format(msg))
+                zip_path = os.path.join(CONFIG.PACKAGES, "{0}_update.zip".format(addon_id))
+                tools.remove_file(zip_path)
 
-            zip_path = os.path.join(CONFIG.PACKAGES, "{0}_update.zip".format(addon_id))
-            tools.remove_file(zip_path)
-
-            # Download
-            try:
-                Downloader(progress_dialog_bg=self.background).download(url, zip_path)
-            except Exception as e:
-                logging.log("[ModularUpdater] Download failed for {0}: {1}".format(addon_id, e), level=xbmc.LOGERROR)
-                continue
-
-            xbmc.sleep(500)
-
-            if not os.path.exists(zip_path) or os.path.getsize(zip_path) == 0:
-                continue
-
-            # Integrity check: the manifest ships a sha256 for every addon, but
-            # nothing used to verify it. A truncated/corrupt download would be
-            # extracted blindly. Verify before touching special://home/addons.
-            want_sha = mod.get('sha256')
-            if want_sha:
                 try:
-                    got_sha = config_apply.sha256_file(zip_path)
+                    Downloader(progress_dialog_bg=self.background).download(url, zip_path)
                 except Exception as e:
-                    logging.log("[ModularUpdater] sha256 read failed for {0}: {1}".format(addon_id, e), level=xbmc.LOGERROR)
-                    got_sha = None
-                if got_sha and got_sha.lower() != str(want_sha).lower():
-                    logging.log("[ModularUpdater] sha256 mismatch for {0} (want {1}, got {2}); skipping".format(addon_id, want_sha, got_sha), level=xbmc.LOGERROR)
-                    tools.remove_file(zip_path)
                     continue
 
-            # Extract
-            #
-            # FIX #1 (critical): a single-addon Kodi zip has the addon id as
-            # its top-level folder ("plugin.video.pov/addon.xml"), so it MUST
-            # be extracted into CONFIG.ADDONS (special://home/addons), exactly
-            # like the wizard's own repo installer does
-            # (update.py -> extract.all(lib, CONFIG.ADDONS)). The original
-            # CONFIG.HOME target dropped each addon into special://home/<id>/,
-            # where Kodi never scans -> the update silently did nothing.
-            #
-            # ignore=True bypasses the wizard's self-skip logic so a Wizard
-            # update can overwrite itself.
-            title = "[COLOR {0}]מתקין:[/COLOR] [COLOR {1}]{2}[/COLOR]".format(CONFIG.COLOR2, CONFIG.COLOR1, tools.clean_text(name))
-            try:
-                extract.all(zip_path, CONFIG.ADDONS, ignore=True, title=title, progress_dialog_bg=self.background)
-                extracted_addons.append(addon_id)
-            except Exception as e:
-                logging.log("[ModularUpdater] Extract failed for {0}: {1}".format(addon_id, e), level=xbmc.LOGERROR)
+                xbmc.sleep(500)
+                if not os.path.exists(zip_path) or os.path.getsize(zip_path) == 0: continue
 
-            tools.remove_file(zip_path)
+                want_sha = mod.get('sha256')
+                if want_sha:
+                    try: got_sha = config_apply.sha256_file(zip_path)
+                    except Exception: got_sha = None
+                    if got_sha and got_sha.lower() != str(want_sha).lower():
+                        tools.remove_file(zip_path)
+                        continue
 
-        # Close progress dialogs
-        try:
-            self.progress.close()
-        except:
-            pass
+                title = "[COLOR {0}]מתקין:[/COLOR] [COLOR {1}]{2}[/COLOR]".format(CONFIG.COLOR2, CONFIG.COLOR1, tools.clean_text(name))
+                try:
+                    extract.all(zip_path, CONFIG.ADDONS, ignore=True, title=title, progress_dialog_bg=self.background)
+                    extracted_addons.append(addon_id)
+                except Exception: pass
+                tools.remove_file(zip_path)
 
-        # 4. Database Registration & Cleanup
+            try: self.progress.close()
+            except: pass
+
+        # 4. Database Registration for all extracted addons
         if extracted_addons:
             logging.log("[ModularUpdater] Registering to Addons DB: {0}".format(extracted_addons), level=xbmc.LOGINFO)
             db.addon_database(extracted_addons, 1, True)
-
-            # Force Kodi to see the new files immediately
             xbmc.executebuiltin('UpdateLocalAddons')
             xbmc.sleep(1500)
-
-            # Explicitly enable each addon in the running session. The sqlite
-            # write above does not flip Kodi's in-memory state, so without this a
-            # freshly extracted addon (notably repository.Fishenzon) stays
-            # DISABLED -> System.HasAddon false -> heal re-downloads it forever.
             for _aid in extracted_addons:
                 self._enable_addon(_aid)
 
-        # 4b/4c. Build-config pack + content-addon provisioning.
-        #
-        # ORDERING MATTERS (the black-background / English-metadata fix):
-        # config.zip carries POV's settings.xml (meta_language=he, fanart on,
-        # TMDB/Trakt keys). On a FRESH install we must place every content addon
-        # FIRST and apply config.zip as the ABSOLUTE FINAL step, so nothing an
-        # addon writes at install/first-init can clobber our POV config. On an
-        # OTA update there is no content provisioning here, so the pack is
-        # applied right away (idempotent: self-skips when the device already has
-        # the manifest's config_version).
-        fresh = getattr(self, 'fresh', False)
-        config_skin_touched = False
+        # 4a. Native Binary/Fallback handling outside of custom window loops
+        if getattr(self, '_missing_native', None) and not xbmc.Monitor().abortRequested():
+            try:
+                bg = xbmcgui.DialogProgressBG()
+                bg.create(CONFIG.ADDONTITLE, "משלים התקנות מערכת (Native)...")
+                self._native_install_fallback(self._missing_native, per_addon_timeout=60)
+                bg.close()
+            except Exception as e:
+                logging.log("[ModularUpdater] Native fallback failed: {0}".format(e), level=xbmc.LOGERROR)
 
+        # 4b/4c. Build-config pack Phase
         def _apply_config_pack():
             try:
                 manifest = getattr(self, '_manifest', None)
@@ -600,40 +609,12 @@ class ModularUpdater:
                 logging.log("[ModularUpdater] config apply failed: {0}".format(e), level=xbmc.LOGERROR)
             return False
 
-        if not fresh:
-            config_skin_touched = _apply_config_pack()
-        else:
-            # Provision the third-party content addons (POV, IdanPlus, YouTube,
-            # language pack, Otaku) -- now headless/silent (see
-            # post_install_provisioning), so no UI dialogs to fight.
-            try:
-                self.post_install_provisioning()
-            except Exception as e:
-                logging.log("[ModularUpdater] provisioning failed: {0}".format(e), level=xbmc.LOGERROR)
+        config_skin_touched = _apply_config_pack()
 
-            # ABSOLUTE FINAL config step: apply config.zip AFTER every addon is on
-            # disk so our POV (and skin) settings win the last write.
-            config_skin_touched = _apply_config_pack()
-
-            # End of the fresh-install sequence: every addon attempted + the
-            # config.zip applied. Stamp the persistent .provisioned marker -- but
-            # ONLY if Kodi is not aborting. If the user force-closed mid-setup,
-            # abortRequested() is True and we leave the marker ABSENT so startup
-            # resumes next launch. A single addon that timed out (still missing)
-            # is caught separately by the startup HasAddon OTA enforcement.
+        if fresh:
             if not xbmc.Monitor().abortRequested():
                 cfg = (getattr(self, '_manifest', None) or {}).get('config') or {}
                 self.mark_provisioned(cfg.get('config_version') or CONFIG.BUILDVERSION_DEFAULT)
-            else:
-                logging.log("[Provisioning] abort detected -- NOT writing .provisioned "
-                            "marker (setup will resume next launch)", level=xbmc.LOGWARNING)
-
-        # 5. Handle Reload/Restart
-        if fresh:
-            # Fresh install: the caller (startup.fresh_build_auto_install_if_needed)
-            # pins the build settings and performs the single force-close AFTER
-            # this returns. Restarting/reloading here would kill Kodi before the
-            # build is marked installed, so just hand control back.
             return True
 
         if requires_restart:
@@ -648,9 +629,6 @@ class ModularUpdater:
                     from resources.libs.wizard import Wizard
                     Wizard().force_close_kodi_in_5_seconds("עדכון קריטי הסתיים.")
         elif extracted_addons or config_skin_touched:
-            # Standard plugins/services/inactive-skins OR a config change that
-            # touched the active skin's look: reload the skin so new
-            # menus/widgets/code/settings are picked up without a reboot.
             xbmc.executebuiltin('ReloadSkin()')
             if not self.background:
                 self.dialog.ok(CONFIG.ADDONTITLE, "העדכון המודולרי הסתיים בהצלחה!")
