@@ -65,10 +65,6 @@ APK_DOWNLOADER_CODE = ''
 APK_DOWNLOADER_CODE_IMAGE_URL = 'https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL/main/wizard/assets/kodi_version_auto_update/apk/apk_downloader_code.png'
 #########################################################
 
-# Text File with Youtube Videos urls.  Leave as 'http://' to ignore
-YOUTUBETITLE = ''
-YOUTUBEFILE = 'http://'
-# Text File for addon installer.  Leave as 'http://' to ignore
 ADDONFILE = 'http://'
 # Text File for advanced settings.  Leave as 'http://' to ignore
 ADVANCEDFILE = 'http://'
@@ -88,7 +84,6 @@ ICONMAINT = os.path.join(CUSTOM_ART, 'wizard.jpg')
 ICONSPEED = os.path.join(CUSTOM_ART, 'wizard.jpg')
 ICONAPK = os.path.join(CUSTOM_ART, 'wizard.jpg')
 ICONADDONS = os.path.join(CUSTOM_ART, 'wizard.jpg')
-ICONYOUTUBE = os.path.join(CUSTOM_ART, 'wizard.jpg')
 ICONSAVE = os.path.join(CUSTOM_ART, 'wizard.jpg')
 ICONTRAKT = os.path.join(CUSTOM_ART, 'wizard.jpg')
 ICONREAL = os.path.join(CUSTOM_ART, 'wizard.jpg')

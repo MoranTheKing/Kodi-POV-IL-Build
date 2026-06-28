@@ -77,7 +77,7 @@ def check_build(name, ret):
     #   - 'version' -> the canonical build version (BUILDVERSION_DEFAULT)
     #   - 'kodi'    -> the RUNNING Kodi major, so the build() version-mismatch
     #                  warning can never fire
-    #   - 'url'/'gui'/'theme'/'minor'/'preview'/'info' -> '' (nothing to download)
+    #   - 'url'/'gui'/'theme'/'minor'/'info' -> '' (nothing to download)
     #   - 'icon'/'fanart' -> the build splash, for the menus
     version = getattr(CONFIG, 'BUILDVERSION_DEFAULT', None) or getattr(CONFIG, 'BUILDVERSION', '') or '0.0.0'
     try:
@@ -94,7 +94,6 @@ def check_build(name, ret):
         'theme': '',        # themes retired with build.txt
         'icon': splash,
         'fanart': splash,
-        'preview': '',
         'adult': 'no',
         'info': '',
         'description': getattr(CONFIG, 'ADDONTITLE', name),
@@ -102,7 +101,7 @@ def check_build(name, ret):
     if ret == 'all':
         return (name, fields['version'], fields['url'], fields['minor'], fields['gui'],
                 fields['kodi'], fields['theme'], fields['icon'], fields['fanart'],
-                fields['preview'], fields['adult'], fields['info'], fields['description'])
+                fields['adult'], fields['info'], fields['description'])
     return fields.get(ret, '')
 
 
