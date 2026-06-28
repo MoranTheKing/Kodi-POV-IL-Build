@@ -501,9 +501,6 @@ class Router:
             xbmc.executebuiltin('Container.Refresh()')
 
         # DEVELOPER MENU
-        elif mode == 'createqr':  # Developer Menu -> Create QR Code
-            from resources.libs import qr
-            qr.create_code()
         elif mode == 'testnotify':  # Developer Menu -> Test Notify
             from resources.libs import test
             test.test_notify()
