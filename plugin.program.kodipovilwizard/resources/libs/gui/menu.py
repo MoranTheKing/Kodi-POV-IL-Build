@@ -597,7 +597,6 @@ def change_freq():
 
 
 def developer():
-    directory.add_file('Create QR Code', {'mode': 'createqr'}, themeit=CONFIG.THEME1)
     directory.add_file('Test Notifications', {'mode': 'testnotify'}, themeit=CONFIG.THEME1)
     directory.add_file('Test Update', {'mode': 'testupdate'}, themeit=CONFIG.THEME1)
     directory.add_file('Test Build Prompt', {'mode': 'testbuildprompt'}, themeit=CONFIG.THEME1)
