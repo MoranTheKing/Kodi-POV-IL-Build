@@ -94,9 +94,6 @@ class Router:
         elif mode == 'buildinfo':  # Builds -> Build Info
             from resources.libs.gui.build_menu import BuildMenu
             BuildMenu().build_info(name)
-        elif mode == 'buildpreview':  # Builds -> Build Preview
-            from resources.libs.gui.build_menu import BuildMenu
-            BuildMenu().build_video(name)
         elif mode == 'install':  # Builds -> Fresh Install/Standard Install/Apply guifix
             from resources.libs.wizard import Wizard
 
@@ -209,12 +206,6 @@ class Router:
         elif mode == 'savedata':  # Save Data + Builds -> Save Data Menu
             menu.save_menu()
             self._finish(handle)
-        elif mode == 'youtube':  # "YouTube Section"
-            menu.youtube_menu(url)
-            self._finish(handle)
-        elif mode == 'viewVideo':  # View  Video
-            from resources.libs import yt
-            yt.play_video(url)
         elif mode == 'trakt':  # Save Data -> Keep Trakt Data
             menu.trakt_menu()
             self._finish(handle)

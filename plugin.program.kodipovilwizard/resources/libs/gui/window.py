@@ -153,39 +153,6 @@ def show_contact(msg=""):
     cw.doModal()
     del cw
 
-
-def show_qr_code(layout, imagefile, message):
-    class QRCode(xbmcgui.WindowXMLDialog):
-        def __init__(self, *args, **kwargs):
-            self.image = kwargs["image"]
-            self.text = kwargs["text"]
-
-        def onInit(self):
-            self.imagecontrol = 501
-            self.textbox = 502
-            self.okbutton = 503
-            self.title = 504
-            self.show_dialog()
-
-        def show_dialog(self):
-            self.getControl(self.imagecontrol).setImage(self.image)
-            self.getControl(self.textbox).setText(self.text)
-            self.getControl(self.title).setLabel(CONFIG.ADDONTITLE)
-            self.setFocus(self.getControl(self.okbutton))
-
-        def onClick(self, controlid):
-            if controlid == self.okbutton:
-                self.close()
-
-        def onAction(self, action):
-            if action.getId() in BACK_ACTIONS:
-                self.close()
-
-    qr = QRCode(layout, CONFIG.ADDON_PATH, 'Default', image=imagefile, text=message)
-    qr.doModal()
-    del qr
-
-
 def show_apk_warning(apk):
     class APKInstaller(xbmcgui.WindowXMLDialog):
 

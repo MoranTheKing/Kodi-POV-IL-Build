@@ -68,8 +68,6 @@ class Config:
         self.APK_DOWNLOADER_CODE = uservar.APK_DOWNLOADER_CODE
         self.APK_DOWNLOADER_CODE_IMAGE_URL = uservar.APK_DOWNLOADER_CODE_IMAGE_URL
         ###################################
-        self.YOUTUBETITLE = uservar.YOUTUBETITLE
-        self.YOUTUBEFILE = uservar.YOUTUBEFILE
         self.ADDONFILE = uservar.ADDONFILE
         self.ADVANCEDFILE = uservar.ADVANCEDFILE
 
@@ -79,7 +77,6 @@ class Config:
         self.ICONSPEED = uservar.ICONSPEED if not uservar.ICONSPEED.endswith('://') else self.ADDON_ICON
         self.ICONAPK = uservar.ICONAPK if not uservar.ICONAPK.endswith('://') else self.ADDON_ICON
         self.ICONADDONS = uservar.ICONADDONS if not uservar.ICONADDONS.endswith('://') else self.ADDON_ICON
-        self.ICONYOUTUBE = uservar.ICONYOUTUBE if not uservar.ICONYOUTUBE.endswith('://') else self.ADDON_ICON
         self.ICONSAVE = uservar.ICONSAVE if not uservar.ICONSAVE.endswith('://') else self.ADDON_ICON
         self.ICONTRAKT = uservar.ICONTRAKT if not uservar.ICONTRAKT.endswith('://') else self.ADDON_ICON
         self.ICONDEBRID = uservar.ICONREAL if not uservar.ICONREAL.endswith('://') else self.ADDON_ICON

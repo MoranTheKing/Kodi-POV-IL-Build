@@ -394,29 +394,6 @@ def copy_to_clipboard(txt):
 # Python 3.14 removed entirely). The class had no other callers.
 
 
-def show_result(message, url=None):
-    from resources.libs.gui import window
-
-    dialog = xbmcgui.Dialog()
-
-    if url:
-        try:
-            from resources.libs import qr
-            
-            fn = url.split('/')[-2]
-            imagefile = qr.generate_code(url, fn)
-            window.show_qr_code("loguploader.xml", imagefile, message)
-            try:
-                os.remove(imagefile)
-            except:
-                pass
-        except Exception as e:
-            log(str(e), xbmc.LOGINFO)
-            confirm = dialog.ok(CONFIG.ADDONTITLE, "[COLOR %s]%s[/COLOR]" % (CONFIG.COLOR2, message))
-    else:
-        confirm = dialog.ok(CONFIG.ADDONTITLE, "[COLOR %s]%s[/COLOR]" % (CONFIG.COLOR2, message))
-
-
 def view_log_file():
     from resources.libs.gui import window
 
