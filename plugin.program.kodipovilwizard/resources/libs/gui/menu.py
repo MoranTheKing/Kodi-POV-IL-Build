@@ -104,34 +104,6 @@ def apk_menu(url=None):
         logging.log("[APK Menu] No APK list added.")
 
 
-def youtube_menu(url=None):
-    from resources.libs.common import logging
-    from resources.libs.common import tools
-
-    response = tools.open_url(CONFIG.YOUTUBEFILE)
-    url_response = tools.open_url(url)
-
-    if response:
-        TEMPYOUTUBEFILE = url_response.text if url else response.text
-
-        if TEMPYOUTUBEFILE:
-            link = TEMPYOUTUBEFILE.replace('\n', '').replace('\r', '').replace('\t', '')
-            match = re.compile('name="(.+?)".+?ection="(.+?)".+?rl="(.+?)".+?con="(.+?)".+?anart="(.+?)".+?escription="(.+?)"').findall(link)
-            if len(match) > 0:
-                for name, section, url, icon, fanart, description in match:
-                    if section.lower() == "yes":
-                        directory.add_dir("[B]{0}[/B]".format(name), {'mode': 'youtube', 'name': name, 'url': url}, description=description, icon=icon, fanart=fanart, themeit=CONFIG.THEME3)
-                    else:
-                        directory.add_file(name, {'mode': 'viewVideo', 'url': url}, description=description, icon=icon, fanart=fanart, themeit=CONFIG.THEME2)
-            else:
-                logging.log("[YouTube Menu] ERROR: Invalid Format.")
-        else:
-            logging.log("[YouTube Menu] ERROR: URL for YouTube list not working.")
-            directory.add_file('Url for txt file not valid', themeit=CONFIG.THEME3)
-            directory.add_file('{0}'.format(CONFIG.YOUTUBEFILE), themeit=CONFIG.THEME3)
-    else:
-        logging.log("[YouTube Menu] No YouTube list added.")
-
 #########################################NET TOOLS#############################################
 
 

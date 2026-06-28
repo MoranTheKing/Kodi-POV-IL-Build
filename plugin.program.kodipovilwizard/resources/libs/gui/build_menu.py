@@ -138,11 +138,6 @@ class BuildMenu:
 
         window.show_text_box("Viewing Build Info: {0}".format(name), msg)
 
-    def build_video(self, name):
-        # KODI-POV-IL - video previews were a build.txt feature and are retired.
-        from resources.libs.common import logging
-        logging.log("[{0}] No video preview (build.txt retired)".format(name))
-
     def create_install_menu(self, name):
         menu_items = []
 
