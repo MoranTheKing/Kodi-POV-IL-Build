@@ -136,83 +136,74 @@ def youtube_menu(url=None):
 
 
 def net_tools():
+    # 1. Real Debrid Speed Test
+    directory.add_dir('Real Debrid בדיקת מהירות', {'mode': 'rd_speedtest'}, icon=CONFIG.ICONSPEED, themeit=CONFIG.THEME1)
 
-    ##############################################################################################
-    # KODI-RD-IL
-    directory.add_dir('Real Debrid בדיקת מהירות', {'mode': 'build_speed_test'}, icon=CONFIG.ICONSPEED, themeit=CONFIG.THEME1)
-    ##############################################################################################
-    
-    directory.add_dir('Speed Test', {'mode': 'speedtest'}, icon=CONFIG.ICONSPEED, themeit=CONFIG.THEME1)
+    # 2. Kodi Speed Test
+    directory.add_dir('Speed Test', {'mode': 'standard_speedtest'}, icon=CONFIG.ICONSPEED, themeit=CONFIG.THEME1)
+
     if CONFIG.HIDESPACERS == 'No':
         directory.add_separator()
-    directory.add_dir('View IP Address & MAC Address', {'mode': 'viewIP'}, icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME1)
+
+    # 3. View IP
+    if CONFIG.HIDESPACERS == 'No':
+        directory.add_separator()
+    directory.add_dir('View IP & MAC Address Details', {'mode': 'viewIP'}, icon=CONFIG.ICONSPEED, themeit=CONFIG.THEME1)
+
+def get_external_ip_info():
+    import json
+    import urllib.request
+    from resources.libs.common import logging
+
+    info = {
+        'ip': 'Unknown',
+        'city': 'Unknown',
+        'state': 'Unknown',
+        'country': 'Unknown',
+        'isp': 'Unknown'
+    }
+
+    try:
+        req = urllib.request.Request('http://ip-api.com/json', headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=5) as response:
+            geo = json.loads(response.read().decode('utf-8'))
+
+        if geo.get('status') == 'success':
+            info['ip'] = geo.get('query', 'Unknown')
+            info['isp'] = geo.get('isp', 'Unknown')
+            info['city'] = geo.get('city', 'Unknown')
+            info['country'] = geo.get('country', 'Unknown')
+            info['state'] = geo.get('regionName', 'Unknown')
+    except Exception as e:
+        logging.log(f"External IP Check Failed: {e}")
+
+    return info
 
 
 def view_ip():
-    from resources.libs import speedtest
-
-    mac, inter_ip, ip, city, state, country, isp = speedtest.net_info()
-    directory.add_file('[COLOR {0}]MAC:[/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, mac), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
-    directory.add_file('[COLOR {0}]Internal IP: [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, inter_ip), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
-    directory.add_file('[COLOR {0}]External IP:[/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, ip), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
-    directory.add_file('[COLOR {0}]City:[/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, city), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
-    directory.add_file('[COLOR {0}]State:[/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, state), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
-    directory.add_file('[COLOR {0}]Country:[/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, country), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
-    directory.add_file('[COLOR {0}]ISP:[/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, isp), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
-
-
-def speed_test():
-    from datetime import date
-
-    directory.add_file('Run Speed Test', {'mode': 'speedtest'}, icon=CONFIG.ICONSPEED, themeit=CONFIG.THEME3)
-    if os.path.exists(CONFIG.SPEEDTEST):
-        speedimg = glob.glob(os.path.join(CONFIG.SPEEDTEST, '*.png'))
-        speedimg.sort(key=lambda f: os.path.getmtime(f), reverse=True)
-        if len(speedimg) > 0:
-            directory.add_file('Clear Results', {'mode': 'clearspeedtest'}, icon=CONFIG.ICONSPEED, themeit=CONFIG.THEME3)
-            directory.add_separator('Previous Runs', icon=CONFIG.ICONSPEED, themeit=CONFIG.THEME3)
-            for item in speedimg:
-                created = date.fromtimestamp(os.path.getmtime(item)).strftime('%m/%d/%Y %H:%M:%S')
-                img = item.replace(os.path.join(CONFIG.SPEEDTEST, ''), '')
-                directory.add_file('[B]{0}[/B]: [I]Ran {1}[/I]'.format(img, created), {'mode': 'viewspeedtest', 'name': img}, icon=CONFIG.ICONSPEED, themeit=CONFIG.THEME3)
-
-
-def clear_speed_test():
     from resources.libs.common import tools
 
-    speedimg = glob.glob(os.path.join(CONFIG.SPEEDTEST, '*.png'))
-    for file in speedimg:
-        tools.remove_file(file)
+    # 1. Get Local IP and MAC using Kodi Built-ins
+    inter_ip = tools.get_info_label('Network.IPAddress') or 'Unknown'
+    mac = tools.get_info_label('Network.MacAddress') or 'Unknown'
 
+    # 2. Get External IP and Geo-location
+    geo = get_external_ip_info()
 
-def view_speed_test(img=None):
-    from resources.libs.gui import window
-
-    img = os.path.join(CONFIG.SPEEDTEST, img)
-    window.show_speed_test(img)
-
-
-def run_speed_test():
-    from resources.libs.common import logging
-    from resources.libs import speedtest
-
-    try:
-        found = speedtest.speedtest()
-        if not os.path.exists(CONFIG.SPEEDTEST):
-            os.makedirs(CONFIG.SPEEDTEST)
-        urlsplits = found[0].split('/')
-        dest = os.path.join(CONFIG.SPEEDTEST, urlsplits[-1])
-        urlretrieve(found[0], dest)
-        view_speed_test(urlsplits[-1])
-    except Exception as e:
-        logging.log("[Speed Test] Error Running Speed Test: {0}".format(e), level=xbmc.LOGDEBUG)
-        pass
+    # 3. Draw the menu
+    directory.add_file(f'[COLOR {CONFIG.COLOR1}]MAC:[/COLOR] [COLOR {CONFIG.COLOR2}]{mac}[/COLOR]', icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
+    directory.add_file(f'[COLOR {CONFIG.COLOR1}]Internal IP:[/COLOR] [COLOR {CONFIG.COLOR2}]{inter_ip}[/COLOR]', icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
+    directory.add_file(f'[COLOR {CONFIG.COLOR1}]External IP:[/COLOR] [COLOR {CONFIG.COLOR2}]{geo["ip"]}[/COLOR]', icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
+    directory.add_file(f'[COLOR {CONFIG.COLOR1}]City:[/COLOR] [COLOR {CONFIG.COLOR2}]{geo["city"]}[/COLOR]', icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
+    directory.add_file(f'[COLOR {CONFIG.COLOR1}]State:[/COLOR] [COLOR {CONFIG.COLOR2}]{geo["state"]}[/COLOR]', icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
+    directory.add_file(f'[COLOR {CONFIG.COLOR1}]Country:[/COLOR] [COLOR {CONFIG.COLOR2}]{geo["country"]}[/COLOR]', icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
+    directory.add_file(f'[COLOR {CONFIG.COLOR1}]ISP:[/COLOR] [COLOR {CONFIG.COLOR2}]{geo["isp"]}[/COLOR]', icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
 
 
 def system_info():
+    import os, glob, re
     from resources.libs.common import logging
     from resources.libs.common import tools
-    from resources.libs import speedtest
 
     infoLabel = ['System.FriendlyName', 'System.BuildVersion', 'System.CpuUsage', 'System.ScreenMode',
                  'Network.IPAddress', 'Network.MacAddress', 'System.Uptime', 'System.TotalUptime', 'System.FreeSpace',
@@ -289,15 +280,20 @@ def system_info():
     directory.add_file('[COLOR {0}]Free Memory:[/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, ram_used), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
     directory.add_file('[COLOR {0}]Total Memory:[/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, ram_total), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
 
-    mac, inter_ip, ip, city, state, country, isp = speedtest.net_info()
+    # --- REPLACED SPEEDTEST.PY LOGIC WITH LIGHTWEIGHT WEB CALL ---
+    inter_ip = data[4] if data[4] else 'Unknown'
+    mac = data[5] if data[5] else 'Unknown'
+    geo = get_external_ip_info()
+    # -------------------------------------------------------------
+
     directory.add_file('[B]Network:[/B]', icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
     directory.add_file('[COLOR {0}]Mac:[/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, mac), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
     directory.add_file('[COLOR {0}]Internal IP: [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, inter_ip), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
-    directory.add_file('[COLOR {0}]External IP:[/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, ip), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
-    directory.add_file('[COLOR {0}]City:[/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, city), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
-    directory.add_file('[COLOR {0}]State:[/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, state), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
-    directory.add_file('[COLOR {0}]Country:[/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, country), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
-    directory.add_file('[COLOR {0}]ISP:[/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, isp), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
+    directory.add_file('[COLOR {0}]External IP:[/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, geo['ip']), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
+    directory.add_file('[COLOR {0}]City:[/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, geo['city']), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
+    directory.add_file('[COLOR {0}]State:[/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, geo['state']), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
+    directory.add_file('[COLOR {0}]Country:[/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, geo['country']), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
+    directory.add_file('[COLOR {0}]ISP:[/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR1, CONFIG.COLOR2, geo['isp']), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
 
     totalcount = len(picture) + len(music) + len(video) + len(programs) + len(scripts) + len(skins) + len(repos)
     directory.add_file('[B]Addons([COLOR {0}]{1}[/COLOR]):[/B]'.format(CONFIG.COLOR1, totalcount), icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME2)
