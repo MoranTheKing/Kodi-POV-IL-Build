@@ -191,7 +191,6 @@ class Config:
         self.PACKAGES = os.path.join(self.ADDONS, 'packages')
         self.ADDON_DATA = os.path.join(self.USERDATA, 'addon_data')
         self.PLUGIN_DATA = os.path.join(self.ADDON_DATA, self.ADDON_ID)
-        self.QRCODES = os.path.join(self.PLUGIN_DATA, 'QRCodes')
         self.ARCHIVE_CACHE = os.path.join(self.TEMP, 'archive_cache')
         self.ART = os.path.join(self.PLUGIN, 'resources', 'art')
         self.CUSTOM_ART = os.path.join(self.PLUGIN, 'resources', 'kodi_rd_israel_art')
