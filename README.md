@@ -139,51 +139,49 @@ Owner addon: **`plugin.program.kodipovilwizard`**.
 
 ### A. Modular Updater & Headless Installer (`headless_installer.py`)
 
-`resources/libs/modular_updater.py` orchestrates everything; the heavy lifting of
-third‑party content addons lives in `resources/libs/headless_installer.py`.
+`resources/libs/modular_updater.py` orchestrates the entire deployment pipeline as a **single, continuous UI experience
+**. It coordinates the local asset extraction (Phase 1) and seamlessly transitions into the third‑party content addon
+provisioning (Phase 2) without ever closing the custom installer window.
 
-**Manifest phase (our addons + repos)** — `ModularUpdater.execute_updates()`:
+**1. Manifest Phase (Local Addons & Repositories)** — `ModularUpdater.execute_updates()`:
 
-- Diffs local vs manifest versions (`run_update_check`) and only touches addons
-  **already installed** unless `install_missing`/`fresh` is set (so a missing
-  on‑demand skin is never force‑installed).
-- Per addon: download → **verify sha256** → `extract.all(zip, CONFIG.ADDONS,
-  ignore=True)` → `db.addon_database([...], 1, True)` (SQLite registration in
-  `Addons??.db`) → `UpdateLocalAddons`.
-- A foreground install uses the rich `install_manager` UI (parallel downloads,
-  per‑addon progress); any UI failure falls back to a classic sequential
-  `DialogProgress` loop.
+- Diffs local vs manifest versions (`run_update_check`) and only touches addons **already installed** unless
+  `install_missing` or `fresh` is set (ensuring unselected on‑demand skins are ignored).
+- Per addon: download → **strictly verify sha256** (enforced for manifest items) →
+  `extract.all(zip, CONFIG.ADDONS, ignore=True)` → SQLite database registration in `Addons??.db` → `UpdateLocalAddons`.
+- Runs via the rich `install_manager` UI featuring parallel bounded downloads and real-time extraction progress tracks.
 
-**Headless content‑addon provisioning** — `headless_installer.HeadlessInstaller`:
+**2. The Synchronization Gap & Transition:**
 
-- **Headless dependency resolution.** It enumerates **every repository already on
-  disk** — ours (`repository.kodifitzwell` for POV, `repository.Fishenzon` for
-  IdanPlus, `repository.otaku`, `repository.jurialmunkey` for AF3) **and Kodi's
-  bundled `repository.xbmc.org`** — reads each repo's `addon.xml` for its
-  `<info>` (addons.xml URL) + `<datadir>` (zip base), fetches and parses each
-  `addons.xml(.gz)` into a **union index** `{id: {version, requires, datadir}}`
-  (highest version wins), then resolves the **dependency closure deps‑first**.
-  Each resolvable addon is downloaded as a standard `<datadir>/<id>/<id>-<ver>.zip`
-  and **silently extracted**, then registered cleanly in Kodi's Addons DB +
-  `UpdateLocalAddons`. **No `InstallAddon`, no dependency dialog, no first‑run
-  popups** during install → **no UI to fight**.
-  - A per‑repo **early‑stop** means the large official repo costs **one**
-    `addons.xml.gz` fetch (the first codename that yields a usable index), not one
-    per codename.
-- **Binary addon protection.** Binary / platform‑specific addons
-  (`inputstream.*`, `pvr.*`, `vfs.*`, `audiodecoder.*`, `peripheral.*`,
-  `screensaver.*`, `visualization.*`, `game.*`, …) are **NEVER extracted blindly** —
-  a repo's `addons.xml` lists one version per Kodi codename but the binary must
-  match the device's OS/arch/ABI. If such a dep is missing, its **dependent is
-  deferred** to the native fallback so Kodi installs the correct platform build.
-  (In practice these are usually already bundled with Kodi.)
-- **Minimal native fallback.** For anything the headless path cannot resolve
-  (e.g. a dependency only in a repo we don't ship), a **single
-  `InstallAddon(<id>)`** is fired per addon, accompanied by a **micro‑watchdog**
-  that auto‑accepts **only window `10100`** (the dependency Yes/No confirm,
-  control `11`). It **never** closes any other dialog — the old aggressive
-  watchdog that did (and ate the user's Power menu / stalled the queue) is
-  **deleted**.
+- Once Phase 1 finishes, the Orchestrator executes a 2.5-second database settling pause (`waitForAbort(2.5)`) to ensure
+  the SQLite database is completely unlocked and Kodi finishes reloading newly extracted local repo structures.
+- Concurrently, the UI window enters a visual `pause_for_resolution()` state (displaying a "Calculating dependencies /
+  מנתח מאגרים..." status label), maintaining a live, uninterrupted window context.
+
+**3. Headless Content‑Addon Provisioning** — `headless_installer.HeadlessInstaller`:
+
+- **Resilient Manifest Fetching:** It parses repositories already on disk (ours + Kodi's official
+  `repository.xbmc.org`). To prevent the post-extraction Python SSL race condition (where rapid folder extraction
+  thrashes Python's internal certificate verification, causing an `SSLCertVerificationError`), the fetching engine
+  automatically falls back to Kodi’s native C++ abstraction layer (`xbmcvfs.File()`) to pull the remote
+  `addons.xml(.gz)`.
+- **Dynamic Dependency Closure:** Parses repository XMLs into a unified union index. When resolving dependencies, it *
+  *dynamically maps addon types based on ID prefixes** (e.g., `script.module.*` -> `module`, `resource.language.*` ->
+  `language`) to prevent database and folder structure corruption, instead of blindly forcing a `'plugin'` type.
+- **Dynamic Queue Injection:** Resolved content addons and their dependencies are injected live into the active UI via a
+  thread-safe `append_to_queue()` method. During Phase 2 downloading, the UI **gracefully bypasses SHA256 verification**
+  since upstream 3rd-party repositories omit file hashes, preventing fatal `KeyErrors`.
+- **Resolution Resilience:** If an addon's dependency tree fails to resolve, a bounding fix ensures the parent addon
+  doesn't drop into a logic "black hole"; it bubbles up to `self.unresolved` to trigger the native fallback.
+
+**4. Binary Addon Protection & Native Fallback:**
+
+- Binary / platform‑specific addons (`inputstream.*`, `pvr.*`, etc.) are **NEVER extracted blindly**, as zip packages
+  must match the device's host OS/architecture/ABI.
+- Any binary dependency or unresolvable upstream addon is deferred to the **Minimal Native Fallback** pipeline. This
+  triggers *only after* our custom GUI cleanly closes. It executes a background native `InstallAddon(<id>)` via a sleek,
+  non-intrusive Kodi status bar overlay (`xbmcgui.DialogProgressBG()`), backed by a micro‑watchdog that auto‑accepts *
+  *only window `10100`** (the dependency confirmation dialog, control `11`).
 
 **Provision order** (`PROVISION_IDS`) is deliberate and ends with the heaviest:
 
@@ -192,30 +190,24 @@ plugin.video.pov  →  plugin.video.idanplus  →  plugin.video.youtube
   →  resource.language.he_il  →  plugin.video.otaku   (LAST: heavy + timeout‑prone)
 ```
 
-Otaku is last so a transient Otaku stall can never block the core build; the boot
-loop re‑installs it next launch.
+Otaku is last so a transient Otaku stall can never block the core build; the boot loop re‑installs it next launch.
 
 ### B. OTA & Self‑Healing
 
-- **`.provisioned` marker** (`special://userdata/kodipovil.provisioned`). Written
-  **only** when a fresh install reaches the very end (every addon attempted **and**
-  `config.zip` applied) *and* Kodi is not aborting. `startup.py` uses it to tell a
-  *completed* setup from one the user force‑closed mid‑provisioning, so an
-  interrupted setup is **resumed** next launch instead of left half‑built.
-  `run_fresh_install()` is idempotent — present addons are skipped, the config
-  pack self‑applies once.
-- **`heal_missing_addons()`** — a background boot‑loop self‑heal. On startup it
-  verifies with `System.HasAddon(...)` that every required manifest addon (minus
-  on‑demand skins) and every `PROVISION_IDS` content addon is physically present,
-  and silently (re)installs whatever is missing through the same headless pipeline.
-  This is what makes a half‑provisioned build **self‑complete** over a couple of
-  launches.
-- **Graceful reload, not crash.** A forced restart is reserved for *critical*
-  updates only (the Wizard itself, or the **currently active** skin whose live
-  files can't be hot‑swapped). Everything else — plugins, services, inactive
-  skins, or a config change that only touched the active skin's look — is applied
-  in place with **`ReloadSkin()`**. We do **not** kill Kodi to apply ordinary
-  updates.
+- **`.provisioned` marker** (`special://userdata/kodipovil.provisioned`). Written **only** when a fresh install reaches
+  the very end (every addon attempted **and** `config.zip` applied) *and* Kodi is not aborting. `startup.py` uses it to
+  tell a *completed* setup from one the user force‑closed mid‑provisioning, so an interrupted setup is **resumed** next
+  launch instead of left half‑built. `run_fresh_install()` is idempotent — present addons are skipped, the config pack
+  self‑applies once.
+- **`heal_missing_addons()`** — a background boot‑loop self‑heal. On startup it verifies with `System.HasAddon(...)`
+  that every required manifest addon (minus on‑demand skins) and every `PROVISION_IDS` content addon is physically
+  present. If anything is missing, it runs the **exact same headless pipeline silently in the background** without
+  invoking the `install_manager` GUI thread. This architecture guarantees the build will seamlessly self‑complete over a
+  couple of launches if an installation is ever partially interrupted.
+- **Graceful reload, not crash.** A forced restart is reserved for *critical* updates only (the Wizard itself, or the *
+  *currently active** skin whose live files can't be hot‑swapped). Everything else — plugins, services, inactive skins,
+  or a config change that only touched the active skin's look — is applied in place with **`ReloadSkin()`**. We do **not
+  ** kill Kodi to apply ordinary updates.
 
 ---
 
