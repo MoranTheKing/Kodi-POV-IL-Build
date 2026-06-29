@@ -202,7 +202,7 @@
     <setting id="auto_play_movie" default="true">false</setting>
     <setting id="autoplay_quality_movie" default="true">SD, 720p, 1080p, 4K</setting>
     <setting id="results_quality_movie" default="true">SD, 720p, 1080p, 4K</setting>
-    <setting id="auto_resume_movie" default="true">0</setting>
+    <setting id="auto_resume_movie" default="true">1</setting>
     <setting id="stingers.enable">true</setting>
     <setting id="stingers.threshold">10</setting>
     <setting id="autoscrape_next_episode">true</setting>
@@ -217,7 +217,7 @@
     <setting id="autoplay_next_window_percentage">95</setting>
     <setting id="autoplay_next_check_threshold">3</setting>
     <setting id="results_quality_episode" default="true">SD, 720p, 1080p, 4K</setting>
-    <setting id="auto_resume_episode" default="true">0</setting>
+    <setting id="auto_resume_episode" default="true">1</setting>
     <setting id="load_action">1</setting>
     <setting id="volumecheck.enabled" default="true">false</setting>
     <setting id="volumecheck.percent">50</setting>
@@ -268,7 +268,7 @@
     <setting id="rpdb_api_key" default="true" />
     <setting id="get_rpdb_data" default="true">false</setting>
     <setting id="get_rpdb_data_series" default="true">false</setting>
-    <setting id="get_fanart_data">true</setting>
+    <setting id="get_fanart_data" default="true">false</setting>
     <setting id="fanarttv.default" default="true">false</setting>
     <setting id="fanart_amble1" default="true" />
     <setting id="fanart_client_key" default="true">fe073550acf157bdb8a4217f215c0882</setting>

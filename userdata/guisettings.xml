@@ -39,8 +39,8 @@
     <setting id="lookandfeel.startupwindow" default="true">10000</setting>
     <setting id="window.width" default="true">720</setting>
     <setting id="window.height" default="true">480</setting>
-    <setting id="window.top">287</setting>
-    <setting id="window.left">600</setting>
+    <setting id="window.top" default="true">0</setting>
+    <setting id="window.left" default="true">0</setting>
     <setting id="videolibrary.updateonstartup" default="true">false</setting>
     <setting id="videolibrary.backgroundupdate" default="true">false</setting>
     <setting id="videolibrary.ignorevideoversions" default="true">true</setting>
@@ -291,9 +291,9 @@
     <setting id="weather.currentlocation" default="true">1</setting>
     <setting id="weather.addon" default="true" />
     <setting id="videoscreen.monitor" default="true">Default</setting>
-    <setting id="videoscreen.screen">-1</setting>
-    <setting id="videoscreen.resolution">15</setting>
-    <setting id="videoscreen.screenmode">WINDOW</setting>
+    <setting id="videoscreen.screen" default="true">0</setting>
+    <setting id="videoscreen.resolution">126</setting>
+    <setting id="videoscreen.screenmode" default="true">DESKTOP</setting>
     <setting id="videoscreen.fakefullscreen" default="true">true</setting>
     <setting id="videoscreen.blankdisplays" default="true">false</setting>
     <setting id="videoscreen.delayrefreshchange" default="true">0</setting>
