@@ -25,7 +25,7 @@ except Exception:
 
 try:
     import xbmcaddon
-    _ADDON = xbmcaddon.Addon()
+    _ADDON = xbmcaddon.Addon('plugin.program.orderfavourites-hebrew')
 except Exception:
     xbmcaddon = None
     _ADDON = None

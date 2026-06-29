@@ -131,26 +131,6 @@ class Wizard:
         # First-launch notification windows (build-first-launch + skin-switch help).
         CONFIG.set_setting('notedismiss', 'false')
         CONFIG.set_setting('build_skin_switch_notifcation_dismiss', 'false')
-        try:
-            import importlib.util
-            import xbmcvfs
-            import xbmcaddon
-
-            of_addon_path = xbmcvfs.translatePath(
-                xbmcaddon.Addon('plugin.program.orderfavourites-hebrew').getAddonInfo('path')
-            )
-            mi_file = os.path.join(of_addon_path, 'media_installer.py')
-
-            if os.path.isfile(mi_file):
-                logging.log("[Build] Running media_installer.py from Wizard...", level=xbmc.LOGINFO)
-                spec = importlib.util.spec_from_file_location('media_installer_wizard_run', mi_file)
-                mi_module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(mi_module)
-
-                mi_module.install_global_media_assets()
-                logging.log("[Build] Media assets and favourites installed successfully via Wizard.", level=xbmc.LOGINFO)
-        except Exception as err:
-            logging.log("[Build] Failed to execute media_installer during install: {0}".format(err), level=xbmc.LOGERROR)
 
         self.force_close_kodi_in_5_seconds(dialog_header="התקנת הבילד הסתיימה בהצלחה")
 

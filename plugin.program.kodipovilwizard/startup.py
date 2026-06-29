@@ -259,6 +259,31 @@ def fresh_build_auto_install_if_needed():
         CONFIG.BUILDLATEST = build_version
         CONFIG.INSTALLED = 'true'
 
+        try:
+            import importlib.util
+            import xbmcvfs
+
+            xbmc.executebuiltin('UpdateLocalAddons')
+            xbmc.sleep(2000)
+
+            addon_folder = 'special://home/addons/plugin.program.orderfavourites-hebrew'
+            of_addon_path = xbmcvfs.translatePath(addon_folder)
+            mi_file = os.path.join(of_addon_path, 'resources', 'lib', 'media_installer.py')
+
+            if os.path.isfile(mi_file):
+                logging.log("[Fresh Build Auto Install] Running media_installer.py...", level=xbmc.LOGINFO)
+                spec = importlib.util.spec_from_file_location('media_installer_wizard_run', mi_file)
+                mi_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mi_module)
+
+                mi_module.install_global_media_assets()
+                logging.log("[Fresh Build Auto Install] Media assets installed successfully.", level=xbmc.LOGINFO)
+            else:
+                logging.log("[Fresh Build Auto Install] media_installer.py not found at: {0}".format(mi_file), level=xbmc.LOGERROR)
+
+        except Exception as err:
+            logging.log("[Fresh Build Auto Install] Failed to execute media_installer: {0}".format(err), level=xbmc.LOGERROR)
+
         # Keep the wait banner up THROUGH the force-close countdown -- it tells
         # the user to wait until Kodi fully closes. Kodi tears it down on exit.
         from resources.libs.wizard import Wizard
