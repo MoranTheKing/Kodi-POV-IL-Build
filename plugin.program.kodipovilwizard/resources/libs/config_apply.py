@@ -333,7 +333,8 @@ def apply_config_pack(manifest, fresh=False, background=True):
 
             if rel_path not in handled_srcs:
                 dest_rel = rel_path.replace(os.sep, '/')
-                dest_path = _home_path(dest_rel)
+                dest_rel_userdata = 'userdata/' + dest_rel
+                dest_path = _home_path(dest_rel_userdata)
 
                 if not os.path.exists(dest_path):
                     try:
