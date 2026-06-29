@@ -17,7 +17,9 @@
         <setting id="show20" type="bool" label="הצג בילדים לקודי 20 (Nexus)" default="true"/>
         <setting id="show21" type="bool" label="הצג בילדים לקודי 21 (Omega)" default="true"/>
         <setting id="separate" type="bool" label="בטל הפרדה לפי גרסה" default="false"/>
-        
+        <setting type="lsep" label="ייצוב הפעלה ראשונה (First Boot):"/>
+        <setting id="first_boot_warmup_seconds" type="slider" label="זמן חימום POV בהפעלה הראשונה (שניות)" default="25" range="5,5,120" option="int"/>
+
         <!-- Hidden Settings -->
         <setting id="first_install" type="bool" label="First Install" visible="false" default="true" />
         <setting id="enable_all" type="bool" label="Enable all Add-ons on Start" visible="false" default="false" />
