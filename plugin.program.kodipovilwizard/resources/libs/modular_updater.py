@@ -305,6 +305,7 @@ class ModularUpdater:
         'plugin.video.idanplus',            # <- repository.Fishenzon
         'plugin.video.youtube',             # <- Kodi official repo
         'resource.language.he_il',          # <- Kodi official repo (Hebrew language pack)
+        'script.xbmc.unpausejumpback',      # <- Kodi official repo (unpause jumpback)
         'plugin.video.otaku',               # <- repository.otaku (+ context.otaku); LAST: heavy
                                             #    + timeout-prone, must not block core install.
     ]
