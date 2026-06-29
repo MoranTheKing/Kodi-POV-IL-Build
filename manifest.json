@@ -3,15 +3,15 @@
   "name": "Kodi POV IL Build",
   "repo": "MoranTheKing/Kodi-POV-IL-Build",
   "release_tag": "addons-latest",
-  "generated": "2026-06-28T19:10:40Z",
+  "generated": "2026-06-29T17:07:11Z",
   "manifest_url": "https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL-Build/main/manifest.json",
   "config": {
-    "config_version": "2.0.4",
-    "filename": "config-2.0.4.zip",
-    "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/config-2.0.4.zip",
-    "size": 27922,
-    "sha256": "88276cb647b19bed217e4ee19d32c3b45765beb0f748b0ce4eee3597c293f266",
-    "updated": "2026-06-27T22:34:24Z"
+    "config_version": "2.0.6",
+    "filename": "config-2.0.6.zip",
+    "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/config-2.0.6.zip",
+    "size": 33041,
+    "sha256": "0d436059b0847ac119a3d00612d80598c0be7c90ad089a059cc0935ff9b9503e",
+    "updated": "2026-06-29T17:07:11Z"
   },
   "addons": {
     "plugin.program.autocompletion": {
@@ -28,13 +28,13 @@
     "plugin.program.kodipovilwizard": {
       "id": "plugin.program.kodipovilwizard",
       "name": "[COLOR yellow]Kodi POV IL Wizard[/COLOR]",
-      "version": "0.2.1",
+      "version": "0.2.3",
       "type": "plugin",
-      "filename": "plugin.program.kodipovilwizard-0.2.1.zip",
-      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.kodipovilwizard-0.2.1.zip",
-      "size": 2489019,
-      "sha256": "22235e24e3db9df83c655a896cfee917caaab374d7f2f622be5da17b37c2f38a",
-      "updated": "2026-06-28T19:10:40Z"
+      "filename": "plugin.program.kodipovilwizard-0.2.3.zip",
+      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.kodipovilwizard-0.2.3.zip",
+      "size": 2489210,
+      "sha256": "a28182fc53e29ad768a1297b0532babe4710fb299a683546a3f626f7c807c059",
+      "updated": "2026-06-29T17:07:11Z"
     },
     "plugin.program.orderfavourites-hebrew": {
       "id": "plugin.program.orderfavourites-hebrew",
