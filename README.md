@@ -208,6 +208,17 @@ Otaku is last so a transient Otaku stall can never block the core build; the boo
   *currently active** skin whose live files can't be hot‑swapped). Everything else — plugins, services, inactive skins,
   or a config change that only touched the active skin's look — is applied in place with **`ReloadSkin()`**. We do **not
   ** kill Kodi to apply ordinary updates.
+- **First‑Boot Stabilizer (race shield).** The first boot *after* an install is a race: FENtastic fires parallel widget
+  directory queries at `plugin.video.pov` at the exact moment POV's service is creating its DBs for the first time —
+  POV answers `Unable to find plugin` / `GetDirectory` fails and the skin‑variable engine can hard‑deadlock the Python
+  interpreter (the "second boot is always fine" symptom). `fresh_build_auto_install_if_needed()` arms a one‑shot marker
+  (`kodipovil.first_boot_stabilize`, same pattern as `.provisioned`) right before the force‑close; on the next boot,
+  *after* `wait_for_gui_ready()`, `first_boot_stabilize_if_needed()` holds briefly with a **user‑visible Hebrew countdown
+  banner** while POV warms up (bounded by `first_boot_warmup_seconds`, default 25s, early‑exit once
+  `System.HasAddon(plugin.video.pov)` + a minimum warm‑up), then `UpdateLocalAddons` + `ReloadSkin()` so the home
+  widgets re‑evaluate against a ready POV. It is a no‑op on every normal boot, never patches the skin, uses no global
+  watchdog, and **always clears the marker in a `finally`** so a failure can never trap Kodi in a stabilize loop or a
+  black screen.
 
 ---
 
