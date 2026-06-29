@@ -321,6 +321,31 @@ def apply_config_pack(manifest, fresh=False, background=True):
             if d.endswith('guisettings.xml') or (active_skin and active_skin in d):
                 result['skin_touched'] = True
 
+    # Automatically backup/copy files that were forgotten to be configured in config_policy.json
+    # (provided they do not exist on the target)
+    handled_srcs = {spec.get('src', '').replace('/', os.sep) for spec in policy.get('files', [])}
+    for root, dirs, files in os.walk(work_dir):
+        for file in files:
+            if file == POLICY_NAME:
+                continue
+            full_src_path = os.path.join(root, file)
+            rel_path = os.path.relpath(full_src_path, work_dir)
+
+            if rel_path not in handled_srcs:
+                dest_rel = rel_path.replace(os.sep, '/')
+                dest_path = _home_path(dest_rel)
+
+                if not os.path.exists(dest_path):
+                    try:
+                        os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+                        shutil.copyfile(full_src_path, dest_path)
+                        result['applied'] = True
+                        if dest_rel.endswith('guisettings.xml') or (active_skin and active_skin in dest_rel):
+                            result['skin_touched'] = True
+                        logging.log("[config_apply] unlisted file auto-seeded: {0} -> {1}".format(dest_rel, dest_path))
+                    except Exception as e:
+                        logging.log("[config_apply] failed auto-seeding unlisted {0}: {1}".format(dest_rel, e), level=xbmc.LOGERROR)
+
     _run_cleanup(policy)
 
     CONFIG.set_setting('config_applied_version', version)
