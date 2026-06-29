@@ -123,7 +123,7 @@ THEME6 = u'[COLOR {COLOR_WHITE}]{{}}[/COLOR]'.format(COLOR_WHITE=COLOR_WHITE)
 # Enable 'Contact' menu item 'Yes' hide or 'No' dont hide
 HIDECONTACT = 'No'
 # You can add \n to do line breaks
-CONTACT = 'Thank you for choosing OpenWizard'
+CONTACT = 'ברוכים הבאים! תודה שבחרתם בבילד שלנו.\n\nכדי שתוכלו ליהנות מחוויית צפייה מושלמת,\nלהישאר תמיד מעודכנים בגרסאות האחרונות\nולקבל תמיכה טכנית מהירה לכל שאלה –\nהצטרפו לקהילה הרשמית שלנו!\n\nסרקו את קוד ה-QR באמצעות המכשיר הנייד שלכם והצטרפו אלינו לקהילה בטלגרם.'
 # Images used for the contact window.  http:// for default icon and fanart
 CONTACTICON = os.path.join(ART, 'qricon.jpg')
 CONTACTFANART = 'http://'

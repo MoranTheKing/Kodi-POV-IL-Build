@@ -134,6 +134,7 @@ def show_contact(msg=""):
             self.imagecontrol = 103
             self.textbox = 104
             self.scrollcontrol = 105
+            self.closebutton = 106
             self.show_dialog()
 
         def show_dialog(self):
@@ -146,6 +147,10 @@ def show_contact(msg=""):
 
         def onAction(self, action):
             if action.getId() in BACK_ACTIONS:
+                self.close()
+
+        def onClick(self, controlId):
+            if controlId == self.closebutton:
                 self.close()
 
     cw = ContactWindow("Contact.xml", CONFIG.ADDON_PATH, 'Default', title=CONFIG.ADDONTITLE, fanart=CONFIG.CONTACTFANART,
