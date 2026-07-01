@@ -3,7 +3,7 @@
   "name": "Kodi POV IL Build",
   "repo": "MoranTheKing/Kodi-POV-IL-Build",
   "release_tag": "addons-latest",
-  "generated": "2026-06-29T20:48:20Z",
+  "generated": "2026-07-01T14:09:53Z",
   "manifest_url": "https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL-Build/main/manifest.json",
   "config": {
     "config_version": "2.0.6",
@@ -11,7 +11,7 @@
     "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/config-2.0.6.zip",
     "size": 33041,
     "sha256": "0d436059b0847ac119a3d00612d80598c0be7c90ad089a059cc0935ff9b9503e",
-    "updated": "2026-06-29T17:07:11Z"
+    "updated": "2026-07-01T14:09:53Z"
   },
   "addons": {
     "plugin.program.autocompletion": {
@@ -23,7 +23,7 @@
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.autocompletion-2.1.3.zip",
       "size": 21389,
       "sha256": "f00eacd471073878ac1be85fc333aa8afefaa0078621ff57ccbd71950afdd3f1",
-      "updated": "2026-06-27T22:06:20Z"
+      "updated": "2026-07-01T14:09:53Z"
     },
     "plugin.program.kodipovilwizard": {
       "id": "plugin.program.kodipovilwizard",
@@ -34,7 +34,7 @@
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.kodipovilwizard-0.2.5.zip",
       "size": 2491616,
       "sha256": "d1c49060c6ae3455c77760fcad977b6329ac45818c7a72f059a618433ec72bdd",
-      "updated": "2026-06-29T20:48:20Z"
+      "updated": "2026-07-01T14:09:53Z"
     },
     "plugin.program.orderfavourites-hebrew": {
       "id": "plugin.program.orderfavourites-hebrew",
@@ -45,7 +45,7 @@
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.orderfavourites-hebrew-1.4.1.zip",
       "size": 12978325,
       "sha256": "608ca02eba483fe2de897e7a8337bd98e49bfff80878482e7653e78e011e9ddb",
-      "updated": "2026-06-29T18:38:28Z"
+      "updated": "2026-07-01T14:09:53Z"
     },
     "repository.Fishenzon": {
       "id": "repository.Fishenzon",
@@ -56,7 +56,7 @@
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/repository.Fishenzon-1.0.3.zip",
       "size": 19175,
       "sha256": "18a47fdc9cc7ef3b13f40d99e607a93ef4d57a46198e0d6c6091bd77c401e244",
-      "updated": "2026-06-27T22:06:20Z"
+      "updated": "2026-07-01T14:09:53Z"
     },
     "repository.jurialmunkey": {
       "id": "repository.jurialmunkey",
@@ -67,7 +67,7 @@
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/repository.jurialmunkey-3.4.zip",
       "size": 7217,
       "sha256": "88af3e286666e1a15e435cc5e3b7fe2dc8ca5455690e20693f46aba74207f31a",
-      "updated": "2026-06-27T22:06:20Z"
+      "updated": "2026-07-01T14:09:53Z"
     },
     "repository.kodifitzwell": {
       "id": "repository.kodifitzwell",
@@ -78,7 +78,7 @@
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/repository.kodifitzwell-0.0.1.zip",
       "size": 13214,
       "sha256": "d0b3ad9f76918718aaea387e2593a05607086d9bbed0d843c89ecdcde43d83ac",
-      "updated": "2026-06-27T22:06:20Z"
+      "updated": "2026-07-01T14:09:53Z"
     },
     "repository.otaku": {
       "id": "repository.otaku",
@@ -89,7 +89,7 @@
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/repository.otaku-1.0.zip",
       "size": 453823,
       "sha256": "ae9ffdb5dc44ce540b75ddf0f40ef6bf9079c0b8cae61060152261b5e652262f",
-      "updated": "2026-06-27T22:06:20Z"
+      "updated": "2026-07-01T14:09:53Z"
     },
     "script.fentastic.helper": {
       "id": "script.fentastic.helper",
@@ -100,7 +100,7 @@
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/script.fentastic.helper-0.6.20a.zip",
       "size": 18907,
       "sha256": "c17a361921d72635ecb6cfea477042680883520af3a25498d64623cc53711af9",
-      "updated": "2026-06-27T22:06:20Z"
+      "updated": "2026-07-01T14:09:53Z"
     },
     "script.module.autocompletion": {
       "id": "script.module.autocompletion",
@@ -111,7 +111,7 @@
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/script.module.autocompletion-2.1.2.zip",
       "size": 175596,
       "sha256": "2dc8cf82a006546f30fd87d7a41bd1a7a293a2481da769a03ac43936701cec1b",
-      "updated": "2026-06-27T22:06:20Z"
+      "updated": "2026-07-01T14:09:53Z"
     },
     "service.subtitles.kodipovilai": {
       "id": "service.subtitles.kodipovilai",
@@ -120,9 +120,9 @@
       "type": "subtitle",
       "filename": "service.subtitles.kodipovilai-0.2.273.zip",
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/service.subtitles.kodipovilai-0.2.273.zip",
-      "size": 1362793,
-      "sha256": "5108ced1f6dee2fbf3f822f855d0b476fa9de5d80cdafa838a8a21b8366f0fc9",
-      "updated": "2026-06-27T22:06:20Z"
+      "size": 1364901,
+      "sha256": "5ec55d0017b73f0273c8769b819f8eec3debaf1fa5d86b088ae7662dfaa468c2",
+      "updated": "2026-07-01T14:09:53Z"
     },
     "skin.estuary": {
       "id": "skin.estuary",
@@ -133,7 +133,7 @@
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/skin.estuary-4.0.2.zip",
       "size": 6815864,
       "sha256": "6ee2e9581f4bad1960c302e34662aea5f12545eaf946125456d18651537f6d4f",
-      "updated": "2026-06-27T22:06:20Z"
+      "updated": "2026-07-01T14:09:53Z"
     },
     "skin.fentastic": {
       "id": "skin.fentastic",
@@ -144,7 +144,7 @@
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/skin.fentastic-1.0.27.zip",
       "size": 10080861,
       "sha256": "6c3af603cf99f623cfd229ab8120388e12b1b953c873bd27b95de96e6625b3f1",
-      "updated": "2026-06-27T22:06:20Z"
+      "updated": "2026-07-01T14:09:53Z"
     },
     "skin.povil.nox": {
       "id": "skin.povil.nox",
@@ -155,7 +155,7 @@
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/skin.povil.nox-1.0.11.zip",
       "size": 24370802,
       "sha256": "902c4470ef0ec39440cfae8fd784f02091af3e9e5801db41fcbec4583395fce2",
-      "updated": "2026-06-27T22:06:20Z"
+      "updated": "2026-07-01T14:09:53Z"
     }
   }
 }
