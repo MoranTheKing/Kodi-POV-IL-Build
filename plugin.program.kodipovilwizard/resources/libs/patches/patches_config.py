@@ -73,5 +73,50 @@ PATCH_CONFIG = [
             "\t\t\t\t\tif 'genres/' in icon:\n"
             "\t\t\t\t\t\tlistitem.setArt({'fanart': icon})\n"
         )
+    },
+    {
+        "id": "pov_tmdb_timeout_widen",
+        "name": "POV TMDB Timeout Widen",
+        "target_file": "resources/lib/indexers/tmdb_api.py",
+        "marker": "# WIZARD_POV_TMDB_TIMEOUT_v2",
+        "anchor": "timeout = 3.05",
+        "action": "append_after",
+        "hook": (
+            "timeout = 15.05  # WIZARD: Widened for mobile per-item fetch reliability\n"
+        )
+    },
+    {
+        "id": "pov_movie_meta_blank_guard",
+        "name": "POV Movie Meta Blank Guard",
+        "target_file": "resources/lib/indexers/metadata.py",
+        "marker": "# WIZARD_POV_MOVIE_META_GUARD_v2",
+        "anchor": "\t\t\tmetacache_set('movie', id_type, meta, EXPIRES_2_DAYS)",
+        "action": "prepend_before",
+        "hook": (
+            "\t\t\t# WIZARD: Bypass cache persistence and purge poisoned DB rows\n"
+            "\t\t\timport sys, xbmcvfs;\n"
+            "\t\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/modules/');\n"
+            "\t\t\tsys.path.append(p) if p not in sys.path else None;\n"
+            "\t\t\timport pov_meta_handler;\n"
+            "\t\t\tpov_meta_handler.clear_blank_meta();\n"
+            "\t\t\treturn meta\n"
+        )
+    },
+    {
+        "id": "pov_tvshow_meta_blank_guard",
+        "name": "POV TVShow Meta Blank Guard",
+        "target_file": "resources/lib/indexers/metadata.py",
+        "marker": "# WIZARD_POV_TVSHOW_META_GUARD_v2",
+        "anchor": "\t\t\tmetacache_set('tvshow', id_type, meta, EXPIRES_2_DAYS)",
+        "action": "prepend_before",
+        "hook": (
+            "\t\t\t# WIZARD: Bypass cache persistence and purge poisoned DB rows\n"
+            "\t\t\timport sys, xbmcvfs;\n"
+            "\t\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/modules/');\n"
+            "\t\t\tsys.path.append(p) if p not in sys.path else None;\n"
+            "\t\t\timport pov_meta_handler;\n"
+            "\t\t\tpov_meta_handler.clear_blank_meta();\n"
+            "\t\t\treturn meta\n"
+        )
     }
 ]

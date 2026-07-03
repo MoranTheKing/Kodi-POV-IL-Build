@@ -162,7 +162,6 @@ def _run_build_startup_repairs():
         _maybe_patch_pov_hebrew_ui,
         _maybe_patch_pov_genre_menu_icons,
         _maybe_patch_pov_combined_discover,
-        _maybe_patch_pov_movie_networks,
         _maybe_patch_pov_view_mode,
         _maybe_patch_af3_home,
         _maybe_patch_pov_repeat_timer,
@@ -171,7 +170,6 @@ def _run_build_startup_repairs():
         _maybe_reseed_series_networks,
         _maybe_patch_pov_torbox_usage,
         _maybe_patch_pov_trakt_cache_empty,
-        _maybe_patch_pov_meta_blank,
         _maybe_patch_pov_build_content_logger,
         _maybe_patch_pov_debrid_status,
         _maybe_show_af3_first_launch_dialog,
@@ -654,35 +652,6 @@ def _maybe_patch_pov_hebrew_genres():
             pass
 
 
-def _maybe_patch_pov_movie_networks():
-    """Restore POV's stock 'movies by streaming service' query. The 0.2.305
-    watch-provider rewrite made that tile hang on real devices, so this reverts
-    it to stock (returns a result instead of spinning forever). Idempotent,
-    compile-checked."""
-    try:
-        from resources.lib import pov_movie_networks_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_movie_networks_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'pov_movie_networks_patcher: reverted movie service query to '
-                'stock', level='INFO')
-        elif status in ('no_pov', 'no_file', 'already_patched'):
-            pass
-        else:
-            kodi_utils.log(
-                'pov_movie_networks_patcher: ' + status, level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_movie_networks_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_patch_pov_view_mode():
     """Fix POV's intermittent 'view resets to a plain list when paging
     forward': POV's set_view_mode gave up applying the chosen view if the new
@@ -890,43 +859,6 @@ def _maybe_patch_pov_build_content_logger():
             kodi_utils.log(
                 'pov_build_content_logger_patcher failed: '
                 '{0}'.format(e), level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_pov_meta_blank():
-    """Patch POV's indexers/metadata.py so a transient per-item
-    metadata fetch failure (movie_details timeout/blip) doesn't persist
-    a blank_entry into metacache.db for 2 days. Third sibling to the
-    main_cache and trakt_cache empty patchers -- those fix the LIST
-    caches; this fixes the PER-ITEM meta cache, the one neither touched.
-    Fixes the diagnosed bug where favorites ARE saved (watched.db has
-    the rows, auth valid) but both POV-local and TMDB favorites tiles
-    show 0 in BOTH skins because the items' metadata is cached blank.
-    Also one-shot-clears already-poisoned blank_entry rows so existing
-    favorites recover immediately."""
-    try:
-        from resources.lib import (
-            pov_meta_blank_patcher, kodi_utils)
-    except Exception:
-        return
-    try:
-        status = pov_meta_blank_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'pov_meta_blank_patcher: movie_meta/tvshow_meta no '
-                'longer persist transient blank_entry; poisoned rows '
-                'cleared', level='INFO')
-        elif status in ('no_pov', 'no_file', 'already_patched'):
-            pass  # quiet steady-state
-        else:
-            kodi_utils.log(
-                'pov_meta_blank_patcher: ' + status, level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_meta_blank_patcher failed: {0}'.format(e),
-                level='WARNING')
         except Exception:
             pass
 
