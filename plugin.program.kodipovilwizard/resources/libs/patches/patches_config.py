@@ -158,8 +158,74 @@ PATCH_CONFIG = [
             "\t\t\timport sys, xbmcvfs\n"
             "\t\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/')\n"
             "\t\t\tsys.path.append(p) if p not in sys.path else None\n"
-            "\t\t\timport torbox_usage\n"
-            "\t\t\ttorbox_usage.append_usage_stats(self, account_info, append)"
+            "\t\t\timport pov_torbox_usage\n"
+            "\t\t\tpov_torbox_usage.append_usage_stats(self, account_info, append)"
+        )
+    },
+    {
+        "id": "pov_trakt_empty_cache_fix",
+        "name": "Trakt Empty Cache Prevention",
+        "description": "Prevents transient empty Trakt API responses from being permanently cached, allowing subsequent retries to succeed.",
+        "target_file": "resources/lib/caches/trakt_cache.py",
+        "marker": "# WIZARD_POV_TRAKT_EMPTY_CACHE_v1",
+        "anchor": "dbcur.execute(TC_BASE_SET, (string, repr(result)))",
+        "action": "prepend_before",
+        "hook": (
+            "import sys, xbmcvfs\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/')\n"
+            "sys.path.append(p) if p not in sys.path else None\n"
+            "import pov_trakt_cache\n"
+            "if pov_trakt_cache.is_empty_result(result, string): return result\n"
+        )
+    },
+    {
+        "id": "wizard_pov_view_mode_fix",
+        "name": "Persistent View Mode Patcher",
+        "description": "Fixes the intermittent bug where navigating to a new page resets the view to a plain list instead of the user's chosen view (e.g., poster wall).",
+        "target_file": "resources/lib/modules/kodi_utils.py",
+        "marker": "# WIZARD_POV_VIEW_MODE_FIX_v2",
+        "anchor": "for _ in range(60):",
+        "action": "prepend_before",
+        "hook": (
+            "import sys, xbmcvfs\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/')\n"
+            "sys.path.append(p) if p not in sys.path else None\n"
+            "import pov_view_mode\n"
+            "pov_view_mode.force_view(view_id, content)\n"
+            "return\n"
+        )
+    },
+    {
+        "id": "wizard_pov_combined_discover",
+        "name": "Unified Discover Builder",
+        "description": "Injects a unified Movie+TV search and trending data source for skin integrations like AF3.",
+        "target_file": "resources/lib/menus/tmdb.py",
+        "marker": "# WIZARD_POV_COMBINED_DISCOVER_v2",
+        "anchor": "return tmdb_api.list_details(self.list_id)",
+        "action": "prepend_before",
+        "hook": (
+            "import sys, xbmcvfs\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/')\n"
+            "sys.path.append(p) if p not in sys.path else None\n"
+            "import af3_pov_combined_discover\n"
+            "_wiz_res = af3_pov_combined_discover.handle_fetch(self.params)\n"
+            "if _wiz_res is not None: return _wiz_res\n"
+        )
+    },
+    {
+        "id": "wizard_pov_widget_refresh",
+        "name": "Home Widget Refresh Ping",
+        "description": "Fires a targeted background ping so third-party skin widgets instantly reload after marking items as watched.",
+        "target_file": "resources/lib/modules/kodi_utils.py",
+        "marker": "# WIZARD_POV_WIDGET_REFRESH_v2",
+        "anchor": "return execute_builtin('Container.Refresh')",
+        "action": "prepend_before",
+        "hook": (
+            "import sys, xbmcvfs\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/')\n"
+            "sys.path.append(p) if p not in sys.path else None\n"
+            "import kodi_widget_refresh\n"
+            "kodi_widget_refresh.ping()\n"
         )
     }
 ]
