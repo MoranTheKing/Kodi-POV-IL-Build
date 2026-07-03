@@ -170,7 +170,6 @@ def _run_build_startup_repairs():
         _maybe_patch_pov_menus,
         _maybe_reseed_series_networks,
         _maybe_patch_pov_torbox_usage,
-        _maybe_patch_pov_cache_empty,
         _maybe_patch_pov_trakt_cache_empty,
         _maybe_patch_pov_meta_blank,
         _maybe_patch_pov_build_content_logger,
@@ -796,41 +795,6 @@ def _maybe_patch_favourites_xml():
             kodi_utils.log(
                 'favourites_xml_patcher failed: {0}'.format(e),
                 level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_pov_cache_empty():
-    """Patch POV's caches/main_cache.py so cache_object() refuses to
-    store empty API results in the 24-hour cache. Fixes the
-    real-user bug where adding to TMDB favorites via the in-app
-    context menu succeeds on themoviedb.org but the "My Movies
-    (TMDB)" tile keeps showing "No results" until the cache row
-    naturally expires. Also one-shot-clears any tmdblist_* /
-    trakt_* rows already sitting empty in maincache.db."""
-    try:
-        from resources.lib import (
-            pov_cache_empty_patcher, kodi_utils)
-    except Exception:
-        return
-    try:
-        status = pov_cache_empty_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'pov_cache_empty_patcher: cache_object now skips '
-                'empty results; stale list rows cleared',
-                level='INFO')
-        elif status in ('no_pov', 'no_file', 'already_patched'):
-            pass  # quiet steady-state
-        else:
-            kodi_utils.log(
-                'pov_cache_empty_patcher: ' + status,
-                level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_cache_empty_patcher failed: '
-                '{0}'.format(e), level='WARNING')
         except Exception:
             pass
 
