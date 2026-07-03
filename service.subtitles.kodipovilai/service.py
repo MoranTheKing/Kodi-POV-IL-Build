@@ -164,11 +164,8 @@ def _run_build_startup_repairs():
         _maybe_patch_pov_combined_discover,
         _maybe_patch_pov_view_mode,
         _maybe_patch_af3_home,
-        _maybe_patch_pov_repeat_timer,
         _maybe_patch_pov_favorites_refresh,
         _maybe_patch_pov_menus,
-        _maybe_reseed_series_networks,
-        _maybe_patch_pov_torbox_usage,
         _maybe_patch_pov_trakt_cache_empty,
         _maybe_patch_pov_build_content_logger,
         _maybe_patch_pov_debrid_status,
@@ -428,41 +425,6 @@ def _maybe_unpatch_fentastic_notification():
         pass
 
 
-def _maybe_fix_pov_favourites_typo():
-    """One-shot rewrite of POV's bundled navigator.db so the
-    Favorites tile on the home screen points at the method POV
-    actually defines (navigator.favorites, US spelling). The
-    shipped DB has 'navigator.favourites' (UK spelling, with 'u')
-    which doesn't match POV's method name, so the plugin invocation
-    returns None, never calls endOfDirectory(), and Kodi kills the
-    script after its 5-second timeout -- experienced by the user
-    as "click Favorites, Kodi freezes for ~a minute, bounces back
-    to home". Idempotent + defensive; future installs ship a
-    corrected DB so this patcher is belt-and-braces."""
-    try:
-        from resources.lib import pov_navigator_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_navigator_patcher.maybe_fix_favourites_typo()
-        if status == 'fixed':
-            kodi_utils.log(
-                'pov_navigator_patcher: rewrote favourites typo '
-                'in navigator.db', level='INFO')
-        elif status == 'failed':
-            kodi_utils.log(
-                'pov_navigator_patcher: skipped (will retry next '
-                'startup)', level='WARNING')
-        # 'unchanged' / 'no_db' -- silent; the common steady state
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_navigator_patcher run failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_patch_pov_menus():
     """Force-sync POV's three context-menu builders (movies.py,
     tvshows.py, episodes.py) to the canonical versions bundled in
@@ -492,32 +454,6 @@ def _maybe_patch_pov_menus():
             kodi_utils.log(
                 'pov_menus_patcher run failed: {0}'.format(e),
                 level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_reseed_series_networks():
-    """One-time restore of the NOX 'series by networks' home row in
-    POV's navigator.db. Some devices lost most of the per-service
-    series tiles when POV self-updated and re-extracted a fresh DB;
-    this rewrites the row to its known-good nine-tile contents exactly
-    once per install, then leaves it alone.
-    """
-    try:
-        from resources.lib import pov_series_networks_reseed_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_series_networks_reseed_patcher.maybe_reseed_series_networks()
-        if status == 'reseeded':
-            kodi_utils.log(
-                'pov_series_networks_reseed_patcher: restored series-by-'
-                'networks home row', level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_series_networks_reseed_patcher run failed: '
-                '{0}'.format(e), level='WARNING')
         except Exception:
             pass
 
@@ -768,32 +704,6 @@ def _maybe_patch_favourites_xml():
             pass
 
 
-def _maybe_patch_pov_torbox_usage():
-    """Build-only patch: add TorBox 30-day usage to POV account status."""
-    try:
-        from resources.lib import (
-            pov_torbox_usage_patcher, kodi_utils)
-    except Exception:
-        return
-    try:
-        status = pov_torbox_usage_patcher.ensure_patched()
-        if status.startswith('patched'):
-            kodi_utils.log(
-                'pov_torbox_usage_patcher: ' + status, level='INFO')
-        elif status in ('already_complete', 'no_kodi'):
-            pass
-        else:
-            kodi_utils.log(
-                'pov_torbox_usage_patcher: ' + status, level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_torbox_usage_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_patch_pov_trakt_cache_empty():
     """Patch POV's caches/trakt_cache.py so cache_trakt_object()
     refuses to store empty results. Companion to _maybe_patch_pov_
@@ -859,35 +769,6 @@ def _maybe_patch_pov_build_content_logger():
             kodi_utils.log(
                 'pov_build_content_logger_patcher failed: '
                 '{0}'.format(e), level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_pov_repeat_timer():
-    """Wrap POV's myservices.py RepeatTimer.run() in try/except so
-    auth-polling threads survive single-iteration failures. Without
-    this, transient errors (network blip, malformed response, etc.)
-    kill the polling thread silently and the user's auth dialog
-    for Trakt / RD / TorBox / PM / AD hangs forever after they
-    authorize on the website."""
-    try:
-        from resources.lib import pov_repeat_timer_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_repeat_timer_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'pov_repeat_timer_patcher: applied auth polling '
-                'try/except wrap', level='INFO')
-        elif status in ('unmatched', 'write_failed', 'read_failed'):
-            kodi_utils.log(
-                'pov_repeat_timer_patcher: ' + status, level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_repeat_timer_patcher failed: {0}'.format(e),
-                level='WARNING')
         except Exception:
             pass
 

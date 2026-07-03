@@ -293,43 +293,56 @@ no‑fanart defaults. The fix added it to the policy as:
   fixes to existing users.
 
 ---
-
 ## 6. Runtime Cross‑Addon Patching
 
-Several behaviours we want in third‑party addons (POV, the skins) have **no public
-extension point**, so the build patches those addons **on disk at runtime**. The
-**`service.subtitles.kodipovilai`** service is the **patch host**: its `service.py`
-orchestrates **~38 self‑healing patchers** (`resources/lib/*_patcher.py`) on every
-Kodi startup.
+###  🛠️ Metadata-Driven Patching Architecture (Engine v2)
 
-**The pattern** (used by `pov_*_patcher`, `fentastic_*_patcher`, `af3_*_patcher`,
-`nox_*_patcher`, …):
+Our build system employs a highly decoupled, declarative, and metadata-driven patching architecture managed exclusively by the **Wizard Addon (`plugin.program.wizard`)**.
 
-- Each patcher has an `ensure_patched()` (or `ensure_*`) entry called from
-  `service.py`, fully guarded so it can never break startup.
-- Edits are **marker‑guarded and versioned** (`# AI_..._INJECT_vN` … `# END ...`),
-  so a patch applies **once** and re‑applies cleanly when the host addon
-  auto‑updates from its own repo (a fresh, marker‑less file is re‑patched). An
-  `OLD_MARKERS` list strips every prior version's block before injecting the new
-  one. `INJECT_VERSION` bumps drive one‑time re‑patches.
-- Two safe injection styles: **append‑then‑shadow** (append code at end of file
-  that redefines a function), and **targeted regex splice** into the host's own
-  source. **Always fail‑safe**: if the anchor/marker isn't found (the host
-  refactored), the patcher makes **no change** and the host keeps working.
+Instead of executing standalone runtime scripts that perform repetitive file I/O operations and inject heavy logic, the Wizard runs a **Unified Patching Engine**. This engine ingests static configuration dictionaries (metadata), groups operations by target files, and executes atomic, additive injections in a single pass.
 
-**Canonical example — `pov_services_patcher.py` (the My Services menu).** POV's
-`modules/myservices.authorize()` builds a **local** `services` tuple of
-`(name, Class)` pairs. Earlier versions *wrapped/re‑implemented* that render path
-and risked an empty/broken dialog on any drift. The current approach (v11) **stops
-wrapping**: it appends only the `Gemini` service class and **splices
-`('gemini-ai', Gemini)` straight into POV's own `services` tuple** via a stable
-regex anchor, so **POV's native `authorize()`** renders the menu (its real
-classes, its real dialog) with Gemini as one more row. If the anchor ever misses,
-nothing is spliced and POV's menu still works — Gemini is merely absent.
+### 📐 Core Architectural Principles
 
-> Cross‑addon influence must be **native or safely hooked** (marker‑guarded,
-> versioned, fail‑safe), and it lives in the **subtitle service's patch host** — not
-> scattered across random addons.
+1. **Additive Patching (Lean Hooks)**
+   To prevent upstream breaks, patches *never* overwrite or perform brittle multi-line block replacements of native code. Instead, they use strict, single-line string anchors to seamlessly insert an ultra-lean execution hook either immediately before (`prepend_before`) or after (`append_after`) a target code line.
+
+2. **Decoupled Business Logic & Single Folder Consolidation**
+   Target addon files are kept completely clean of heavy business logic or algorithms. Injected hooks act purely as routers—appending our core patches path and calling external helper modules hosted natively inside the Wizard addon. All metadata registry definitions and extracted business logic modules MUST reside strictly inside a single unified directory to maintain encapsulation.
+   *Example Hook:*
+   ```python
+   import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/'); sys.path.append(p) if p not in sys.path else None; import feature_module; feature_module.run(local_vars)
+   ```
+
+3. **Versioned Markers & Anti-Collision**
+Every injected hook is uniquely identified by a versioned marker (e.g., `# WIZARD_POV_FEATURE_NAME_v2`). The engine uses the base string identifier to prevent duplicate injections, seamlessly upgrading older hook versions (`_v1` $\rightarrow$ `_v2`) or executing clean rollbacks without risking source corruption.
+4. **Clean Environment Assumption (YAGNI)**
+The deployment workflow enforces 100% clean installations. Because the target files are guaranteed to be pristine, unpatched upstream source files at the time of execution, the runtime engine does not waste cycles on legacy regex scrubbing or historical backward-compatibility code.
+5. **Static Configuration Priority**
+Following a "Configuration over Code" philosophy, all environmental variables, addon settings, and initial database structures (e.g., SQLite schemas) are pre-baked statically into our controlled `userdata` distribution. Runtime hooks are strictly reserved for logic routing that cannot be achieved via static files.
+
+---
+
+### 🗂️ Patch Definition Schema
+
+Each patch configuration is declared as a structured Python dictionary within the Wizard's central patch registry:
+
+```python
+{
+    "id": "pov_source_remember",
+    "name": "Remember Last Played Source",
+    "target_file": "resources/lib/modules/sources.py",
+    "marker": "# WIZARD_POV_SOURCE_REMEMBER_v2",
+    "anchor": "def play_file(item):",
+    "action": "append_after",
+    "hook": "import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/'); sys.path.append(p) if p not in sys.path else None; import source_memory; source_memory.capture(item)"
+}
+
+```
+
+### 🔁 Lifecycle & Upstream Updates
+
+* **On Addon Updates:** When Kodi updates an upstream addon, it wipes the directory and extracts pristine source files, naturally reverting all patches. The Wizard engine detects the missing markers on the next boot and reapplies the hooks seamlessly.
+* **On Rollbacks / Disabling:** By setting `"enabled": False` or removing a configuration, the engine targets the specific versioned marker and drops only the injected lines, instantly returning the file to its original upstream state.
 
 ---
 
@@ -419,6 +432,7 @@ reintroduce them or references to them**:
 │       └── skin.fentastic/settings.xml
 ├── plugin.program.kodipovilwizard/          # the install/OTA/self‑heal engine
 │   └── resources/libs/{modular_updater,headless_installer,config_apply,downloader,extract,db}.py
+│       └── lib/patches/                     # UNIFIED directory for registry & decoupled logic modules
 ├── plugin.program.orderfavourites-hebrew/   # favourites generator + icon/media installer
 │   ├── povil_icons/                         # flat canonical icon set (source of truth)
 │   ├── resources/favourites_config.json     # tiles + per‑skin order + icon_base

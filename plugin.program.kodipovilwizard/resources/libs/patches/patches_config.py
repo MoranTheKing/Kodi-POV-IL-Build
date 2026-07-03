@@ -118,5 +118,48 @@ PATCH_CONFIG = [
             "\t\t\tpov_meta_handler.clear_blank_meta();\n"
             "\t\t\treturn meta\n"
         )
+    },
+    {
+        "id": "pov_repeat_timer_resiliency",
+        "name": "RepeatTimer Crash Prevention",
+        "target_file": "resources/lib/modules/myservices.py",
+        "marker": "# WIZARD_POV_REPEAT_TIMER_v1",
+        "anchor": "\t\t\tself.function(*self.args, **self.kwargs)",
+        "action": "prepend_before",
+        "hook": (
+            "try:\n"
+            "    self.function(*self.args, **self.kwargs)\n"
+            "except Exception:\n"
+            "    pass\n"
+            "continue"
+        )
+    },
+    {
+        "id": "pov_torbox_api_user_stats",
+        "name": "TorBox Stats API Addition",
+        "target_file": "resources/lib/debrids/torbox_api.py",
+        "marker": "# WIZARD_POV_TORBOX_API_STATS_v2",
+        "anchor": "\tdef torrent_info(self, request_id):",
+        "action": "prepend_before",
+        "hook": (
+            "\tdef user_stats(self):\n"
+            "\t\turl = 'user/stats'\n"
+            "\t\treturn self._get(url, params={'general': 'true', 'bandwidth': 'true', 'bandwidth_grouping': 'day'})\n\n"
+        )
+    },
+    {
+        "id": "pov_torbox_usage_ui",
+        "name": "TorBox 30-Day Usage UI",
+        "target_file": "resources/lib/menus/torbox.py",
+        "marker": "# WIZARD_POV_TORBOX_USAGE_UI_v2",
+        "anchor": "\t\t\tappend('[B]Downloaded[/B]: %s' % account_info['total_downloaded'])",
+        "action": "append_after",
+        "hook": (
+            "\t\t\timport sys, xbmcvfs\n"
+            "\t\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/')\n"
+            "\t\t\tsys.path.append(p) if p not in sys.path else None\n"
+            "\t\t\timport torbox_usage\n"
+            "\t\t\ttorbox_usage.append_usage_stats(self, account_info, append)"
+        )
     }
 ]
