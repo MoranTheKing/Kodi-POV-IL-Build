@@ -161,10 +161,7 @@ def _run_build_startup_repairs():
         _maybe_patch_pov_hebrew_genres,
         _maybe_patch_pov_hebrew_ui,
         _maybe_patch_af3_home,
-        _maybe_patch_pov_favorites_refresh,
-        _maybe_patch_pov_debrid_status,
         _maybe_show_af3_first_launch_dialog,
-        _maybe_show_debrid_status,
     )
     for step in steps:
         try:
@@ -449,36 +446,6 @@ def _maybe_patch_pov_hebrew_ui():
         try:
             kodi_utils.log(
                 'pov_hebrew_ui_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_pov_favorites_refresh():
-    """Make POV's dialogs.py refresh the open container when an item is
-    ADDED to a list, not only when removed. Without this, adding a title
-    to "My Movies"/"My Shows" (TMDB Favorites/Watchlist, a custom list,
-    or POV-local favorites) shows the "added" toast but the item only
-    appears after navigating away and back -- removing already refreshes
-    instantly. Self-healing: re-applies every startup if POV wiped the
-    marker; skips silently if the upstream shape changed."""
-    try:
-        from resources.lib import pov_favorites_refresh_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_favorites_refresh_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'pov_favorites_refresh_patcher: container now refreshes '
-                'on add too', level='INFO')
-        elif status in ('unmatched', 'write_failed', 'read_failed'):
-            kodi_utils.log(
-                'pov_favorites_refresh_patcher: ' + status, level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_favorites_refresh_patcher run failed: {0}'.format(e),
                 level='WARNING')
         except Exception:
             pass
@@ -1383,55 +1350,6 @@ def _maybe_show_af3_first_launch_dialog():
             kodi_utils.log(
                 'af3_first_launch failed: {0}'.format(e),
                 level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_show_debrid_status():
-    """Build-only premium debrid subscription toasts on Kodi startup.
-
-    This intentionally lives outside POV so it applies consistently in
-    Estuary, FENtastic and Arctic Fuse 3, while the build_mode gate keeps
-    standalone AI-subtitle installs from changing user navigation/state.
-    """
-    try:
-        from resources.lib import debrid_status_notifier, kodi_utils
-    except Exception:
-        return
-    try:
-        status = debrid_status_notifier.maybe_notify()
-        if status.startswith('shown:'):
-            kodi_utils.log('Debrid startup subscription status shown: {0}'
-                           .format(status.split(':', 1)[1]),
-                           level='INFO')
-        elif status not in ('no_pov', 'nothing_to_show', 'already_shown'):
-            kodi_utils.log('Debrid startup status: {0}'.format(status),
-                           level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log('Debrid startup status failed: {0}'.format(e),
-                           level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_pov_debrid_status():
-    """Build-only: make POV's premium-expiry settings suitable for
-    our Hebrew/icon-aware startup toasts and prevent duplicate generic
-    POV expiry notifications."""
-    try:
-        from resources.lib import pov_debrid_status_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_debrid_status_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log('POV debrid status settings patched',
-                           level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log('POV debrid status patch failed: {0}'.format(e),
-                           level='WARNING')
         except Exception:
             pass
 

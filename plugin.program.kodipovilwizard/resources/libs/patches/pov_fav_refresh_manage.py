@@ -1,0 +1,26 @@
+# File: plugin.program.kodipovilwizard/resources/lib/patches/fav_refresh_manage.py
+
+import xbmc
+
+def run(local_vars):
+    """
+    Executes the list toggle logic and forces a container refresh.
+    Returns the toggle result to properly satisfy the BaseListManager.manage() exit flow.
+    """
+    try:
+        self_obj = local_vars.get('self')
+        choice = local_vars.get('choice')
+        action_add = local_vars.get('action_add')
+
+        # 1. Execute the original upstream toggle logic safely
+        toggle_result = self_obj.execute_toggle(choice, action_add)
+
+        # 2. Force the container refresh post-toggle
+        from modules import kodi_utils
+        kodi_utils.container_refresh()
+
+        return toggle_result
+
+    except Exception as e:
+        xbmc.log(f"[Wizard Addon] Error in fav_refresh_manage: {e}", xbmc.LOGERROR)
+        return None

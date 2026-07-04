@@ -341,5 +341,69 @@ PATCH_CONFIG = [
         "import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/'); "
         "sys.path.append(p) if p not in sys.path else None; import pov_my_lists; pov_my_lists.maybe_populate_tvshows(self, page_no)"
       )
+    },
+    {
+        "id": "pov_debrid_status_v2",
+        "name": "Debrid Expiry Notification Override",
+        "description": "Dynamically disables POV's upstream generic debrid notification in memory to prevent duplication with the custom build's Hebrew UI toasts.",
+        "target_file": "resources/lib/service.py",
+        "marker": "# WIZARD_POV_DEBRID_STATUS_v2",
+        "anchor": "\tPOVMonitor().run()",
+        "action": "prepend_before",
+        "hook": (
+            "import sys, xbmcvfs;\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/');\n"
+            "sys.path.append(p) if p not in sys.path else None;\n"
+            "import pov_debrid_status;\n"
+            "pov_debrid_status.run(locals())\n"
+        )
+    },
+    {
+        "id": "pov_custom_debrid_toasts_v2",
+        "name": "Custom Debrid Startup Toasts",
+        "description": "Fires Hebrew-localized, icon-aware Debrid subscription status notifications when Kodi starts, replacing the generic upstream toasts.",
+        "target_file": "resources/lib/service.py",
+        "marker": "# WIZARD_POV_CUSTOM_DEBRID_TOASTS_v2",
+        "anchor": "\tlogger('POV', 'Settings Monitor Service Starting')",
+        "action": "append_after",
+        "hook": (
+            "\timport sys, xbmcvfs, threading;\n"
+            "\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/');\n"
+            "\tsys.path.append(p) if p not in sys.path else None;\n"
+            "\timport pov_custom_debrid_toasts;\n"
+            "\tthreading.Thread(target=pov_custom_debrid_toasts.run, args=(locals(),)).start()\n"
+        )
+    },
+    {
+        "id": "wizard_fav_refresh_manage_v2",
+        "name": "Favorites Refresh (List Manager)",
+        "description": "Forces the UI container to refresh immediately when adding a title to TMDB/Trakt/MDBList, preventing stale views.",
+        "target_file": "resources/lib/indexers/list_helper.py",
+        "marker": "# WIZARD_FAV_REFRESH_MANAGE_v2",
+        "anchor": "return self.execute_toggle(choice, action_add)",
+        "action": "prepend_before",
+        "hook": (
+            "import sys, xbmcvfs;\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/');\n"
+            "sys.path.append(p) if p not in sys.path else None;\n"
+            "import pov_fav_refresh_manage;\n"
+            "return pov_fav_refresh_manage.run(locals())"
+        )
+    },
+    {
+        "id": "wizard_fav_refresh_dialog_v2",
+        "name": "Favorites Refresh (Local Dialogs)",
+        "description": "Forces the UI container to refresh immediately when adding a title to POV-local favorites, preventing stale views.",
+        "target_file": "resources/lib/modules/dialogs.py",
+        "marker": "# WIZARD_FAV_REFRESH_DIALOG_v2",
+        "anchor": "if refresh: container_refresh()",
+        "action": "prepend_before",
+        "hook": (
+            "import sys, xbmcvfs;\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/');\n"
+            "sys.path.append(p) if p not in sys.path else None;\n"
+            "import pov_fav_refresh_dialog;\n"
+            "pov_fav_refresh_dialog.run(locals())"
+        )
     }
 ]
