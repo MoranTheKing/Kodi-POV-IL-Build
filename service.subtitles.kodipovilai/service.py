@@ -162,8 +162,6 @@ def _run_build_startup_repairs():
         _maybe_patch_pov_hebrew_ui,
         _maybe_patch_af3_home,
         _maybe_patch_pov_favorites_refresh,
-        _maybe_patch_pov_menus,
-        _maybe_patch_pov_build_content_logger,
         _maybe_patch_pov_debrid_status,
         _maybe_show_af3_first_launch_dialog,
         _maybe_show_debrid_status,
@@ -377,39 +375,6 @@ def _maybe_repair_rtl_cache():
             pass
 
 
-def _maybe_patch_pov_menus():
-    """Force-sync POV's three context-menu builders (movies.py,
-    tvshows.py, episodes.py) to the canonical versions bundled in
-    this addon. Same self-healing pattern as pov_services_patcher
-    but using a whole-file copy instead of marker-inject, since
-    PR #98 replaces an existing block rather than appending one.
-    """
-    try:
-        from resources.lib import pov_menus_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        results = pov_menus_patcher.ensure_patched()
-        patched = [k for k, v in results.items() if v == 'patched']
-        if patched:
-            kodi_utils.log(
-                'pov_menus_patcher: synced {0} on startup'.format(
-                    ', '.join(patched)), level='INFO')
-        failed = [k for k, v in results.items()
-                  if v in ('failed', 'no_target', 'no_source')]
-        if failed:
-            kodi_utils.log(
-                'pov_menus_patcher: skipped {0}'.format(
-                    ', '.join(failed)), level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_menus_patcher run failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_patch_pov_genre_icons():
     """Re-icon POV's genre navigator rows to the stable genre icon
     set we ship (AF3 cached shortcut rows)."""
@@ -485,39 +450,6 @@ def _maybe_patch_pov_hebrew_ui():
             kodi_utils.log(
                 'pov_hebrew_ui_patcher failed: {0}'.format(e),
                 level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_pov_build_content_logger():
-    """Instrument POV's per-item list builders (menus/movies.py +
-    tvshows.py) so the SWALLOWED exception that empties favorites lists
-    is logged. We proved auth/fetch/db/meta are all fine yet the list
-    renders empty in ~218ms -- meaning build_movie_content raises in the
-    live Kodi context and its bare `except: pass` eats it. This turns
-    that into a POV_BUILD_ITEM_ERROR log line with the real exception."""
-    try:
-        from resources.lib import (
-            pov_build_content_logger_patcher, kodi_utils)
-    except Exception:
-        return
-    try:
-        status = pov_build_content_logger_patcher.ensure_patched()
-        if 'patched' in status and 'already' not in status:
-            kodi_utils.log(
-                'pov_build_content_logger_patcher: ' + status,
-                level='INFO')
-        elif status in ('no_pov',):
-            pass
-        else:
-            kodi_utils.log(
-                'pov_build_content_logger_patcher: ' + status,
-                level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_build_content_logger_patcher failed: '
-                '{0}'.format(e), level='WARNING')
         except Exception:
             pass
 

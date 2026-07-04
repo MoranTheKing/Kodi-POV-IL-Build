@@ -208,8 +208,8 @@ PATCH_CONFIG = [
             "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/')\n"
             "sys.path.append(p) if p not in sys.path else None\n"
             "import af3_pov_combined_discover\n"
-            "_wiz_res = af3_pov_combined_discover.handle_fetch(self.params)\n"
-            "if _wiz_res is not None: return _wiz_res\n"
+            "_pov_res = af3_pov_combined_discover.handle_fetch(self.params)\n"
+            "if _pov_res is not None: return _pov_res\n"
         )
     },
     {
@@ -227,5 +227,119 @@ PATCH_CONFIG = [
             "import kodi_widget_refresh\n"
             "kodi_widget_refresh.ping()\n"
         )
+    },
+    {
+      "id": "wizard_pov_logger_enable_movies_v2",
+      "name": "Content Logger Enable (Movies)",
+      "description": "Installs the exception tracer before run() builds any items.",
+      "target_file": "resources/lib/menus/movies.py",
+      "marker": "# WIZARD_POV_LOGGER_ENABLE_MOVIES_v2",
+      "anchor": "\t\t\tparams_get = self.params.get",
+      "action": "prepend_before",
+      "hook": (
+        "import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/'); "
+        "sys.path.append(p) if p not in sys.path else None; import pov_content_logger; pov_content_logger.enable()"
+      )
+    },
+    {
+      "id": "wizard_pov_logger_disable_movies_v2",
+      "name": "Content Logger Disable (Movies)",
+      "description": "Tears down the exception tracer once run() finishes.",
+      "target_file": "resources/lib/menus/movies.py",
+      "marker": "# WIZARD_POV_LOGGER_DISABLE_MOVIES_v2",
+      "anchor": "\t\tkodi_utils.set_view_mode(view_type, content_type, self.is_widget)",
+      "action": "append_after",
+      "hook": (
+        "import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/'); "
+        "sys.path.append(p) if p not in sys.path else None; import pov_content_logger; pov_content_logger.disable()"
+      )
+    },
+    {
+      "id": "wizard_pov_logger_enable_tvshows_v2",
+      "name": "Content Logger Enable (TV Shows)",
+      "description": "Installs the exception tracer before run() builds any items.",
+      "target_file": "resources/lib/menus/tvshows.py",
+      "marker": "# WIZARD_POV_LOGGER_ENABLE_TVSHOWS_v2",
+      "anchor": "\t\t\tparams_get = self.params.get",
+      "action": "prepend_before",
+      "hook": (
+        "import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/'); "
+        "sys.path.append(p) if p not in sys.path else None; import pov_content_logger; pov_content_logger.enable()"
+      )
+    },
+    {
+      "id": "wizard_pov_logger_disable_tvshows_v2",
+      "name": "Content Logger Disable (TV Shows)",
+      "description": "Tears down the exception tracer once run() finishes.",
+      "target_file": "resources/lib/menus/tvshows.py",
+      "marker": "# WIZARD_POV_LOGGER_DISABLE_TVSHOWS_v2",
+      "anchor": "\t\tkodi_utils.set_view_mode(view_type, content_type, self.is_widget)",
+      "action": "append_after",
+      "hook": (
+        "import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/'); "
+        "sys.path.append(p) if p not in sys.path else None; import pov_content_logger; pov_content_logger.disable()"
+      )
+    },
+    {
+      "id": "wizard_pov_logger_enable_episodes_v2",
+      "name": "Content Logger Enable (Episodes)",
+      "description": "Installs the exception tracer before run() builds any items.",
+      "target_file": "resources/lib/menus/episodes.py",
+      "marker": "# WIZARD_POV_LOGGER_ENABLE_EPISODES_v2",
+      "anchor": "\t\t\tparams_get = self.params.get",
+      "action": "prepend_before",
+      "hook": (
+        "import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/'); "
+        "sys.path.append(p) if p not in sys.path else None; import pov_content_logger; pov_content_logger.enable()"
+      )
+    },
+    {
+      "id": "wizard_pov_logger_disable_episodes_v2",
+      "name": "Content Logger Disable (Episodes)",
+      "description": "Tears down the exception tracer once run() finishes (episodes.py's run() ends at the focus_index line, not set_view_mode).",
+      "target_file": "resources/lib/menus/episodes.py",
+      "marker": "# WIZARD_POV_LOGGER_DISABLE_EPISODES_v2",
+      "anchor": "\t\tif index: kodi_utils.focus_index(index)",
+      "action": "append_after",
+      "hook": (
+        "import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/'); "
+        "sys.path.append(p) if p not in sys.path else None; import pov_content_logger; pov_content_logger.disable()"
+      )
+    },
+    {
+      "id": "wizard_pov_my_lists_movies_v3",
+      "name": "My Lists Dispatch Hook (Movies)",
+      "description": (
+        "Populates self.list for tmdb_my_movies / trakt_my_movies by "
+        "merging TMDB favorites+watchlist or Trakt "
+        "collection+watchlist+favorites, before POV's own dispatch "
+        "chain runs (and no-ops for every other action)."
+      ),
+      "target_file": "resources/lib/menus/movies.py",
+      "marker": "# WIZARD_POV_MY_LISTS_MOVIES_v3",
+      "anchor": "\t\t\texcept ValueError: page_no = params_get('new_page')",
+      "action": "append_after",
+      "hook": (
+        "import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/'); "
+        "sys.path.append(p) if p not in sys.path else None; import pov_my_lists; pov_my_lists.maybe_populate_movies(self, page_no)"
+      )
+    },
+    {
+      "id": "wizard_pov_my_lists_tvshows_v3",
+      "name": "My Lists Dispatch Hook (TV Shows)",
+      "description": (
+        "Populates self.list for tmdb_my_tvshows / trakt_my_tvshows by "
+        "merging TMDB favorites+watchlist or Trakt "
+        "collection+watchlist+favorites, before POV's own dispatch "
+        "chain runs (and no-ops for every other action)."
+      ),
+      "target_file": "resources/lib/menus/tvshows.py",
+      "marker": "# WIZARD_POV_MY_LISTS_TVSHOWS_v3",
+      "anchor": "\t\t\texcept ValueError: page_no = params_get('new_page')",
+      "action": "append_after",
+      "hook": (
+        "import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/'); "
+        "sys.path.append(p) if p not in sys.path else None; import pov_my_lists; pov_my_lists.maybe_populate_tvshows(self, page_no)"
+      )
     }
 ]
