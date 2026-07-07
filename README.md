@@ -310,7 +310,7 @@ Instead of executing standalone runtime scripts that perform repetitive file I/O
    Target addon files are kept completely clean of heavy business logic or algorithms. Injected hooks act purely as routers—appending our core patches path and calling external helper modules hosted natively inside the Wizard addon. All metadata registry definitions and extracted business logic modules MUST reside strictly inside a single unified directory to maintain encapsulation.
    *Example Hook:*
    ```python
-   import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/'); sys.path.append(p) if p not in sys.path else None; import feature_module; feature_module.run(local_vars)
+   import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/'); sys.path.append(p) if p not in sys.path else None; import feature_module; feature_module.run(local_vars)
    ```
 
 3. **Versioned Markers & Anti-Collision**
@@ -334,7 +334,7 @@ Each patch configuration is declared as a structured Python dictionary within th
     "marker": "# WIZARD_POV_SOURCE_REMEMBER_v2",
     "anchor": "def play_file(item):",
     "action": "append_after",
-    "hook": "import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/'); sys.path.append(p) if p not in sys.path else None; import source_memory; source_memory.capture(item)"
+    "hook": "import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/'); sys.path.append(p) if p not in sys.path else None; import source_memory; source_memory.capture(item)"
 }
 
 ```
@@ -343,6 +343,7 @@ Each patch configuration is declared as a structured Python dictionary within th
 
 * **On Addon Updates:** When Kodi updates an upstream addon, it wipes the directory and extracts pristine source files, naturally reverting all patches. The Wizard engine detects the missing markers on the next boot and reapplies the hooks seamlessly.
 * **On Rollbacks / Disabling:** By setting `"enabled": False` or removing a configuration, the engine targets the specific versioned marker and drops only the injected lines, instantly returning the file to its original upstream state.
+* **Implementation & timing:** the engine is `resources/libs/patch_engine.py` (`PatchEngine`: `execute_all`, `apply_patch`, `rollback_patch`, `trigger_post_update_patches`); the registry + business modules live in `resources/libs/patches/`. `execute_all()` runs on **every boot** from the service (`startup.py`), **deferred until after `first_boot_stabilize_if_needed()`** on a fresh-install first boot (so POV is warm), and the modular updater calls `trigger_post_update_patches()` immediately after installing/updating any addon mid-session. Injections are **atomic** (`<file>.tmp` → `os.replace`), `utf-8`, and **indentation-normalised** (hook dedented, then re-indented to the anchor's exact leading whitespace — tabs for POV — to avoid `IndentationError`/`TabError`). A wizard master switch `disable_all_patches` rolls everything back; per-patch `patch_enabled_<id>` settings roll back individual hooks.
 
 ---
 

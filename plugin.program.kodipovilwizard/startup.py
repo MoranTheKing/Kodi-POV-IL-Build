@@ -690,6 +690,18 @@ wait_for_gui_ready()
 # boot. Must run BEFORE the first-launch notification/contact modals below.
 first_boot_stabilize_if_needed()
 
+# RUNTIME PATCH ENGINE v2. Apply the additive POV source patches every boot
+# (idempotent -- already-patched files are skipped, disabled patches rolled
+# back). Placed immediately AFTER the first-boot stabilizer so on a fresh-install
+# first boot it is deferred until POV has warmed up + the skin reloaded (the race
+# guard); on a normal boot the stabilizer is a fast no-op so this runs right away.
+try:
+    from resources.libs.patch_engine import PatchEngine
+    PatchEngine().execute_all()
+except Exception as _pe_err:
+    logging.log('[PatchEngine] execute_all failed at startup: {0}'.format(_pe_err),
+                level=xbmc.LOGERROR)
+
 # SHOW NOTIFICATIONS
 if CONFIG.ENABLE_NOTIFICATION == 'Yes' and CONFIG.get_setting('buildname'):
     show_notification()

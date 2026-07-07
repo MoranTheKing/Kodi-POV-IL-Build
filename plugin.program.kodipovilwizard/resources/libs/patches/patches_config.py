@@ -12,7 +12,7 @@ PATCH_CONFIG = [
         "hook": (
             "\tif not result:\n"
             "\t\timport sys, xbmcvfs;\n"
-            "\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/');\n"
+            "\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
             "\t\tsys.path.append(p) if p not in sys.path else None;\n"
             "\t\timport pov_cache_handler;\n"
             "\t\tpov_cache_handler.handle_empty(string);\n"
@@ -28,7 +28,7 @@ PATCH_CONFIG = [
         "action": "prepend_before",
         "hook": (
             "\t\t\timport sys, xbmcvfs;\n"
-            "\t\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/');\n"
+            "\t\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
             "\t\t\tsys.path.append(p) if p not in sys.path else None;\n"
             "\t\t\timport pov_debrid_cleanup;\n"
             "\t\t\tpov_debrid_cleanup.safe_cleanup(locals());\n"
@@ -95,7 +95,7 @@ PATCH_CONFIG = [
         "hook": (
             "\t\t\t# WIZARD: Bypass cache persistence and purge poisoned DB rows\n"
             "\t\t\timport sys, xbmcvfs;\n"
-            "\t\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/modules/');\n"
+            "\t\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
             "\t\t\tsys.path.append(p) if p not in sys.path else None;\n"
             "\t\t\timport pov_meta_handler;\n"
             "\t\t\tpov_meta_handler.clear_blank_meta();\n"
@@ -112,7 +112,7 @@ PATCH_CONFIG = [
         "hook": (
             "\t\t\t# WIZARD: Bypass cache persistence and purge poisoned DB rows\n"
             "\t\t\timport sys, xbmcvfs;\n"
-            "\t\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/modules/');\n"
+            "\t\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
             "\t\t\tsys.path.append(p) if p not in sys.path else None;\n"
             "\t\t\timport pov_meta_handler;\n"
             "\t\t\tpov_meta_handler.clear_blank_meta();\n"
@@ -128,9 +128,9 @@ PATCH_CONFIG = [
         "action": "prepend_before",
         "hook": (
             "try:\n"
-            "    self.function(*self.args, **self.kwargs)\n"
+            "\tself.function(*self.args, **self.kwargs)\n"
             "except Exception:\n"
-            "    pass\n"
+            "\tpass\n"
             "continue"
         )
     },
@@ -156,7 +156,7 @@ PATCH_CONFIG = [
         "action": "append_after",
         "hook": (
             "\t\t\timport sys, xbmcvfs\n"
-            "\t\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/')\n"
+            "\t\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
             "\t\t\tsys.path.append(p) if p not in sys.path else None\n"
             "\t\t\timport pov_torbox_usage\n"
             "\t\t\tpov_torbox_usage.append_usage_stats(self, account_info, append)"
@@ -172,7 +172,7 @@ PATCH_CONFIG = [
         "action": "prepend_before",
         "hook": (
             "import sys, xbmcvfs\n"
-            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/')\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
             "sys.path.append(p) if p not in sys.path else None\n"
             "import pov_trakt_cache\n"
             "if pov_trakt_cache.is_empty_result(result, string): return result\n"
@@ -188,7 +188,7 @@ PATCH_CONFIG = [
         "action": "prepend_before",
         "hook": (
             "import sys, xbmcvfs\n"
-            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/')\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
             "sys.path.append(p) if p not in sys.path else None\n"
             "import pov_view_mode\n"
             "pov_view_mode.force_view(view_id, content)\n"
@@ -205,7 +205,7 @@ PATCH_CONFIG = [
         "action": "prepend_before",
         "hook": (
             "import sys, xbmcvfs\n"
-            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/')\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
             "sys.path.append(p) if p not in sys.path else None\n"
             "import af3_pov_combined_discover\n"
             "_wiz_res = af3_pov_combined_discover.handle_fetch(self.params)\n"
@@ -222,7 +222,7 @@ PATCH_CONFIG = [
         "action": "prepend_before",
         "hook": (
             "import sys, xbmcvfs\n"
-            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/')\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
             "sys.path.append(p) if p not in sys.path else None\n"
             "import kodi_widget_refresh\n"
             "kodi_widget_refresh.ping()\n"

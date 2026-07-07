@@ -68,6 +68,19 @@ class ModularUpdater:
             logging.log("[ModularUpdater] enable {0} failed: {1}".format(addon_id, e),
                         level=xbmc.LOGWARNING)
 
+    @staticmethod
+    def _run_post_update_patches():
+        """Re-apply the Engine v2 runtime patches after an addon install/update.
+
+        Dynamically imported + fully guarded so a patch-engine problem can never
+        break the updater. Idempotent (already-patched files are skipped)."""
+        try:
+            from resources.libs.patch_engine import PatchEngine
+            PatchEngine().trigger_post_update_patches()
+        except Exception as e:
+            logging.log("[ModularUpdater] post-update patch engine failed: {0}".format(e),
+                        level=xbmc.LOGERROR)
+
     def get_local_version(self, addon_id):
         """Read the local addon.xml to find the currently installed version.
 
@@ -371,6 +384,12 @@ class ModularUpdater:
 
         logging.log("[Provisioning] Provisioning finished", level=xbmc.LOGINFO)
 
+        # POV (and other content addons) were just (re)installed with pristine
+        # source -> re-apply the Engine v2 runtime patches now. On a fresh install
+        # the force-close + first-boot execute_all() also covers this; this call
+        # covers the MID-SESSION heal path (no reboot). Idempotent.
+        self._run_post_update_patches()
+
         all_present = all(
             xbmc.getCondVisibility('System.HasAddon({0})'.format(a)) for a in provision_ids
         )
@@ -588,6 +607,11 @@ class ModularUpdater:
             xbmc.sleep(1500)
             for _aid in extracted_addons:
                 self._enable_addon(_aid)
+
+            # A fresh addon extract overwrites any Engine v2 hooks it carried, so
+            # re-apply the runtime patches immediately (idempotent) rather than
+            # waiting for the next boot's execute_all().
+            self._run_post_update_patches()
 
         # 4a. Native Binary/Fallback handling outside of custom window loops
         if getattr(self, '_missing_native', None) and not xbmc.Monitor().abortRequested():

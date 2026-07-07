@@ -19,6 +19,8 @@
         <setting id="separate" type="bool" label="בטל הפרדה לפי גרסה" default="false"/>
         <setting type="lsep" label="ייצוב הפעלה ראשונה (First Boot):"/>
         <setting id="first_boot_warmup_seconds" type="slider" label="זמן חימום POV בהפעלה הראשונה (שניות)" default="25" range="5,5,120" option="int"/>
+        <setting type="lsep" label="מנוע טלאים (Patch Engine):"/>
+        <setting id="disable_all_patches" type="bool" label="בטל את כל טלאי ההרצה (Runtime Patches)" default="false"/>
 
         <!-- Hidden Settings -->
         <setting id="first_install" type="bool" label="First Install" visible="false" default="true" />
