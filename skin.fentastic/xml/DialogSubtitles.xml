@@ -9,7 +9,7 @@
 			<texture colordiffuse="black">colors/white.png</texture>
 		</control>
 		<include content="AdvancedGlobalViewBackGround">
-		<param name="fanart">$VAR[viewtypefanartview]</param>
+		<param name="fanart">$VAR[NowPlayingFanartVar]</param>
 		</include>
 		<control type="image">
 		<height>2000</height>
@@ -57,7 +57,7 @@
 				<top>10</top>
 				<left>10</left>
 				<height>50</height>
-				<width>1920</width>
+				<width>1720</width>
 				<orientation>horizontal</orientation>
 				<itemgap>15</itemgap>
 				<control type="label">
@@ -76,7 +76,7 @@
 					<description>Video label</description>
 					<top>0</top>
 					<height>40</height>
-					<width max="1200">auto</width>
+					<width max="1000">auto</width>
 					<font>font25_title</font>
 					<label>$INFO[Player.Filename]</label>
 					<align>left</align>
@@ -132,7 +132,7 @@
 				<control type="label">
 					<left>75</left>
 					<height>50</height>
-					<width>50</width>
+					<width>150</width>
 					<centertop>50%</centertop>
 					<textcolor>99FFFFFF</textcolor>
 					<shadowcolor>black</shadowcolor>
@@ -141,18 +141,18 @@
 					<label>[B]$INFO[ListItem.Label][/B]</label>
 				</control>
 				<control type="label">
-					<left>145</left>
+					<left>245</left>
 					<height>50</height>
-					<right>200</right>
+					<right>220</right>
 					<centertop>50%</centertop>
 					<aligny>center</aligny>
 					<font>font12</font>
 					<label>$INFO[ListItem.Label2]</label>
 				</control>
 				<control type="image">
-					<right>15</right>
+					<right>10</right>
 					<align>right</align>
-					<top>15</top>
+					<centertop>50%</centertop>
 					<width>35</width>
 					<height>35</height>
 					<aspectratio>keep</aspectratio>
@@ -161,14 +161,14 @@
 				</control>
 				<control type="image">
 					<right>10</right>
-					<centertop>80%</centertop>
+					<centertop>50%</centertop>
 					<width>50</width>
-					<height>17</height>
+					<height>20</height>
 					<texture>windows/subtitles/icon_sync.png</texture>
 					<visible>ListItem.property(sync)</visible>
 				</control>
 				<control type="image">
-					<right>10</right>
+					<right>80</right>
 					<centertop>50%</centertop>
 					<height>25</height>
 					<width>100</width>
@@ -201,10 +201,10 @@
 					<height>50</height>
 					<texture>$INFO[ListItem.Thumb,windows/subtitles/flags/,.png]</texture>
 				</control>
-				<control type="label">
+					<control type="label">
 					<left>75</left>
 					<height>50</height>
-					<width>50</width>
+					<width>150</width>
 					<centertop>50%</centertop>
 					<textcolor>99FFFFFF</textcolor>
 					<shadowcolor>black</shadowcolor>
@@ -213,20 +213,19 @@
 					<label>[B]$INFO[ListItem.Label][/B]</label>
 				</control>
 				<control type="label">
-					<left>145</left>
+					<left>245</left>
 					<height>50</height>
-					<right>200</right>
+					<right>220</right>
 					<centertop>50%</centertop>
 					<aligny>center</aligny>
 					<font>font12</font>
 					<scroll>true</scroll>
-					<scrolltime>40</scrolltime>
 					<label>$INFO[ListItem.Label2]</label>
 				</control>
 				<control type="image">
-					<right>15</right>
+					<right>10</right>
 					<align>right</align>
-					<top>15</top>
+					<centertop>50%</centertop>
 					<width>35</width>
 					<height>35</height>
 					<aspectratio>keep</aspectratio>
@@ -235,14 +234,14 @@
 				</control>
 				<control type="image">
 					<right>10</right>
-					<centertop>80%</centertop>
+					<centertop>50%</centertop>
 					<width>50</width>
-					<height>17</height>
+					<height>20</height>
 					<texture>windows/subtitles/icon_sync.png</texture>
 					<visible>ListItem.property(sync)</visible>
 				</control>
 				<control type="image">
-					<right>10</right>
+					<right>80</right>
 					<centertop>50%</centertop>
 					<height>25</height>
 					<width>100</width>
@@ -290,6 +289,14 @@
 				</control>
 			</control>
 			
+			<control type="label">
+				<width>300</width>
+				<right>0</right>
+				<bottom>40</bottom>
+				<align>center</align>
+				<height>25</height>
+				<label>[COLOR button_focus]אחוזי צפייה[/COLOR] $INFO[Player.Progress]%</label>
+			</control>
 			
 	</controls>
 </window>

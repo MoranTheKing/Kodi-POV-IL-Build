@@ -27,6 +27,7 @@
 	<include file="script-fentastic-widget_custom2.xml" />
 	<include file="script-fentastic-widget_custom3.xml" />
 	<include file="script-fentastic-search_history.xml" />
+	<include file="Includes_ExtendedInfo.xml" />
 	<include file="View_50_List.xml" />
 	<include file="View_51_Poster.xml" />
 	<include file="View_52_IconWall.xml" />
@@ -39,7 +40,9 @@
 	<include file="View_501_Banner.xml" />
 	<include file="View_502_FanArt.xml" />
 	<include file="View_504_WideWall.xml" />
+	<include file="View_630_Advanced_List.xml" />
 	<include file="Includes_Onclicks.xml"/>
+	<include file="Includes_Lists.xml"/>
 	<include file="Custom_1117_ExtraInfoContent.xml"/>
 	<include file="Custom_1118_SetupGuideViewer.xml"/>
 	<include file="Custom_1119_ChangelogViewer.xml" />
@@ -136,18 +139,23 @@
 		</control>
 		<control type="image">
 			<texture>colors/white.png</texture>
-			<colordiffuse>FF181818</colordiffuse>
-			<animation condition="true" effect="fade" start="100" end="70" time="0">Conditional</animation>
+			<colordiffuse>black</colordiffuse>
+			<animation condition="true" effect="fade" start="100" end="25" time="0">Conditional</animation>
 		</control>	
 		<control type="image">
-			<texture colordiffuse="black" background="true">common/trailerwindow.png</texture>
-			<animation condition="true" effect="fade" start="100" end="58" time="0">Conditional</animation>
+			<texture>colors/white.png</texture>
+			<colordiffuse>FF181818</colordiffuse>
+			<animation condition="true" effect="fade" start="100" end="55" time="0">Conditional</animation>
+		</control>	
+		<control type="image">
+			<texture colordiffuse="FF181818" background="true">common/trailerwindow.png</texture>
+			<animation condition="true" effect="fade" start="100" end="55" time="0">Conditional</animation>
 		</control>
 		<control type="image">
 			<include>__backgroundconfiganim__</include>
-			<animation condition="true" effect="fade" start="100" end="82" time="0">Conditional</animation>
+			<animation condition="true" effect="fade" start="100" end="55" time="0">Conditional</animation>
 			<texture flipx="true" background="true">shadows/shadow_mask.png</texture>
-			<colordiffuse>black</colordiffuse>
+			<colordiffuse>FF181818</colordiffuse>
 		</control>
 		</control>
 	</include>
@@ -2371,6 +2379,8 @@
 	<param name="movement">3</param>
 	<param name="topimage">dateandtimebgobj</param>
 	<param name="centertop">50%</param>
+	<param name="backgroundimage">settingsbackground</param>
+	<param name="list_type">fixedlist</param>
 	<definition>
 	<control type="group">
 	<centertop>$PARAM[centertop]</centertop>
@@ -2379,28 +2389,12 @@
 	<height>$PARAM[basedmenuheight]</height>
 	<include>$PARAM[animation]</include>
 	<visible allowhiddenfocus="true">$PARAM[visible]</visible>
+	<include>$PARAM[backgroundimage]</include>
 	<include>$PARAM[topimage]</include>
-	<control type="image">
-		<texture colordiffuse="85FFFFFF">masks/poster_w460_h680.png</texture>
-	</control>
-	<control type="image">
-		<left>0</left>
-		<right>0</right>
-		<top>0</top>
-		<bottom>0</bottom>
-		<animation condition="true" effect="fade" end="95" time="0">Conditional</animation>
-		<texture colordiffuse="98000000">lists/contentpanel-fade.png</texture>
-	</control>
-	<control type="image">
-		<left>0</left>
-		<right>0</right>
-		<top>0</top>
-		<bottom>0</bottom>
-		<animation condition="true" effect="fade" end="5" time="0">Conditional</animation>
-		<texture flipx="true" colordiffuse="purple">lists/shadow_mask_v.png</texture>
-	</control>
 	<include>$PARAM[TopHeadLineBaseMenu]</include>
-	<control type="fixedlist" id="$PARAM[id]">
+	<control type="$PARAM[list_type]" id="$PARAM[id]">
+		<onup>$PARAM[onup]</onup>
+		<ondown>$PARAM[ondown]</ondown>
 		<top>$PARAM[top_list]</top>
 		<left>$PARAM[list_left]</left>
 		<height>$PARAM[list_height]</height>
@@ -2911,7 +2905,7 @@
 
 
 <include name="SeekBarEnabled">
-<param name="visible">String.IsEqual(Skin.String(__chooseplayer),__simpleplayer)</param>
+<param name="visible">true</param>
 <definition>
 <control type="group">
 	<visible>$PARAM[visible]</visible>
