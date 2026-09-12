@@ -244,13 +244,6 @@
 				<visible>!Integer.IsEqual(ListItem.PercentPlayed,0)</visible>
 			</control>
 		</control>
-		<control type="image">
-			<top>35</top>
-			<width>320</width>
-			<height>120</height>
-			<centerleft>60%</centerleft>
-			<texture>$INFO[ListItem.Art(clearlogo)]</texture>
-		</control>
 	</include>
 	
 	<!-- KODI-RD-IL ADDITION -->

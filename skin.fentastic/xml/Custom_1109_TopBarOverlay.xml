@@ -5,12 +5,12 @@
 	<depth>DepthOSD</depth>
 	<include>GlobalTop2DownAnimation</include>
 	<zorder>0</zorder>
-	<visible>!Player.Paused + [Window.IsActive(fullscreenvidep) | Window.IsActive(videoosd)]</visible>
+	<visible>!Player.Paused + [Window.IsActive(fullscreenvideo) | Window.IsActive(videoosd)]</visible>
 	<controls>
 	
 	<control type="group">
 	<include>GlobalTop2DownAnimation</include>
-	<visible>!Player.Paused + [Window.IsActive(fullscreenvidep) | Window.IsActive(videoosd)]</visible>
+	<visible>!Player.Paused + [Window.IsActive(fullscreenvideo) | Window.IsActive(videoosd)]</visible>
 	<control type="image">
 		<top>-250</top>
 		<height>550</height>
