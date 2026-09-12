@@ -149,7 +149,7 @@
 				<onup>$PARAM[list_id]</onup>
 				<ondown>$PARAM[list_id]</ondown>
 				<viewtype label="$PARAM[viewtype_label]">list</viewtype>
-				<visible>String.IsEqual(Skin.String(lock.view.type),$PARAM[lockview])</visible>
+				<visible>String.IsEmpty(Skin.String(lock.view.type)) | String.IsEqual(Skin.String(lock.view.type),$PARAM[lockview])</visible>
 				
 				<focusedlayout height="85">
 					<control type="label">

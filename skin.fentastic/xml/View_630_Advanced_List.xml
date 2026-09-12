@@ -96,11 +96,11 @@
         
 		<control type="group">
         <include>GlobaRight2LeftAnimation</include>
-		<visible>String.IsEqual(Skin.String(lock.view.type),AdvancedViewList) | String.IsEmpty(Skin.String(lock.view.type)</visible>
+		<visible>String.IsEqual(Skin.String(lock.view.type),AdvancedViewList) | String.IsEmpty(Skin.String(lock.view.type))</visible>
             <control type="fixedlist" id="630">
                <width>1000</width>
 			    <centerleft>55%</centerleft>
-                <visible>String.IsEqual(Skin.String(lock.view.type),AdvancedViewList) | String.IsEmpty(Skin.String(lock.view.type)</visible>
+                <visible>String.IsEqual(Skin.String(lock.view.type),AdvancedViewList) | String.IsEmpty(Skin.String(lock.view.type))</visible>
                 <orientation>vertical</orientation>
                 <scrolltime tween="cubic">550</scrolltime>
                 <focusposition>3</focusposition>
