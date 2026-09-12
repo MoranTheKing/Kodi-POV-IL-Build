@@ -49,5 +49,31 @@
 		<label>$VAR[LockedPlayerLabelOSd]</label>
 	</control>
 </include>
+
+<include name="LockedViewTypesLabel">
+	<control type="label">
+		<centerleft>50%</centerleft>
+		<centertop>6%</centertop>
+		<aligny>center</aligny>
+		<align>center</align>
+		<height>45</height>
+		<font>font45_title</font>
+		<shadowcolor>black</shadowcolor>	
+		<label>$VAR[LockedViewTypeLabel]</label>
+	</control>
+</include>
+
+<include name="headerLockedViewTypesLabel">
+	<control type="label">
+		<centerleft>50%</centerleft>
+		<centertop>4%</centertop>
+		<aligny>center</aligny>
+		<align>center</align>
+		<height>45</height>
+		<font>font45_title</font>
+		<textcolor>98FFFFFF</textcolor>
+		<label>מערכת לנעילת תצוגות</label>
+	</control>
+</include>
 	
 </includes>
