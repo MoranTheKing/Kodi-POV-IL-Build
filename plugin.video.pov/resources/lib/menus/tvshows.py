@@ -1,4 +1,3 @@
-import sys
 from threading import Thread
 from indexers.metadata import tvshow_meta, art_infodict, movie_show_infodict
 from caches.watched_cache import get_watched_info_tv, get_watched_status_tvshow
@@ -7,7 +6,6 @@ from modules import kodi_utils, settings
 from modules.utils import manual_function_import, get_datetime, TaskPool
 # logger = kodi_utils.logger
 
-tv_meta_function = tvshow_meta
 KODI_VERSION, make_cast_list = kodi_utils.get_kodi_version(), kodi_utils.make_cast_list
 string, ls, build_url, get_infolabel = str, kodi_utils.local_string, kodi_utils.build_url, kodi_utils.get_infolabel
 run_plugin, container_refresh, container_update = 'RunPlugin(%s)', 'Container.Refresh(%s)', 'Container.Update(%s)'
@@ -15,15 +13,8 @@ fanart_empty = kodi_utils.get_addoninfo('fanart')
 poster_empty = kodi_utils.media_path('box_office.png')
 item_jump = kodi_utils.media_path('item_jump.png')
 item_next = kodi_utils.media_path('item_next.png')
-watched_str = '[B]סמן כנצפה (%s)[/B]'
-unwatched_str = '[B]סמן כלא נצפה (%s)[/B]'
-traktmanager_str = '[B]ניהול רשימות (Trakt)[/B]'
-tmdbmanager_str = '[B]ניהול רשימות (TMDB)[/B]'
-mdblmanager_str = '[B]ניהול רשימות (MDBList)[/B]'
-favmanager_str = '[B]ניהול מועדפים (POV)[/B]'
-extras_str = '[B]אקסטרות...[/B]'
-options_str = '[B]אפשרויות...[/B]'
-recomm_str = '[B]%s...[/B]' % ls(32503)
+watched_str, unwatched_str, traktmanager_str, tmdbmanager_str, mdblmanager_str = ls(32642), ls(32643), ls(32198), '[B]TMDB Lists Manager[/B]', ls(32200)
+favmanager_str, extras_str, options_str, recomm_str = ls(32197), ls(32645), ls(32646), '[B]%s...[/B]' % ls(32503)
 random_str, exit_str, browse_str = ls(32611), ls(32650), ls(32652)
 nextpage_str, switchjump_str, jumpto_str = ls(32799), ls(32784), ls(32964)
 
@@ -45,15 +36,18 @@ class TVShows:
 		self.include_year_in_title = settings.include_year_in_title('tvshow')
 		self.open_extras = settings.extras_open_action('tvshow')
 		self.cm_sort = settings.context_menu_sort()
-		self.is_folder = False if self.open_extras else True
+		self.smart_play = settings.smart_play_enabled()
 		self.is_widget = kodi_utils.external_browse()
+		if self.open_extras or self.smart_play == 2 or (self.smart_play == 1 and self.is_widget):
+			self.is_folder = False
+		else: self.is_folder = True
 		self.widget_hide_watched = self.is_widget and self.meta_user_info['widget_hide_watched']
 		if not self.exit_list_params: self.exit_list_params = get_infolabel('Container.FolderPath')
 		self.art_provider = (*settings.get_art_provider(), poster_empty, fanart_empty)
 
 	def build_tvshow_content(self, position, tag):
 		try:
-			meta = tv_meta_function(self.id_type, tag, self.meta_user_info, self.current_date)
+			meta = tvshow_meta(self.id_type, tag, self.meta_user_info, self.current_date)
 			meta_get = meta.get
 			if not meta or meta_get('blank_entry', False): return
 			playcount, overlay, total_watched, total_unwatched = get_watched_status_tvshow(
@@ -70,15 +64,12 @@ class TVShows:
 			tmdb_id, tvdb_id, imdb_id = meta_get('tmdb_id'), meta_get('tvdb_id'), meta_get('imdb_id')
 			try: tags = [i for i in (imdb_id, string(tmdb_id), string(tvdb_id)) if i not in ('', 'None', None)]
 			except: tags = []
-			if self.all_episodes and self.all_episodes == 1 and total_seasons > 1: url_params = build_url({
-				'mode': 'build_season_list', 'tmdb_id': tmdb_id
-			})
-			elif self.all_episodes: url_params = build_url({
-				'mode': 'build_episode_list', 'tmdb_id': tmdb_id, 'season': 'all'
-			})
-			else: url_params = build_url({
-				'mode': 'build_season_list', 'tmdb_id': tmdb_id
-			})
+			valid_seasons = (True for i in meta_get('season_data') if i['episode_count'] and i['season_number'])
+			if self.smart_play == 2 or (self.smart_play == 1 and self.is_widget):
+				url_params = build_url({'mode': 'smart_play_media', 'tmdb_id': tmdb_id})
+			elif self.all_episodes == 2 or (self.all_episodes == 1 and sum(valid_seasons) == 1):
+				url_params = build_url({'mode': 'build_episode_list', 'tmdb_id': tmdb_id, 'season': 'all'})
+			else: url_params = build_url({'mode': 'build_season_list', 'tmdb_id': tmdb_id})
 			extras_params = build_url({
 				'mode': 'extras_menu_choice', 'mediatype': 'tvshow',
 				'tmdb_id': tmdb_id, 'is_widget': self.is_widget
@@ -113,20 +104,9 @@ class TVShows:
 				cm_append((self.cm_sort['extras'], browse_str, container_update % url_params))
 			else:
 				cm_append((self.cm_sort['extras'], extras_str, run_plugin % extras_params))
-			# Show every list-manager whose service is connected --
-			# user can have all four side by side (TMDB, Trakt,
-			# MDBList, POV-local). The bundled default TMDB key is
-			# read-only and doesn't set account_id, so users without
-			# a personal TMDB connection don't see the TMDB Manager.
-			# TMDB takes the top slot (above Trakt/MDBList) when
-			# personally connected.
-			if kodi_utils.get_setting('tmdb.account_id'):
-				tmdb_sort_key = min(self.cm_sort['trakt'], self.cm_sort['mdblist']) - 1
-				cm_append((tmdb_sort_key, tmdbmanager_str, run_plugin % tmdb_manager_params))
-			if kodi_utils.get_setting('trakt_user', ''):
-				cm_append((self.cm_sort['trakt'], traktmanager_str, run_plugin % trakt_manager_params))
-			if kodi_utils.get_setting('mdblist.token'):
-				cm_append((self.cm_sort['mdblist'], mdblmanager_str, run_plugin % mdbl_manager_params))
+			cm_append((self.cm_sort['trakt'], traktmanager_str, run_plugin % trakt_manager_params))
+			cm_append((self.cm_sort['mdblist'], mdblmanager_str, run_plugin % mdbl_manager_params))
+			cm_append((self.cm_sort['tmdblist'], tmdbmanager_str, run_plugin % tmdb_manager_params))
 			cm_append((self.cm_sort['favorites'], favmanager_str, run_plugin % fav_manager_params))
 			if not playcount: cm_append((
 				self.cm_sort['mark'], watched_str % self.watched_title, run_plugin % build_url({
@@ -183,9 +163,9 @@ class TVShows:
 		except: pass
 
 class Menu(TVShows):
-	personal_dict = {'watched_tvshows': ('caches.watched_cache', 'get_watched_movie_tvshow'), 'in_progress_tvshows': ('caches.watched_cache', 'get_in_progress_tvshows'), 'favorites_tvshows': ('caches.favorites_cache', 'get_favorites'), 'dropped_tvshows': ('caches.favorites_cache', 'get_dropped')}
+	personal_dict = {'watched_tvshows': ('caches.watched_cache', 'get_watched_movie_tvshow'), 'in_progress_tvshows': ('caches.watched_cache', 'get_in_progress_tvshows'), 'favorites_tvshows': ('indexers.local_api', 'local_favorites'), 'dropped_tvshows': ('indexers.local_api', 'local_droplist')}
 	tmdb_special_key_dict = {'tmdb_tv_networks': 'network_id', 'tmdb_tv_year': 'year', 'tmdb_tvanime_year': 'year'}
-	tmdb_main = ('tmdb_tv_popular', 'tmdb_tv_premieres', 'tmdb_tv_upcoming', 'tmdb_tvanime_popular', 'tmdb_tvanime_premieres')
+	tmdb_main = ('tmdb_tv_trending', 'tmdb_tv_popular', 'tmdb_tv_premieres', 'tmdb_tv_upcoming', 'tmdb_tvanime_popular', 'tmdb_tvanime_premieres')
 	trakt_main = ('trakt_tv_trending', 'trakt_tv_trending_recent', 'trakt_tv_most_watched', 'trakt_tvanime_trending', 'trakt_tvanime_most_watched')
 	tmdb_personal = ('tmdb_watchlist', 'tmdb_favorites', 'tmdb_recommendations')
 	trakt_personal = ('trakt_collection', 'trakt_watchlist', 'trakt_favorites', 'trakt_droplist', 'trakt_collection_lists', 'trakt_watchlist_lists')
@@ -199,14 +179,13 @@ class Menu(TVShows):
 		return self.items
 
 	def run(self):
+		__handle__ = int(kodi_utils.argv1())
 		try:
 			params_get = self.params.get
-			__handle__ = int(sys.argv[1])
 			view_type, content_type = 'view.tvshows', 'tvshows'
-			mode = params_get('mode')
+			mode, category = params_get('mode'), ls(params_get('name'))
 			try: page_no = int(params_get('new_page', '1'))
 			except ValueError: page_no = params_get('new_page')
-			letter = params_get('new_letter', 'None')
 			if self.action in Menu.personal_dict: var_module, import_function = Menu.personal_dict[self.action]
 			else: var_module, import_function = 'indexers.%s_api' % self.action.split('_')[0], self.action
 			try: function = manual_function_import(var_module, import_function)
@@ -222,56 +201,55 @@ class Menu(TVShows):
 				self.list = [i['show']['ids'] for i in data]
 				if total_pages > page_no: self.new_page = {'new_page': string(page_no + 1)}
 			elif self.action in Menu.tmdb_personal:
-				data, total_pages = function('tv', page_no, letter)
+				data, total_pages = function('tv', page_no)
 				self.list = [i['id'] for i in data]
-				if total_pages > page_no: self.new_page = {'new_page': string(page_no + 1), 'new_letter': letter}
+				if total_pages > page_no: self.new_page = {'new_page': string(page_no + 1)}
 			elif self.action in Menu.trakt_personal:
 				self.id_type = 'trakt_dict'
-				data, total_pages = function('shows', page_no, letter)
+				data, total_pages = function('shows', page_no)
 				self.list = [i['media_ids'] for i in data]
 				if total_pages > 2: self.total_pages = total_pages
-				try:
-					if total_pages > page_no: self.new_page = {'new_page': string(page_no + 1), 'new_letter': letter}
-				except: pass
+				if isinstance(page_no, int) and total_pages > page_no:
+					self.new_page = {'new_page': string(page_no + 1)}
 			elif self.action in Menu.mdblist_personal:
-				self.id_type = 'trakt_dict'
-				data, total_pages = function('shows', page_no, letter)
-				self.list = [{'imdb': i['imdb_id'], 'tmdb': i['id']} for i in data]
+				data, total_pages = function('shows', page_no)
+				self.list = [i['id'] for i in data]
 				if total_pages > 2: self.total_pages = total_pages
-				try:
-					if total_pages > page_no: self.new_page = {'new_page': string(page_no + 1), 'new_letter': letter}
-				except: pass
+				if total_pages > page_no: self.new_page = {'new_page': string(page_no + 1)}
 			elif self.action in Menu.personal_dict:
-				data, total_pages = function(self.watched_info, 'tvshow', page_no, letter)
+				data, total_pages = function(self.watched_info, 'tvshow', page_no)
 				self.list = [i['media_id'] for i in data]
 				if total_pages > 2: self.total_pages = total_pages
-				if total_pages > page_no: self.new_page = {'new_page': string(page_no + 1), 'new_letter': letter}
+				if total_pages > page_no: self.new_page = {'new_page': string(page_no + 1)}
 			elif self.action in Menu.similar:
 				tmdb_id = self.params['tmdb_id']
 				data = function(tmdb_id, page_no)
 				self.list = [i['id'] for i in data['results']]
-				if data['page'] < data['total_pages']: self.new_page = {'new_page': string(data['page'] + 1), 'tmdb_id': tmdb_id}
+				if data['page'] < data['total_pages']:
+					self.new_page = {'new_page': string(data['page'] + 1), 'tmdb_id': tmdb_id}
 			elif self.action in Menu.tmdb_special_key_dict:
 				key = Menu.tmdb_special_key_dict[self.action]
 				function_var = params_get(key)
 				if not function_var: return
 				data = function(function_var, page_no)
 				self.list = [i['id'] for i in data['results']]
-				if data['page'] < data['total_pages']: self.new_page = {'new_page': string(data['page'] + 1), key: function_var}
-			elif self.action == 'tmdb_tv_discover':
+				if data['page'] < data['total_pages']:
+					self.new_page = {'new_page': string(data['page'] + 1), key: function_var}
+			elif self.action in ('tmdb_media_discover', 'tmdb_tv_discover'):
 				from menus.discover import set_history
-				name = self.params['name']
-				query = self.params['query']
+				name, query = self.params['name'], self.params['query']
 				if page_no == 1: set_history('tvshow', name, query)
 				data = function(query, page_no)
 				self.list = [i['id'] for i in data['results']]
-				if data['page'] < data['total_pages']: self.new_page = {'query': query, 'name': name, 'new_page': string(data['page'] + 1)}
+				if data['page'] < data['total_pages']:
+					self.new_page = {'query': query, 'name': name, 'new_page': string(data['page'] + 1)}
 			elif self.action in ('tmdb_tv_genres', 'tmdb_tvanime_genres'):
 				genre_id = self.params['genre_id']
 				if not genre_id: return
 				data = function(genre_id, page_no)
 				self.list = [i['id'] for i in data['results']]
-				if data['page'] < data['total_pages']: self.new_page = {'new_page': string(data['page'] + 1), 'genre_id': genre_id}
+				if data['page'] < data['total_pages']:
+					self.new_page = {'new_page': string(data['page'] + 1), 'genre_id': genre_id}
 			elif self.action == 'tmdb_tv_search':
 				query = self.params['query']
 				data = function(query, page_no)
@@ -296,12 +274,12 @@ class Menu(TVShows):
 				kodi_utils.add_dir(__handle__, url_params, jumpto_str, item_jump, isFolder=False)
 			kodi_utils.add_items(__handle__, self.worker())
 			if self.new_page:
-				self.new_page.update({'mode': mode, 'action': self.action, 'exit_list_params': self.exit_list_params, 'name': ls(params_get('name'))})
+				self.new_page.update({'mode': mode, 'action': self.action, 'exit_list_params': self.exit_list_params, 'name': category})
 				kodi_utils.add_dir(__handle__, self.new_page, nextpage_str, item_next)
 		except: pass
-		kodi_utils.set_category(__handle__, ls(params_get('name')))
+		kodi_utils.set_category(__handle__, category)
 		kodi_utils.set_sort_method(__handle__, content_type)
 		kodi_utils.set_content(__handle__, content_type)
 		kodi_utils.end_directory(__handle__, False if self.is_widget else None)
-		kodi_utils.set_view_mode(view_type, content_type)
+		kodi_utils.set_view_mode(view_type, content_type, self.is_widget)
 

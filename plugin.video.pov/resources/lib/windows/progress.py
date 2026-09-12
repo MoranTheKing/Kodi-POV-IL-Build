@@ -18,7 +18,6 @@ class ProgressMedia(BaseDialog):
 		self.false_button = kwargs.get('false_button', '')
 		self.focus_button = kwargs.get('focus_button', 10)
 		self.percent = float(kwargs.get('percent', 0))
-		self.make_items()
 		self.set_properties()
 
 	def onInit(self):
@@ -29,18 +28,18 @@ class ProgressMedia(BaseDialog):
 		self.clearProperties()
 		return self.selected
 
-	def iscanceled(self):
-		if self.enable_buttons: return self.selected
-		else: return self.is_canceled
+	def onClick(self, controlID):
+		self.selected = controlID == 10
+		self.close()
 
 	def onAction(self, action):
 		if action in self.closing_actions:
 			self.is_canceled = True
 			self.close()
 
-	def onClick(self, controlID):
-		self.selected = controlID == 10
-		self.close()
+	def iscanceled(self):
+		if self.enable_buttons: return self.selected
+		else: return self.is_canceled
 
 	def allow_buttons(self):
 		self.setProperty('tikiskins.source_progress.buttons', 'true')
@@ -49,15 +48,13 @@ class ProgressMedia(BaseDialog):
 		self.update(self.text, self.percent)
 		self.setFocusId(self.focus_button)
 
-	def make_items(self):
-		self.poster_main, self.poster_backup, self.fanart_main, self.fanart_backup = get_art_provider()
+	def set_properties(self):
+		poster_main, poster_backup, fanart_main, fanart_backup = get_art_provider()
+		self.poster = self.meta.get(poster_main) or self.meta.get(poster_backup) or poster_empty
+		self.fanart = self.meta.get(fanart_main) or self.meta.get(fanart_backup) or fanart_empty
+		self.clearlogo = self.meta.get('clearlogo') or ''
 		self.title = self.meta['title']
 		self.year = str(self.meta['year'])
-		self.poster = self.meta.get(self.poster_main) or self.meta.get(self.poster_backup) or poster_empty
-		self.fanart = self.meta.get(self.fanart_main) or self.meta.get(self.fanart_backup) or fanart_empty
-		self.clearlogo = self.meta['clearlogo'] or ''
-
-	def set_properties(self):
 		self.setProperty('tikiskins.source_progress.title', self.title)
 		self.setProperty('tikiskins.source_progress.year', self.year)
 		self.setProperty('tikiskins.source_progress.poster', self.poster)

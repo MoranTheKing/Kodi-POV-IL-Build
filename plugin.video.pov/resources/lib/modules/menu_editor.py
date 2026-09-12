@@ -1,5 +1,4 @@
 import json
-from urllib.parse import parse_qsl
 from caches.navigator_cache import navigator_cache
 from modules import kodi_utils, menu_lists as default_menus
 # from modules.kodi_utils import logger
@@ -12,7 +11,7 @@ class MenuEditor:
 	def __init__(self, params):
 		self.params = params
 		if 'menu_item' in params: self.menu_item = json.loads(params.get('menu_item'))
-		else: self.menu_item = dict(parse_qsl(kodi_utils.get_infolabel("ListItem.FileNameAndPath").replace('plugin://plugin.video.pov/?','')))
+		else: self.menu_item = kodi_utils.parsed_query(kodi_utils.get_infolabel('ListItem.FileNameAndPath'))
 		self.params_get, self.menu_item_get = self.params.get, self.menu_item.get
 		if not self.menu_item: self._make_menu_item()
 
@@ -24,20 +23,20 @@ class MenuEditor:
 		external_list_item, shortcut_folder = self.menu_item_get('external_list_item', 'False') == 'True', self.menu_item_get('shortcut_folder', 'False') == 'True'
 		list_name =  main_list_name_dict[active_list]
 		listing = []
+		listing_append = listing.append
 		if len(active_list) != 1:
-			listing.append((ls(32716) % menu_name_translated_display, self.move))
-			listing.append((ls(32717) % menu_name_translated_display, self.remove))
+			listing_append((ls(32716) % menu_name_translated_display, self.move))
+			listing_append((ls(32717) % menu_name_translated_display, self.remove))
 		if not shortcut_folder:
-			listing.append((ls(32718) % menu_name_translated_display, self.add_original_external))
-			listing.append((ls(32719) % menu_name_translated_display, self.shortcut_folder_add_item))
-		listing.append((ls(32721) % list_name, self.add_original))
-		listing.append((ls(32725) % list_name, self.shortcut_folder_add_to_main_menu))
-		listing.append((ls(32720) % list_name, self.add_trakt))
-		listing.append((ls(32722) % list_name, self.restore))
-		listing.append((ls(32723) % list_name, self.check_update_list))
-		if not external_list_item: listing.append((ls(32724) % menu_name_translated_display, self.reload_menu_item))
+			listing_append((ls(32718) % menu_name_translated_display, self.add_original_external))
+			listing_append((ls(32719) % menu_name_translated_display, self.shortcut_folder_add_item))
+		listing_append((ls(32725) % list_name, self.shortcut_folder_add_to_main_menu))
+		listing_append((ls(32721) % list_name, self.add_original))
+		listing_append((ls(32723) % list_name, self.check_update_list))
+		listing_append((ls(32722) % list_name, self.restore))
+		if not external_list_item: listing_append((ls(32724) % menu_name_translated_display, self.reload_menu_item))
 		list_items = [{'line1': i[0]} for i in listing]
-		kwargs = {'items': json.dumps(list_items), 'heading': 'POV', 'enumerate': 'false', 'multi_choice': 'false', 'multi_line': 'false'}
+		kwargs = {'items': json.dumps(list_items), 'heading': list_name.upper(), 'multi_line': 'false'}
 		function = kodi_utils.select_dialog([i[1] for i in listing], **kwargs)
 		if function is None: return
 		self.params = {'active_list': active_list, 'list_name': list_name, 'menu_name': menu_name, 'menu_name_translated': menu_name_translated, 'position': position}
@@ -45,9 +44,10 @@ class MenuEditor:
 		return function()
 
 	def edit_menu_shortcut_folder(self):
+		list_name = self.params_get('active_list', '')
 		listing = [(ls(32712), 'move'), (ls(32713), 'remove'), ('%s %s' % (ls(32671), ls(32129)), 'clear_all')]
 		list_items = [{'line1': i[0]} for i in listing]
-		kwargs = {'items': json.dumps(list_items), 'heading': 'POV', 'enumerate': 'false', 'multi_choice': 'false', 'multi_line': 'false'}
+		kwargs = {'items': json.dumps(list_items), 'heading': list_name.upper(), 'multi_line': 'false'}
 		self.action = kodi_utils.select_dialog([i[1] for i in listing], **kwargs)
 		if self.action is None: return
 		return self.shortcut_folder_contents_adjust()
@@ -57,10 +57,13 @@ class MenuEditor:
 		list_name =  main_list_name_dict[active_list]
 		try: choice_items = self._get_removed_items(active_list)
 		except: return kodi_utils.notification(32760, 1500)
-		browse_item = self._menu_select(choice_items, list_name)
+		icon_path = media_path()
+		list_items = [{'line1': ls(i['name']), 'icon': '%s%s' % (icon_path, i['iconImage'])} for i in choice_items]
+		kwargs = {'items': json.dumps(list_items), 'heading': list_name}
+		browse_item = kodi_utils.select_dialog(choice_items, **kwargs)
 		if browse_item is None: return
-		browse_item = choice_items[browse_item]
-		if browse_item.get('mode') == 'build_popular_people': kodi_utils.execute_builtin('RunPlugin(%s)' % kodi_utils.build_url(browse_item))
+		if browse_item.get('mode') == 'build_popular_people':
+			kodi_utils.execute_builtin('RunPlugin(%s)' % kodi_utils.build_url(browse_item))
 		else: kodi_utils.execute_builtin('Container.Update(%s)' % kodi_utils.build_url(browse_item))
 
 	def move(self):
@@ -110,20 +113,6 @@ class MenuEditor:
 		list_items.insert(position, self._add_external_info_to_item(self.menu_item, menu_name, False))
 		self._db_execute('set', choice_name, list_items, refresh=False)
 
-	def add_trakt(self):
-		from indexers.trakt_api import get_trakt_list_selection
-		trakt_selection = get_trakt_list_selection(list_choice='nav_edit')
-		if trakt_selection is None: return kodi_utils.notification(32736, 1500)
-		active_list = self.params_get('active_list')
-		list_items = navigator_cache.currently_used_list(active_list)
-		menu_name = trakt_selection['name']
-		position = self._menu_select(list_items, menu_name, multi_line='true', position_list=True)
-		if position is None: return kodi_utils.notification(32736, 1500)
-		menu_name = self._get_external_name_input(menu_name)
-		trakt_selection.update({'mode': 'build_trakt_list', 'iconImage': 'trakt.png'})
-		list_items.insert(position, self._add_external_info_to_item(trakt_selection, menu_name, False))
-		self._db_execute('set', active_list, list_items)
-
 	def restore(self):
 		if not kodi_utils.confirm_dialog(): return kodi_utils.notification(32736, 1500)
 		active_list = self.params_get('active_list')
@@ -149,7 +138,7 @@ class MenuEditor:
 		list_type = 'edited' if edited else'default'
 		current_list = edited or default
 		if default == new_contents: return kodi_utils.notification(32983, 1500)
-		new_entry = [i for i in new_contents if not i in default][0]
+		new_entry = [i for i in new_contents if i not in default][0]
 		new_entry_translated_name = ls(new_entry.get('name'))
 		if not kodi_utils.confirm_dialog(text='%s[CR]%s' % (ls(32727) % new_entry_translated_name, ls(32728))): return kodi_utils.notification(32736, 1500)
 		item_position = self._menu_select(current_list, new_entry_translated_name, position_list=True)
@@ -172,26 +161,26 @@ class MenuEditor:
 		self._db_execute('set', choice_name, list_items, refresh=False)
 
 	def _menu_select(self, choice_items, menu_name, heading='POV', multi_line='false', position_list=False):
-		def _builder():
-			for item in choice_items:
-				item_get = item.get
-				line1 = ls(item_get('name', '')).replace('[B]', '').replace('[/B]', '')
-				line2 = pos_str % (menu_name, line1 or ls(item_get('list_name')) if position_list else '')
-				if item_get('iconImage') in ('', 'None', None, 'DefaultFolder.png'): icon = 'DefaultFolder.png'
-				elif item_get('iconImage') == 'pov.png': icon = kodi_utils.get_addoninfo('icon')
-				elif item_get('network_id'): icon = item_get('iconImage', 'discover.png')
-				else: icon = '%s%s' % (icon_path, item_get('iconImage', 'discover.png'))
-				yield {'line1': line1, 'line2': line2, 'icon': icon}
 		menu_name, icon_path = menu_name.replace('[B]', '').replace('[/B]', ''), media_path()
-		list_items = list(_builder())
-		if position_list: list_items.insert(0, {'line1': top_str, 'line2': top_pos_str % menu_name, 'icon': media_path('top.png')})
-		index_list = [list_items.index(i) for i in list_items]
-		kwargs = {'items': json.dumps(list_items), 'heading': heading, 'enumerate': 'false', 'multi_choice': 'false', 'multi_line': multi_line}
+		list_items = []
+		list_items_append = list_items.append
+		if position_list: list_items_append({'line1': top_str, 'line2': top_pos_str % menu_name, 'icon': media_path('top.png')})
+		for item in choice_items:
+			item_get = item.get
+			line1 = ls(item_get('name', '')).replace('[B]', '').replace('[/B]', '')
+			line2 = pos_str % (menu_name, line1 or ls(item_get('list_name')) if position_list else '')
+			if item_get('iconImage') in ('', 'None', None, 'DefaultFolder.png'): icon = 'DefaultFolder.png'
+			elif item_get('iconImage') == 'pov.png': icon = kodi_utils.get_addoninfo('icon')
+			elif item_get('network_id'): icon = item_get('iconImage', 'discover.png')
+			else: icon = '%s%s' % (icon_path, item_get('iconImage', 'discover.png'))
+			list_items_append({'line1': line1, 'line2': line2, 'icon': icon})
+		index_list = list(range(len(list_items)))
+		kwargs = {'items': json.dumps(list_items), 'heading': heading, 'multi_line': multi_line}
 		return kodi_utils.select_dialog(index_list, **kwargs)
 
 	def _get_removed_items(self, active_list):
 		default_list_items, list_items = navigator_cache.get_main_lists(active_list)
-		return [i for i in default_list_items if not i in list_items]
+		return [i for i in default_list_items if i not in list_items]
 
 	def _get_external_name_input(self, current_name):
 		new_name = kodi_utils.dialog.input('POV', defaultt=current_name)
@@ -211,9 +200,7 @@ class MenuEditor:
 		return [(i, default_menus.main_menu_items[i]) for i in choice_list]
 
 	def _make_menu_item(self):
-		if 'imdb_keywords' in self.params_get('mode'):
-			self.menu_item = {'mode': 'build_%s_list' % self.params_get('media_type'), 'action': 'imdb_keywords_list_contents',
-								'list_id': self.params_get('list_id'), 'iconImage': 'imdb.png'}
+		pass
 
 	def _remove_active_shortcut_folder(self, main_menu_items_list, folder_name):
 		for x in main_menu_items_list:
@@ -265,11 +252,11 @@ class MenuEditor:
 			shortcut_folders[choice]
 			choice_name, choice_list = shortcut_folders[choice]
 		else:
-			if not kodi_utils.confirm_dialog(text=32702, top_space=True, default_control=10): return kodi_utils.notification(32736, 1500)
+			if not kodi_utils.confirm_dialog(text=32702, default_control=10): return kodi_utils.notification(32736, 1500)
 			self.shortcut_folder_make()
 			try: choice_name, choice_list = navigator_cache.get_shortcut_folders()[0]
 			except: return kodi_utils.notification(32736, 1500)
-		list_items = eval(choice_list)
+		list_items = json.loads(choice_list)
 		name = self.params_get('name') or self.params_get('menu_name_translated')
 		menu_name = self._get_external_name_input(name) or name
 		self.menu_item.update({'name': menu_name, 'iconImage': self.params_get('iconImage') or self.menu_item_get('iconImage')})
@@ -287,7 +274,7 @@ class MenuEditor:
 			shortcut_folders[choice]
 			name = shortcut_folders[choice][0]
 		else:
-			if not kodi_utils.confirm_dialog(text=32702, top_space=True, default_control=10): return kodi_utils.notification(32736, 1500)
+			if not kodi_utils.confirm_dialog(text=32702, default_control=10): return kodi_utils.notification(32736, 1500)
 			self.shortcut_folder_make()
 			try: name = navigator_cache.get_shortcut_folders()[0][0]
 			except: return kodi_utils.notification(32736, 1500)

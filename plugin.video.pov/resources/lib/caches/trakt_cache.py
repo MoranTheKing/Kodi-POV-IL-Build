@@ -1,3 +1,4 @@
+import json
 from modules.kodi_utils import trakt_db, database_connect
 from modules.utils import chunks
 # from modules.kodi_utils import logger
@@ -5,7 +6,7 @@ from modules.utils import chunks
 timeout = 20
 SELECT = 'SELECT id FROM trakt_data'
 DELETE = 'DELETE FROM trakt_data WHERE id = ?'
-DELETE_LIKE = 'DELETE FROM trakt_data WHERE id LIKE "%s"'
+DELETE_LIKE = 'DELETE FROM trakt_data WHERE id LIKE ?'
 WATCHED_INSERT = 'INSERT OR IGNORE INTO watched_status VALUES (?, ?, ?, ?, ?, ?)'
 WATCHED_DELETE = 'DELETE FROM watched_status WHERE db_type = ?'
 PROGRESS_INSERT = 'INSERT OR IGNORE INTO progress VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
@@ -59,9 +60,11 @@ def cache_trakt_object(function, string, url):
 	dbcur = TraktCache().dbcur
 	dbcur.execute(TC_BASE_GET, (string,))
 	cached_data = dbcur.fetchone()
-	if cached_data: return eval(cached_data[0])
+	try:
+		if cached_data: return json.loads(cached_data[0])
+	except: pass
 	result = function(url)
-	dbcur.execute(TC_BASE_SET, (string, repr(result)))
+	dbcur.execute(TC_BASE_SET, (string, json.dumps(result)))
 	return result
 
 def reset_activity(latest_activities):
@@ -71,9 +74,9 @@ def reset_activity(latest_activities):
 		dbcur = TraktCache().dbcur
 		dbcur.execute(TC_BASE_GET, (string,))
 		cached_data = dbcur.fetchone()
-		if cached_data: cached_data = eval(cached_data[0])
+		if cached_data: cached_data = json.loads(cached_data[0])
 		else: cached_data = default_activities()
-		dbcur.execute(TC_BASE_SET, (string, repr(latest_activities)))
+		dbcur.execute(TC_BASE_SET, (string, json.dumps(latest_activities)))
 	except: pass
 	return cached_data
 
@@ -84,10 +87,9 @@ def clear_trakt_hidden_data(list_type):
 		dbcur.execute(DELETE, (string,))
 	except: pass
 
-def clear_trakt_collection_watchlist_data(list_type, media_type):
-	if media_type == 'movies': media_type = 'movie'
-	if media_type in ('tvshows', 'shows'): media_type = 'tvshow'
-	string = 'trakt_%s_%s' % (list_type, media_type)
+def clear_trakt_collection_watchlist_data(list_type, mediatype):
+	mediatype = 'movie' if mediatype in ('movie', 'movies') else 'tvshow'
+	string = 'trakt_%s_%s' % (list_type, mediatype)
 	try:
 		dbcur = TraktCache().dbcur
 		dbcur.execute(DELETE, (string,))
@@ -97,7 +99,7 @@ def clear_trakt_list_contents_data(list_type):
 	string = 'trakt_list_contents_' + list_type + '_%'
 	try:
 		dbcur = TraktCache().dbcur
-		dbcur.execute(DELETE_LIKE % string)
+		dbcur.execute(DELETE_LIKE, (string,))
 	except: pass
 
 def clear_trakt_list_data(list_type):
@@ -110,11 +112,11 @@ def clear_trakt_list_data(list_type):
 def clear_trakt_calendar():
 	try:
 		dbcur = TraktCache().dbcur
-		dbcur.execute(DELETE_LIKE % 'trakt_get_my_calendar_%')
+		dbcur.execute(DELETE_LIKE, ('trakt_get_my_calendar_%',))
 	except: return
 
-def clear_trakt_recommendations(media_type):
-	string = 'trakt_recommendations_%s' % (media_type)
+def clear_trakt_recommendations(mediatype):
+	string = 'trakt_recommendations_%s' % (mediatype)
 	try:
 		dbcur = TraktCache().dbcur
 		dbcur.execute(DELETE, (string,))
@@ -134,67 +136,73 @@ def clear_all_trakt_cache_data(refresh=True):
 
 def default_activities():
 	return {
-			'all': '2020-01-01T00:00:01.000Z',
+			'all': '',
 			'movies':
 				{
-				'watched_at': '2020-01-01T00:00:01.000Z',
-				'collected_at': '2020-01-01T00:00:01.000Z',
-				'rated_at': '2020-01-01T00:00:01.000Z',
-				'watchlisted_at': '2020-01-01T00:00:01.000Z',
-				'recommendations_at': '2020-01-01T00:00:01.000Z',
-				'commented_at': '2020-01-01T00:00:01.000Z',
-				'paused_at': '2020-01-01T00:00:01.000Z',
-				'hidden_at': '2020-01-01T00:00:01.000Z'
+				'watched_at': '',
+				'collected_at': '',
+				'rated_at': '',
+				'watchlisted_at': '',
+				'favorited_at': '',
+				'recommendations_at': '',
+				'commented_at': '',
+				'paused_at': '',
+				'hidden_at': ''
 				},
 			'episodes':
 				{
-				'watched_at': '2020-01-01T00:00:01.000Z',
-				'collected_at': '2020-01-01T00:00:01.000Z',
-				'rated_at': '2020-01-01T00:00:01.000Z',
-				'watchlisted_at': '2020-01-01T00:00:01.000Z',
-				'commented_at': '2020-01-01T00:00:01.000Z',
-				'paused_at': '2020-01-01T00:00:01.000Z'
+				'watched_at': '',
+				'collected_at': '',
+				'rated_at': '',
+				'watchlisted_at': '',
+				'commented_at': '',
+				'paused_at': ''
 				},
 			'shows':
 				{
-				'rated_at': '2020-01-01T00:00:01.000Z',
-				'watchlisted_at': '2020-01-01T00:00:01.000Z',
-				'recommendations_at': '2020-01-01T00:00:01.000Z',
-				'commented_at': '2020-01-01T00:00:01.000Z',
-				'hidden_at': '2020-01-01T00:00:01.000Z',
-				'dropped_at': '2020-01-01T00:00:01.000Z'
+				'rated_at': '',
+				'watchlisted_at': '',
+				'favorited_at': '',
+				'recommendations_at': '',
+				'commented_at': '',
+				'hidden_at': '',
+				'dropped_at': ''
 				},
 			'seasons':
 				{
-				'rated_at': '2020-01-01T00:00:01.000Z',
-				'watchlisted_at': '2020-01-01T00:00:01.000Z',
-				'commented_at': '2020-01-01T00:00:01.000Z',
-				'hidden_at': '2020-01-01T00:00:01.000Z'
+				'rated_at': '',
+				'watchlisted_at': '',
+				'commented_at': '',
+				'hidden_at': ''
 				},
 			'comments':
 				{
-				'liked_at': '2020-01-01T00:00:01.000Z'
+				'liked_at': ''
 				},
 			'lists':
 				{
-				'liked_at': '2020-01-01T00:00:01.000Z',
-				'updated_at': '2020-01-01T00:00:01.000Z',
-				'commented_at': '2020-01-01T00:00:01.000Z'
+				'liked_at': '',
+				'updated_at': '',
+				'commented_at': ''
 				},
 			'watchlist':
 				{
-				'updated_at': '2020-01-01T00:00:01.000Z'
+				'updated_at': ''
+				},
+			'favorites':
+				{
+				'updated_at': ''
 				},
 			'recommendations':
 				{
-				'updated_at': '2020-01-01T00:00:01.000Z'
+				'updated_at': ''
 				},
 			'account':
 				{
-				'settings_at': '2020-01-01T00:00:01.000Z',
-				'followed_at': '2020-01-01T00:00:01.000Z',
-				'following_at': '2020-01-01T00:00:01.000Z',
-				'pending_at': '2020-01-01T00:00:01.000Z'
+				'settings_at': '',
+				'followed_at': '',
+				'following_at': '',
+				'pending_at': ''
 				}
 			}
 

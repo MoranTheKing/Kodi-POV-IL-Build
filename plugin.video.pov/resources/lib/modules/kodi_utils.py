@@ -1,46 +1,43 @@
 import json
 import sqlite3 as database
-from urllib.parse import urlencode, parse_qsl
+from urllib.parse import urlencode, urlparse, parse_qsl
 import xbmc, xbmcgui, xbmcplugin, xbmcvfs
 from xbmcaddon import Addon
 
-window, dialog, progressDialog, progressDialogBG = xbmcgui.Window(10000), xbmcgui.Dialog(), xbmcgui.DialogProgress(), xbmcgui.DialogProgressBG()
-player, xbmc_player, monitor, xbmc_monitor, execJSONRPC = xbmc.Player(), xbmc.Player, xbmc.Monitor(), xbmc.Monitor, xbmc.executeJSONRPC
-get_infolabel, get_addoninfo, get_visibility = xbmc.getInfoLabel, Addon().getAddonInfo, xbmc.getCondVisibility
-window_xml_info_action, window_xml_dialog = xbmcgui.ACTION_SHOW_INFO, xbmcgui.WindowXMLDialog
-window_xml_closing_actions = (xbmcgui.ACTION_PARENT_DIR, xbmcgui.ACTION_PREVIOUS_MENU, xbmcgui.ACTION_STOP, xbmcgui.ACTION_NAV_BACK)
-window_xml_selection_actions = (xbmcgui.ACTION_SELECT_ITEM, xbmcgui.ACTION_MOUSE_START)
-window_xml_context_actions = (xbmcgui.ACTION_CONTEXT_MENU, xbmcgui.ACTION_MOUSE_RIGHT_CLICK, xbmcgui.ACTION_MOUSE_LONG_CLICK)
-window_xml_left_action, window_xml_right_action = xbmcgui.ACTION_MOVE_LEFT, xbmcgui.ACTION_MOVE_RIGHT
-window_xml_up_action, window_xml_down_action = xbmcgui.ACTION_MOVE_UP, xbmcgui.ACTION_MOVE_DOWN
+addon_object, window, execJSONRPC = Addon(), xbmcgui.Window(10000), xbmc.executeJSONRPC
+player, xbmc_player, monitor, xbmc_monitor = xbmc.Player(), xbmc.Player, xbmc.Monitor(), xbmc.Monitor
+dialog, progressDialog, progressDialogBG = xbmcgui.Dialog(), xbmcgui.DialogProgress(), xbmcgui.DialogProgressBG()
+get_addoninfo, get_infolabel, get_visibility = addon_object.getAddonInfo, xbmc.getInfoLabel, xbmc.getCondVisibility
 
 navigator_db   = 'special://profile/addon_data/plugin.video.pov/navigator.db'
 watched_db     = 'special://profile/addon_data/plugin.video.pov/watched.db'
-favourites_db  = 'special://profile/addon_data/plugin.video.pov/favourites.db'
+favorites_db   = 'special://profile/addon_data/plugin.video.pov/watched.db'
 views_db       = 'special://profile/addon_data/plugin.video.pov/views.db'
-trakt_db       = 'special://profile/addon_data/plugin.video.pov/traktcache4.db'
+trakt_db       = 'special://profile/addon_data/plugin.video.pov/traktcache.db'
 mdbl_db        = 'special://profile/addon_data/plugin.video.pov/mdblcache.db'
 maincache_db   = 'special://profile/addon_data/plugin.video.pov/maincache.db'
 metacache_db   = 'special://profile/addon_data/plugin.video.pov/metacache.db'
 debridcache_db = 'special://profile/addon_data/plugin.video.pov/debridcache.db'
-external_db    = 'special://profile/addon_data/plugin.video.pov/providerscache2.db'
+external_db    = 'special://profile/addon_data/plugin.video.pov/providerscache.db'
+scrapers_path  = 'special://home/addons/plugin.video.pov/resources/lib/scrapers/'
 databases_path = 'special://profile/addon_data/plugin.video.pov/'
 packages_path  = 'special://home/addons/packages/'
+indicators_dict = {0: watched_db, 1: trakt_db, 2: mdbl_db}
 
-current_dbs           = ('settings.xml', 'debridcache.db', 'favourites.db', 'maincache.db', 'metacache.db', 'fenomundesirables.db',
-						'navigator.db', 'providerscache2.db', 'traktcache4.db', 'mdblcache.db', 'views.db', 'watched.db', 'fenomcache.db')
-movie_dict_removals   = ('tmdblogo', 'fanart_added', 'cast', 'poster', 'rootname', 'imdb_id', 'tmdb_id', 'tvdb_id', 'all_trailers',
-						'fanart', 'banner', 'clearlogo', 'clearart', 'landscape', 'discart', 'original_title', 'english_title', 'extra_info',
-						'alternative_titles', 'country_codes', 'fanarttv_fanart', 'fanarttv_poster', 'fanart2', 'poster2')
-tvshow_dict_removals  = ('tmdblogo', 'fanart_added', 'cast', 'poster', 'rootname', 'imdb_id', 'tmdb_id', 'tvdb_id', 'all_trailers',
-						'fanart', 'banner', 'clearlogo', 'clearart', 'landscape', 'discart', 'original_title', 'english_title', 'extra_info',
-						'alternative_titles', 'country_codes', 'fanarttv_fanart', 'fanarttv_poster', 'fanart2', 'poster2',
-						'total_episodes', 'total_seasons', 'total_aired_eps', 'season_summary', 'season_data')
-episode_dict_removals = ('thumb', 'guest_stars', 'episode_type')
-myvideos_db_paths     = {19: '119', 20: '121', 21: '131'}
+def current_dbs():
+	return {'settings.xml', 'fenomcache.db', 'traktcache.db', 'mdblcache.db', 'watched.db',
+			'maincache.db', 'metacache.db', 'navigator.db', 'views.db', 'debridcache.db', 'providerscache.db'}
 
 def logger(heading, function):
 	xbmc.log('>> %s <<: %s' % (heading, function), 1)
+
+def argv1():
+	try: return __import__('sys').argv[1]
+	except: return '-1'
+
+def parsed_query(url):
+	try: return dict(parse_qsl(urlparse(url).query))
+	except: return dict()
 
 def database_connect(file, **kwargs):
 	return database.connect(translate_path(file), **kwargs)
@@ -62,7 +59,7 @@ def addon(addon_id='plugin.video.pov'):
 	return Addon(id=addon_id)
 
 def addon_installed(addon_id):
-	return get_visibility('System.HasAddon(%s)' % addon_id)
+	return get_visibility('System.AddonIsEnabled(%s)' % addon_id)
 
 def add_item(handle, url, listitem, isFolder):
 	xbmcplugin.addDirectoryItem(handle, url, listitem, isFolder)
@@ -103,6 +100,9 @@ def convert_language(lang, format='long'):
 def supported_media():
 	return xbmc.getSupportedMedia('video')
 
+def translate_path(path):
+	return xbmcvfs.translatePath(path)
+
 def path_exists(path):
 	return xbmcvfs.exists(path)
 
@@ -133,12 +133,9 @@ def make_listitem():
 def local_string(string):
 	try: _string = int(string)
 	except: return string
-	try: _string = str(Addon().getLocalizedString(_string))
-	except: _string = Addon().getLocalizedString(_string)
+	try: _string = str(addon_object.getLocalizedString(_string))
+	except: _string = addon_object.getLocalizedString(_string)
 	return _string or string
-
-def translate_path(path):
-	return xbmcvfs.translatePath(path)
 
 def sleep(time):
 	return xbmc.sleep(time)
@@ -159,7 +156,8 @@ def current_window_id():
 	return xbmcgui.Window(xbmcgui.getCurrentWindowId())
 
 def get_video_database_path():
-	return 'special://profile/Database/MyVideos%s.db' % myvideos_db_paths[get_kodi_version()]
+	version = {19: '119', 20: '121', 21: '131', 22: '146'}[get_kodi_version()]
+	return 'special://profile/Database/MyVideos%s.db' % version
 
 def show_busy_dialog():
 	return execute_builtin('ActivateWindow(busydialognocancel)')
@@ -183,48 +181,65 @@ def widget_refresh():
 def container_refresh():
 	return execute_builtin('Container.Refresh')
 
-def ok_dialog(heading='POV', text='', highlight='dodgerblue', ok_label=local_string(32839), top_space=False):
-#	from windows import open_window
+def ok_dialog(heading='POV', text='', highlight='dodgerblue', ok_label=local_string(32839), top_space=True):
 	if isinstance(heading, int): heading = local_string(heading)
 	if isinstance(text, int): text = local_string(text)
-	if not text: text = '[CR]%s' % local_string(32760)
-	elif top_space: text = '[CR]%s' % text
-	kwargs = {'heading': heading, 'text': text, 'highlight': highlight, 'ok_label': ok_label}
-#	return open_window(('windows.select_ok', 'OK'), 'select_ok.xml', **kwargs)
+	if not text: top_space, text = True, local_string(32760)
+	if top_space: text = '[CR]%s' % text
 	return dialog.ok(heading, text)
 
-def confirm_dialog(heading='POV', text='', highlight='dodgerblue', ok_label=local_string(32839), cancel_label=local_string(32840), top_space=False, default_control=11):
-#	from windows import open_window
+def confirm_dialog(heading='POV', text='', highlight='dodgerblue', ok_label=local_string(32839), cancel_label=local_string(32840), top_space=True, default_control=11):
 	if isinstance(heading, int): heading = local_string(heading)
 	if isinstance(text, int): text = local_string(text)
 	if isinstance(ok_label, int): ok_label = local_string(ok_label)
 	if isinstance(cancel_label, int): cancel_label = local_string(cancel_label)
 	if not text: text = '[CR]%s' % local_string(32580)
 	elif top_space: text = '[CR]%s' % text
-	kwargs = {'heading': heading, 'text': text, 'highlight': highlight, 'ok_label': ok_label, 'cancel_label': cancel_label, 'default_control': default_control}
-#	return open_window(('windows.select_ok', 'YesNo'), 'select_ok.xml', **kwargs)
 	return dialog.yesno(heading, text, cancel_label, ok_label)
 
 def select_dialog(function_list, **kwargs):
-	from windows import open_window
-	selection = open_window(('windows.select_ok', 'Select'), 'select.xml', **kwargs)
-	if selection in ([], None): return None
-	if kwargs.get('multi_choice', 'false') == 'true': return [function_list[i] for i in selection]
+	def _builder():
+		for count, item in enumerate(items, 1):
+			line1 = '%s. %s' % (count, item['line1']) if enum else item['line1']
+			line2 = '[I]%s[/I]' % (item.get('line2') or item['line1'])
+			listitem = make_listitem()
+			listitem.setLabel(line1.upper())
+			listitem.setLabel2(line2.upper())
+			listitem.setArt({'icon': item.get('icon') or default_icon})
+			yield listitem
+	default_icon = '%s%s' % (get_addoninfo('path'), 'pov_poster.png')
+	items = json.loads(kwargs.get('items') or '[]')
+	heading = kwargs.get('heading') or get_addoninfo('name')
+	enum = kwargs.get('enumerate', 'false') == 'true'
+	details = kwargs.get('multi_line', 'true') == 'true'
+	multi_choice = kwargs.get('multi_choice', 'false') == 'true'
+	if multi_choice:
+		preselect = kwargs.get('preselect') or []
+		selection = dialog.multiselect(heading, list(_builder()), preselect=preselect, useDetails=details)
+	else:
+		preselect = kwargs.get('preselect') if kwargs.get('preselect') is not None else -1
+		selection = dialog.select(heading, list(_builder()), preselect=preselect, useDetails=details)
+	if isinstance(selection, list) and multi_choice: return [function_list[i] for i in selection]
+	if selection in (-1, None): return None
 	return function_list[selection]
 
 def show_text(heading, text=None, file=None, font_size='small', kodi_log=False):
-	from windows import open_window
 	if isinstance(heading, int): heading = local_string(heading)
 	heading = heading.replace('[B]', '').replace('[/B]', '')
 	if file:
 		with open_file(file) as f: text = f.readBytes().decode('utf-8-sig')
-	if kodi_log and confirm_dialog(text=local_string(32855), ok_label=local_string(32824), cancel_label=local_string(32828), top_space=True):
+	if kodi_log and confirm_dialog(
+		text=local_string(32855),
+		ok_label=local_string(32824),
+		cancel_label=local_string(32828)
+	):
 		lines = []
 		for line in text.splitlines(keepends=True):
 			if line[0].isdigit(): lines += [line]
 			else: lines[-1] += line
 		text = ''.join(i for i in reversed(lines) if any(x in i.lower() for x in ('exception', 'error')))
-	return open_window(('windows.textviewer', 'TextViewer'), 'textviewer.xml', heading=heading, text=text, font_size=font_size)
+	if not text: return notification(32760)
+	return dialog.textviewer(heading, text)
 
 def notification(line1, time=3000, icon=None, sound=False):
 	if isinstance(line1, int): line1 = local_string(line1)
@@ -262,31 +277,20 @@ def set_view_property(view_type, view_id):
 def set_view_properties():
 	dbcon = database_connect(views_db, isolation_level=None)
 	dbcur = dbcon.cursor()
-	dbcur.execute("""PRAGMA synchronous = OFF""")
-	dbcur.execute("""PRAGMA journal_mode = OFF""")
 	dbcur.execute("""SELECT * FROM views""")
 	view_ids = dbcur.fetchall()
 	for item in view_ids: set_property('pov_%s' % item[0], item[1])
 
-def set_view_mode(view_type, content='files'):
-	if external_browse(): return
+def set_view_mode(view_type, content='files', is_widget=None):
+	if is_widget is True or (is_widget is None and external_browse()): return
 	view_id = get_property('pov_%s' % view_type)
-	hold = 0
-	if not view_id:
-		try:
-			dbcon = database_connect(views_db, isolation_level=None)
-			dbcur = dbcon.cursor()
-			dbcur.execute("""SELECT view_id FROM views WHERE view_type = ?""", (str(view_type),))
-			view_id = dbcur.fetchone()[0]
-		except: return
+	if not view_id: return
 	try:
-		sleep(100)
-		while not container_content() == content:
-			hold += 1
-			if hold < 5000: sleep(1)
-			else: return
-		if view_id: execute_builtin('Container.SetViewMode(%s)' % view_id)
-	except: return
+		for _ in range(60):
+			sleep(50)
+			if container_content() != content: continue
+			return execute_builtin('Container.SetViewMode(%s)' % view_id)
+	except: pass
 
 def clear_view(view_type):
 	if not confirm_dialog(): return
@@ -296,14 +300,14 @@ def clear_view(view_type):
 		dbcur.execute("""PRAGMA synchronous = OFF""")
 		dbcur.execute("""PRAGMA journal_mode = OFF""")
 		dbcur.execute("""SELECT view_type FROM views""")
-		for item in dbcur.fetchall():
-			dbcur.execute("""DELETE FROM views WHERE view_type = ?""", (item[0],))
-			clear_property('pov_%s' % item[0])
+		for item in dbcur.fetchall(): clear_property('pov_%s' % item[0])
+		dbcur.execute("""DELETE FROM views""")
+		dbcur.execute("""VACUUM""")
 		dbcon = database_connect('special://profile/Database/ViewModes6.db')
 		dbcur = dbcon.cursor()
 		dbcur.execute("""DELETE FROM view WHERE path LIKE 'plugin://plugin.video.pov/%'""")
-		dbcur.connection.commit()
-		dbcur.connection.close()
+		dbcon.commit()
+		dbcon.close()
 	except: return notification(32574, 1500)
 	notification(32576, 1500)
 
@@ -324,11 +328,11 @@ def remove_meta_keys(dict_item, dict_removals):
 	for k in dict_removals: dict_item.pop(k, None)
 	return dict_item
 
-def volume_checker(volume_setting):
-	# 0% == -60db, 100% == 0db
-	try:
+def volume_checker(volume_setting=None):
+	try: # 0% == -60db, 100% == 0db
 		if get_visibility('Player.Muted'): return
 		from modules.utils import string_alphanum_to_num
+		if not volume_setting: volume_setting = get_setting('volumecheck.percent', '100')
 		max_volume = int(min(int(volume_setting), 100))
 		current_volume_db = int(string_alphanum_to_num(get_infolabel('Player.Volume').split('.')[0]))
 		current_volume_percent = int(100 - ((float(current_volume_db)/60)*100))
@@ -356,46 +360,78 @@ def fetch_kodi_imagecache(image):
 	except: pass
 	return result
 
-def set_setting(setting_id, value):
-	Addon().setSetting(setting_id, value)
+class SettingsManager:
+	def __init__(self):
+		self._cache = {}
+		self._last_raw_string = None
+
+	def _sync(self):
+		current_raw = get_property('pov_settings')
+		if current_raw == self._last_raw_string: return
+		try: self._cache = json.loads(current_raw)
+		except Exception: self._cache = make_settings_dict()
+		self._last_raw_string = current_raw
+
+	def get(self, key, fallback=None):
+		self._sync()
+		value = self._cache.get(key, '')
+		if value == '' and fallback is not None: return fallback
+		return value
+
+manager = SettingsManager()
 
 def get_setting(setting_id, fallback=None):
-	try: settings_dict = json.loads(get_property('pov_settings'))
-	except: settings_dict = make_settings_dict()
-	if settings_dict is None: settings_dict = get_setting_fallback(setting_id)
-	value = settings_dict.get(setting_id, '')
-	if fallback is None: return value
-	if value == '': return fallback
+	try: value = manager.get(setting_id, fallback)
+	except: value = Addon().getSetting(setting_id)
 	return value
 
-def get_setting_fallback(setting_id):
-	return {setting_id: Addon().getSetting(setting_id)}
+def set_setting(setting_id, value):
+	Addon().setSetting(setting_id, value)
 
 def make_settings_dict():
 	import xml.etree.ElementTree as ET
 	settings_dict = None
+	setting = Addon().getSetting
 	try:
-		profile_dir = 'special://profile/addon_data/plugin.video.pov/'
-		if not path_exists(profile_dir): make_directorys(profile_dir)
-		settings_xml = profile_dir + 'settings.xml'
-		root = ET.parse(translate_path(settings_xml)).getroot()
-		settings_dict = {}
-		for item in root:
-			setting_id = item.get('id')
-			setting_value = item.text
-			if setting_value is None: setting_value = ''
-			dict_item = {setting_id: setting_value}
-			settings_dict.update(dict_item)
+		default_xml = 'special://home/addons/plugin.video.pov/resources/settings.xml'
+		with open_file(default_xml) as xml_file: root = ET.fromstring(xml_file.read())
+		settings_dict = {i: setting(i) for item in root.iter('setting') if (i := item.get('id'))}
 		set_property('pov_settings', json.dumps(settings_dict))
-	except: pass
+	except Exception as e: logger('make_settings_dict error', str(e))
 	return settings_dict
 
-def toggle_jump_to():
-	from modules.settings import nav_jump_use_alphabet
-	(setting, new_action) = ('0', local_string(32022)) if nav_jump_use_alphabet() else ('1', local_string(32023))
-	set_setting('nav_jump', setting)
-	container_refresh()
-	notification(local_string(32851) % new_action)
+def clean_settings(silent=False):
+	import xml.etree.ElementTree as ET
+	addon_ids = 'plugin.video.pov'
+	default_xml = 'special://home/addons/%s/resources/settings.xml' % addon_ids
+	profile_xml = 'special://profile/addon_data/%s/settings.xml' % addon_ids
+	try:
+		removed_settings = []
+		removed_append = removed_settings.append
+		with open_file(default_xml) as xml_file: root = ET.fromstring(xml_file.read())
+		active_settings = [item.get('id') for item in root.iter('setting') if item.get('id')]
+		with open_file(profile_xml) as xml_file: root = ET.fromstring(xml_file.read())
+		for item in root.iter('setting'):
+			if item.get('id') in active_settings: continue
+			removed_append(item)
+		for item in removed_settings: root.remove(item)
+		with open_file(profile_xml, 'w') as xml_file: xml_file.write(ET.tostring(root))
+		text = local_string(32813) % len(removed_settings) if removed_settings else 32576
+		if not silent: notification(text, 1500)
+	except:
+		if not silent: notification(32574, 1500)
+
+def open_settings(query, addon='plugin.video.pov'):
+	hide_busy_dialog()
+	execute_builtin('Addon.OpenSettings(%s)' % addon)
+	if not query: return
+	try:
+		if get_kodi_version() < 20: button, control = 100, 80
+		else: button, control = 200, 180
+		menu, function = query.split('.')
+		execute_builtin('SetFocus(%i)' % (int(menu) - button))
+		execute_builtin('SetFocus(%i)' % (int(function) - control))
+	except: notification(32574)
 
 def toggle_language_invoker():
 	import xml.etree.ElementTree as ET
@@ -404,7 +440,7 @@ def toggle_language_invoker():
 	current_addon_setting = get_setting('reuse_language_invoker', 'true')
 	new_value = 'false' if current_addon_setting == 'true' else 'true'
 	if not confirm_dialog(text=local_string(32979) % (current_addon_setting.upper(), new_value.upper())): return
-	if new_value == 'true' and not confirm_dialog(text=32980, top_space=True): return
+	if new_value == 'true' and not confirm_dialog(text=32980): return
 	addon_xml = translate_path('special://home/addons/plugin.video.pov/addon.xml')
 	tree = ET.parse(addon_xml)
 	root = tree.getroot()
@@ -413,89 +449,22 @@ def toggle_language_invoker():
 	item.text = new_value
 	tree.write(addon_xml)
 	set_setting('reuse_language_invoker', new_value)
-	ok_dialog(text=32981, top_space=True)
+	ok_dialog(text=32981)
 	execute_builtin('LoadProfile(%s)' % get_infolabel('system.profilename'))
-
-def open_settings(query, addon='plugin.video.pov'):
-	hide_busy_dialog()
-	if query:
-		try:
-			button, control = 100, 80
-			menu, function = query.split('.')
-			execute_builtin('Addon.OpenSettings(%s)' % addon)
-			execute_builtin('SetFocus(%i)' % (int(menu) - button))
-			execute_builtin('SetFocus(%i)' % (int(function) - control))
-		except: execute_builtin('Addon.OpenSettings(%s)' % addon)
-	else: execute_builtin('Addon.OpenSettings(%s)' % addon)
-
-def clean_settings():
-	import xml.etree.ElementTree as ET
-	def _make_content(dict_object):
-		content = '<settings version="2">'
-		for item in dict_object:
-			_id = item['id']
-			if _id in active_settings:
-				if 'default' in item and 'value' in item: content += '\n    <setting id="%s" default="%s">%s</setting>' % (_id, item['default'], item['value'])
-				elif 'default' in item: content += '\n    <setting id="%s" default="%s"></setting>' % (_id, item['default'])
-				elif 'value' in item: content += '\n    <setting id="%s">%s</setting>' % (_id, item['value'])
-				else: content += '\n    <setting id="%s"></setting>'
-			else: removed_append(item)
-		content += '\n</settings>'
-		return content
-#	progressDialog.create('POV', '')
-	addon_ids = ['plugin.video.pov']
-	addon_settings = 'special://home/addons/%s/resources/settings.xml'
-	addon_data_settings = 'special://profile/addon_data/%s/settings.xml'
-	addon_names = ['POV']
-	addon_data_settings_xmls = [addon_data_settings % i for i in addon_ids]
-	addon_settings_xmls = [addon_settings % i for i in addon_ids]
-	params = list(zip(addon_names, addon_data_settings_xmls, addon_settings_xmls))
-	for count, (name, profile_xml, default_xml) in enumerate(params, 1):
-		try:
-#			if progressDialog.iscanceled(): break
-			removed_settings = []
-			active_settings = []
-			current_user_settings = []
-			removed_append = removed_settings.append
-			active_append = active_settings.append
-			current_append = current_user_settings.append
-			root = ET.parse(translate_path(default_xml)).getroot()
-			for item in root.findall('./category/setting'):
-				setting_id = item.get('id')
-				if setting_id: active_append(setting_id)
-			settings_xml = profile_xml
-			root = ET.parse(translate_path(settings_xml)).getroot()
-			for item in root:
-				dict_item = {}
-				setting_id = item.get('id')
-				setting_default = item.get('default')
-				setting_value = item.text
-				dict_item['id'] = setting_id
-				if setting_value: dict_item['value'] = setting_value
-				if setting_default: dict_item['default'] = setting_default
-				current_append(dict_item)
-			new_content = _make_content(current_user_settings)
-			with open_file(settings_xml, 'w') as xml_file: xml_file.write(new_content)
-			percent = int(count / len(params) * 100)
-			line2 = local_string(32812) % name
-			line3 = local_string(32813) % len(removed_settings)
-#			progressDialog.update(percent, '[CR]%s[CR]%s' % (line2, line3))
-#			sleep(500)
-		except: notification(32574, 1500)
-		notification(line3, 1500) if removed_settings else notification(32576, 1500)
-#	progressDialog.close()
 
 def upload_logfile():
 	# Thanks 123Venom
 	log_file, url = 'special://logpath/kodi.log', 'https://paste.kodi.tv/'
-	if not path_exists(log_file): return ok_dialog(text='Error. Log File Not Found.', top_space=True)
-	if not confirm_dialog(): return
-	import requests
+	if not path_exists(log_file): return ok_dialog(text='Error. Log File Not Found.')
+	from platform import python_version
+	text = f"Kodi: {get_infolabel('System.BuildVersion')}[CR]Python: {python_version()}[CR]{local_string(32580)}"
+	if not confirm_dialog(text=text, top_space=False): return
 	show_busy_dialog()
+	import requests
 	try:
-		with open_file(log_file) as f: text = f.read().encode('utf-8', errors='ignore')
+		with open_file(log_file) as f: text = f.readBytes().decode('utf-8-sig')
 		response = requests.post('%s%s' % (url, 'documents'), data=text, timeout=10.0).json()
-		if 'key' in response: ok_dialog(text=url + response['key'], top_space=True)
+		if 'key' in response: ok_dialog(text=url + response['key'])
 		else: ok_dialog(text='Error. Log Upload Failed')
 	except: notification(32574, 1500)
 	hide_busy_dialog()

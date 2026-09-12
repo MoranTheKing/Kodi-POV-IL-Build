@@ -1,13 +1,12 @@
 import json
-from threading import Thread
+import concurrent.futures
 from datetime import datetime, timedelta
-from windows import BaseDialog
+from windows import BaseDialog, location, open_window, videoplayer
 from caches import watched_cache as ws
-from indexers import people, metadata, tmdb_api, imdb_api, mdblist_api
-from indexers.images import Images
-from modules import settings, dialogs
-from modules.downloader import runner
-from modules.meta_lists import networks
+from indexers import metadata, tmdb_api, imdb_api, mdblist_api
+from menus import images, people, trakt, mdblist, tmdb
+from modules import settings, dialogs, downloader
+from modules.meta_lists import networks as meta_networks
 from modules.utils import get_datetime
 from modules.kodi_utils import media_path, notification, close_all_dialog, hide_busy_dialog, ok_dialog, fetch_kodi_imagecache, local_string as ls
 # from modules.kodi_utils import logger
@@ -25,10 +24,19 @@ tmdb_list_ids = (recommended_id, year_id, genres_id, networks_id, collection_id)
 imdb_list_ids = (reviews_id, trivia_id, blunders_id, parentsguide_id)
 art_ids = (posters_id, backdrops_id)
 parentsguide_dict = {
-	'Sex & Nudity': (ls(32990), 'porn.png'), 'Violence & Gore': (ls(32991), 'war.png'), 'Profanity': (ls(32992), 'bad_language.png'),
-	'Alcohol, Drugs & Smoking': (ls(32993), 'drugs_alcohol.png'), 'Frightening & Intense Scenes': (ls(32994), 'horror.png'),
-	'mild': ls(32996), 'moderate': ls(32997), 'severe': ls(32998)
+	'mild': ls(32996), 'moderate': ls(32997), 'severe': ls(32998), 'none': 'none',
+	'profanity': (ls(32992), 'bad_language.png'),
+	'alcohol': (ls(32993), 'drugs_alcohol.png'),
+	'frightening': (ls(32994), 'horror.png'),
+	'violence': (ls(32991), 'war.png'),
+	'nudity': (ls(32990), 'porn.png')
 }
+
+def extras_menu(params):
+	function = metadata.movie_meta if params['mediatype'] == 'movie' else metadata.tvshow_meta
+	meta = function('tmdb_id', params['tmdb_id'], settings.metadata_user_info(), get_datetime())
+	kwargs = {'meta': meta, 'is_widget': params.get('is_widget', 'false'), 'is_home': params.get('is_home', 'false')}
+	open_window(('windows.extras', 'Extras'), 'extras.xml', **kwargs)
 
 class Extras(BaseDialog):
 	def __init__(self, *args, **kwargs):
@@ -39,16 +47,26 @@ class Extras(BaseDialog):
 		self.set_properties()
 
 	def onInit(self):
-		for i in (
-			Thread(target=self.set_poster), Thread(target=self.make_cast), Thread(target=self.make_recommended),
-			Thread(target=self.make_reviews), Thread(target=self.make_trivia), Thread(target=self.make_blunders),
-			Thread(target=self.make_parentsguide), Thread(target=self.make_videos), Thread(target=self.make_year),
-			Thread(target=self.make_genres), Thread(target=self.make_network),
-			Thread(target=self.make_artwork, args=('posters',)), Thread(target=self.make_artwork, args=('backdrops',))
-		): i.start()
-		if self.media_type == 'movie': Thread(target=self.make_collection).start()
-		else: self.setProperty('tikiskins.extras.make.collection', 'false')
-		self.make_options()
+		tpe = concurrent.futures.ThreadPoolExecutor()
+		try:
+			futures = [
+				tpe.submit(self.make_ratings),
+				tpe.submit(self.make_imdb_extended_info),
+				tpe.submit(self.make_recommended),
+				tpe.submit(self.make_videos),
+				tpe.submit(self.make_year),
+				tpe.submit(self.make_genres),
+				tpe.submit(self.make_network),
+				tpe.submit(self.make_artwork, 'posters'),
+				tpe.submit(self.make_artwork, 'backdrops')
+			]
+			if self.is_movie: futures.append(tpe.submit(self.make_collection))
+			else: self.setProperty('tikiskins.extras.make.collection', 'false')
+			self.make_options()
+			self.make_cast()
+			self.set_poster()
+			concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
+		finally: tpe.shutdown(False)
 		self.setFocusId(self.focus_id)
 
 	def run(self):
@@ -64,79 +82,61 @@ class Extras(BaseDialog):
 		if action in self.closing_actions: self.close()
 		if action in self.context_actions:
 			focus_id = self.getFocusId()
-			if focus_id == actions_id and self.media_type == 'movie':
-				chosen_listitem = self.get_listitem(focus_id)
-				params = int(chosen_listitem.getProperty('tikiskins.extras.actions'))
-				if not params == playbrowse_id: return
-				dialogs.playback_choice('movie', self.poster, self.meta)
+			if focus_id == actions_id and self.is_movie:
+				params = int(self.get_listitem(focus_id).getProperty('tikiskins.extras.actions'))
+				if params == playbrowse_id: dialogs.playback_choice('movie', self.poster, self.meta)
 			elif focus_id in (posters_id, backdrops_id):
 				chosen_listitem = self.get_listitem(focus_id)
 				image = chosen_listitem.getProperty('tikiskins.extras.thumbnail')
-				params = {
-					'action': 'image', 'media_type': 'image', 'image': BaseDialog.icon,
+				return downloader.factory({
+					'action': 'image', 'mediatype': 'image', 'image': BaseDialog.icon,
 					'name': '%s %s' % (self.rootname, chosen_listitem.getProperty('tikiskins.extras.name')),
 					'thumb_url': image.replace('w780', {posters_id: 'w185', backdrops_id: 'w300'}[focus_id]),
 					'image_url': image.replace('w780', 'original')
-				}
-				return runner(params)
-		if not self.control_id or not action in self.selection_actions: return
+				})
+		if not self.control_id or action not in self.selection_actions: return
 		if self.control_id == actions_id:
 			try: chosen_var = int(self.get_listitem(self.control_id).getProperty('tikiskins.extras.actions'))
 			except: return
 			if chosen_var == playbrowse_id:
-				if self.media_type == 'movie':
-					close_all_dialog()
-					url_params = {'mode': 'play_media', 'media_type': 'movie', 'tmdb_id': self.tmdb_id}
+				close_all_dialog()
+				if self.is_movie:
+					url_params = {'mode': 'play_media', 'mediatype': 'movie', 'tmdb_id': self.tmdb_id}
 					self.selected = self.plugin_runner % self.build_url(url_params)
-					self.close()
 				else:
-					close_all_dialog()
 					url_params = self.make_tvshow_browse_params()
 					self.selected = self.folder_runner % self.build_url(url_params)
-					self.close()
+				self.close()
 			elif chosen_var == trailer_id:
-				chosen = dialogs.trailer_choice(self.media_type, self.poster, self.tmdb_id, self.meta['trailer'], self.meta['all_trailers'])
+				chosen = dialogs.trailer_choice(self.mediatype, self.poster, self.tmdb_id, self.meta['trailer'], self.meta['all_trailers'])
 				if not chosen: return ok_dialog()
-				elif chosen == 'canceled': return
-				if self.is_widget == 'true':
-					close_all_dialog()
-					self.selected = self.plugin_runner % chosen
-					self.close()
-				else:
-					params = {'import_info': json.dumps(['windows.videoplayer', 'VideoPlayer']), 'skin_xml': 'videoplayer.xml', 'kwargs': json.dumps({'video': chosen})}
-					return self.open_window(('windows.videoplayer', 'VideoPlayer'), 'videoplayer.xml', video=chosen)
+				if chosen == 'canceled': return
+				kwargs = {'meta': self.meta, 'is_widget': self.is_widget, 'is_home': self.is_home}
+				return videoplayer(chosen, self.close, type(self)('extras.xml', location, **kwargs).run)
 			elif chosen_var == extrainfo_id:
-				text = media_extra_info(self.media_type, self.meta)
-				self.open_window(('windows.extras', 'ShowTextMedia'), 'textviewer_media.xml', text=text, poster=self.poster)
+				text = media_extra_info(self.mediatype, self.meta)
+				self.open_window(('windows.extras', 'TextviewerMedia'), 'textviewer_media.xml', text=text, poster=self.poster)
 			elif chosen_var == genre_id:
 				if not self.genre: return
-				base_media = 'movies' if self.media_type == 'movie' else 'tv'
+				base_media = 'movies' if self.is_movie else 'tv'
 				genre_params = dialogs.genres_choice(base_media, self.genre, self.poster)
 				if not genre_params: return
 				close_all_dialog()
 				self.selected = self.folder_runner % self.build_url(genre_params)
 				self.close()
 			elif chosen_var == director_id:
-				if self.media_type == 'movie':
+				if self.is_movie:
 					director = self.meta.get('director')
-					if not director: return
-					return people.person_data_dialog({'query': director})
+					if director: return people.person_data_dialog({'query': director})
 				else:
 					close_all_dialog()
 					self.selected = self.plugin_runner % self.build_url({'mode': 'random_choice', 'tmdb_id': self.tmdb_id, 'poster': self.poster})
 					self.close()
-			elif chosen_var == trakt_id:
-				params = {'tmdb_id': self.tmdb_id, 'imdb_id': self.imdb_id, 'tvdb_id': self.meta['tvdb_id'],
-						'media_type': self.media_type, 'icon': self.poster}
-				return dialogs.trakt_manager_choice(params)
-			elif chosen_var == mdbl_id:
-				params = {'tmdb_id': self.tmdb_id, 'imdb_id': self.imdb_id, 'tvdb_id': self.meta['tvdb_id'],
-						'media_type': self.media_type, 'icon': self.poster}
-				return dialogs.mdbl_manager_choice(params)
-			elif chosen_var == tmdbl_id:
-				params = {'tmdb_id': self.tmdb_id, 'imdb_id': self.imdb_id, 'tvdb_id': self.meta['tvdb_id'],
-						'media_type': self.media_type, 'icon': self.poster}
-				return dialogs.tmdb_manager_choice(params)
+			elif chosen_var in (trakt_id, mdbl_id, tmdbl_id):
+				params = {'tmdb_id': self.tmdb_id, 'imdb_id': self.imdb_id, 'tvdb_id': self.meta['tvdb_id'], 'mediatype': self.mediatype, 'icon': self.poster}
+				if chosen_var == trakt_id: return trakt.TraktManager(params).manage()
+				if chosen_var == mdbl_id: return mdblist.MdbListManager(params).manage()
+				if chosen_var == tmdbl_id: return tmdb.TmdbManager(params).manage()
 		else:
 			try: chosen_var = self.get_listitem(self.control_id).getProperty(self.item_action_dict[self.control_id])
 			except: return
@@ -147,285 +147,253 @@ class Extras(BaseDialog):
 				if not chosen: return
 				self.open_window(('windows.videoplayer', 'VideoPlayer'), 'videoplayer.xml', meta=self.meta, video=chosen)
 			elif self.control_id in tmdb_list_ids:
-				function = metadata.movie_meta if self.media_type == 'movie' else metadata.tvshow_meta
+				function = metadata.movie_meta if self.is_movie else metadata.tvshow_meta
 				meta = function('tmdb_id', chosen_var, settings.metadata_user_info(), get_datetime())
 				if not meta: return
-				params = {'mode': 'extras_menu_choice', 'tmdb_id': chosen_var, 'media_type': self.media_type, 'is_widget': self.is_widget, 'is_home': self.is_home}
-				return dialogs.extras_menu(params)
+				kwargs = {'meta': meta, 'is_widget': self.is_widget, 'is_home': self.is_home}
+				return self.open_window(('windows.extras', 'Extras'), 'extras.xml', **kwargs)
 			elif self.control_id in imdb_list_ids:
 				if self.control_id == parentsguide_id:
 					listings = json.loads(chosen_var)
 					if not listings: return
 					chosen_var = '\n\n'.join(['%02d. %s' % (count, i) for count, i in enumerate(listings, 1)])
-				self.open_window(('windows.extras', 'ShowTextMedia'), 'textviewer_media.xml', text=chosen_var, poster=self.poster)
+				self.open_window(('windows.extras', 'TextviewerMedia'), 'textviewer_media.xml', text=chosen_var, poster=self.poster)
 			elif self.control_id in art_ids:
 				slideshow_params = {'mode': 'slideshow_image', 'all_images': chosen_var, 'current_index': self.get_position(self.control_id)}
-				ending_position = Images().run(slideshow_params)
+				ending_position = images.Images().run(slideshow_params)
 				self.getControl(self.control_id).selectItem(ending_position)
 
 	def make_options(self):
-		def builder():
-			for i in (
-				(extrainfo_id, 'extra info', 'information.png'),
-				(playbrowse_id, 'playback', 'player.png')
-				if self.media_type == 'movie' else
-				(playbrowse_id, 'browse', 'in_progress_tvshow.png'),
-				(trailer_id, 'trailer', 'watched.png'),
-				(genre_id, 'genres', 'genres.png'),
-				(director_id, 'director', 'movies.png')
-				if self.media_type == 'movie' else
-				(director_id, 'play random', 'library.png'),
-				(trakt_id, 'trakt', 'trakt.png'),
-				(mdbl_id, 'mdblist', 'mdblist.png'),
-				(tmdbl_id, 'tmdblist', 'tmdb.png')
-			):
-				try:
-					name, icon = '[B]%s[/B]' % i[1].upper(), '%s%s' % (icon_path, i[2])
-					listitem = self.make_listitem()
-					listitem.setProperty('tikiskins.extras.name', name)
-					listitem.setProperty('tikiskins.extras.actions', str(i[0]))
-					listitem.setProperty('tikiskins.extras.thumbnail', icon)
-					yield listitem
-				except: pass
-		try:
-			icon_path = media_path()
-			item_list = list(builder())
+		icon_path = media_path()
+		item_list = []
+		if self.is_movie:
+			args = (playbrowse_id, 'playback', 'player.png'), (director_id, 'director', 'movies.png')
+		else:
+			args = (playbrowse_id, 'browse', 'in_progress_tvshow.png'), (director_id, 'play random', 'library.png')
+		for i, name, icon in [
+			(extrainfo_id, 'extra info', 'information.png'),
+			args[0],
+			(trailer_id, 'trailer', 'watched.png'),
+			(genre_id, 'genres', 'genres.png'),
+			args[1],
+			(trakt_id, 'trakt', 'trakt.png'),
+			(mdbl_id, 'mdblist', 'mdblist.png'),
+			(tmdbl_id, 'tmdblist', 'tmdb.png')
+		]:
+			try:
+				name, icon = '[B]%s[/B]' % name.upper(), '%s%s' % (icon_path, icon)
+				listitem = self.make_listitem()
+				listitem.setProperty('tikiskins.extras.name', name)
+				listitem.setProperty('tikiskins.extras.actions', str(i))
+				listitem.setProperty('tikiskins.extras.thumbnail', icon)
+				item_list.append(listitem)
+			except: pass
 #			self.setProperty('tikiskins.extras.actions.number', '(x%02d)' % len(item_list))
-			self.add_items(actions_id, item_list)
-		except: pass
+		self.add_items(actions_id, item_list)
 
 	def make_cast(self):
-		if not cast_id in self.enabled_lists: return
-		def builder():
-			for item in self.meta['cast']:
-				try:
-					thumbnail = item['thumbnail']
-					if not thumbnail: thumbnail = backup_cast_thumbnail
-					listitem = self.make_listitem()
-					listitem.setProperty('tikiskins.extras.name', item['name'])
-					listitem.setProperty('tikiskins.extras.role', item['role'])
-					listitem.setProperty('tikiskins.extras.thumbnail', thumbnail)
-					yield listitem
-				except: pass
-		try:
-			item_list = list(builder())
-			self.setProperty('tikiskins.extras.cast.number', '(x%02d)' % len(item_list))
-			self.item_action_dict[cast_id] = 'tikiskins.extras.name'
-			self.add_items(cast_id, item_list)
-		except: pass
+		if cast_id not in self.enabled_lists: return
+		item_list = []
+		for item in self.meta.get('cast', []):
+			try:
+				thumbnail = item['thumbnail'] or backup_cast_thumbnail
+				listitem = self.make_listitem()
+				listitem.setProperty('tikiskins.extras.name', item['name'])
+				listitem.setProperty('tikiskins.extras.role', item['role'])
+				listitem.setProperty('tikiskins.extras.thumbnail', thumbnail)
+				item_list.append(listitem)
+			except: pass
+		if not item_list: return
+		self.setProperty('tikiskins.extras.cast.number', '(x%02d)' % len(item_list))
+		self.item_action_dict[cast_id] = 'tikiskins.extras.name'
+		self.add_items(cast_id, item_list)
 
 	def make_recommended(self):
-		if not recommended_id in self.enabled_lists: return
 		try:
-			function = tmdb_api.tmdb_movies_recommendations if self.media_type == 'movie' else tmdb_api.tmdb_tv_recommendations
+			if self.is_movie: function = tmdb_api.tmdb_movies_recommendations
+			else: function = tmdb_api.tmdb_tv_recommendations
 			data = function(self.tmdb_id, 1)['results']
-			item_list = list(self.make_tmdb_listitems(data))
-			self.setProperty('tikiskins.extras.recommended.number', '(x%02d)' % len(item_list))
-			self.item_action_dict[recommended_id] = 'tikiskins.extras.tmdb_id'
-			self.add_items(recommended_id, item_list)
-		except: pass
-
-	def make_reviews(self):
-		if not reviews_id in self.enabled_lists: return
-		def builder():
-			for count, item in enumerate(reviews, 1):
-				try:
-					provider = mdblist_api.review_provider_id.get(item['provider_id'], 'mdblist').upper()
-					updated_at = item['updated_at'] or 'NA'
-					rating = item['rating'] or 'NA'
-					content = (
-						'[B][COLOR red][%s][/COLOR][CR][I]%02d. %s - %s - %s[/I][/B]\n\n%s'
-						% (spoiler, count, provider, rating, updated_at, item['content'])
-					) if 'spoiler' in item and item['spoiler'] else (
-						'[B][I]%02d. %s - %s - %s[/I][/B]\n\n%s'
-						% (count, provider, rating, updated_at, item['content'])
-					)
-					listitem = self.make_listitem()
-					listitem.setProperty('tikiskins.extras.text', content)
-					yield listitem
-				except: pass
-		try:
-			spoiler = ls(32985).upper()
-			data = mdblist_api.mdbl_media_info(self.imdb_id, self.media_type)
-			if not data is None:
-				ratings, reviews = data['ratings'], data['reviews']
-				reviews.sort(key=lambda k: k['updated_at'] or '', reverse=True)
-				sources = ('imdb', 'metacritic', 'mdblist', 'tomatoes', 'trakt', 'tmdb')
-				if 'score' in data: ratings.append({'source': 'mdblist', 'value': data['score']})
-				ratings = ((i['source'], str(i['value'])) for i in ratings if i['source'] in sources and i['value'])
-				for k, v in ratings: self.setProperty('tikiskins.extras.rating.%s' % k, v)
-			else: reviews = [{'content': 'Authorize MDBList for Ratings & Reviews.', 'provider_id': '', 'updated_at': '', 'rating': ''}]
-			item_list = list(builder())
-			self.setProperty('tikiskins.extras.imdb_reviews.number', '(x%02d)' % len(item_list))
-			self.item_action_dict[reviews_id] = 'tikiskins.extras.text'
-			self.add_items(reviews_id, item_list)
-		except: pass
-
-	def make_trivia(self):
-		if not trivia_id in self.enabled_lists: return
-		def builder():
-			for count, item in enumerate(data, 1):
-				try:
-					listitem = self.make_listitem()
-					listitem.setProperty('tikiskins.extras.text', '[B]%s %02d.[/B][CR][CR]%s' % (trivia, count, item))
-					yield listitem
-				except: pass
-		try:
-			trivia = ls(32984).upper()
-			data = imdb_api.imdb_trivia(self.imdb_id)
-			item_list = list(builder())
-			self.setProperty('tikiskins.extras.imdb_trivia.number', '(x%02d)' % len(item_list))
-			self.item_action_dict[trivia_id] = 'tikiskins.extras.text'
-			self.add_items(trivia_id, item_list)
-		except: pass
-
-	def make_blunders(self):
-		if not blunders_id in self.enabled_lists: return
-		def builder():
-			for count, item in enumerate(data, 1):
-				try:
-					listitem = self.make_listitem()
-					listitem.setProperty('tikiskins.extras.text', '[B]%s %02d.[/B][CR][CR]%s' % (blunders, count, item))
-					yield listitem
-				except: pass
-		try:
-			blunders = ls(32986).upper()
-			data = imdb_api.imdb_blunders(self.imdb_id)
-			item_list = list(builder())
-			self.setProperty('tikiskins.extras.imdb_blunders.number', '(x%02d)' % len(item_list))
-			self.item_action_dict[blunders_id] = 'tikiskins.extras.text'
-			self.add_items(blunders_id, item_list)
-		except: pass
-
-	def make_parentsguide(self):
-		if not parentsguide_id in self.enabled_lists: return
-		def builder():
-			for item in data:
-				try:
-					name, icon = parentsguide_dict[item['title']]
-					icon = '%s%s' % (icon_path, icon)
-					ranking = parentsguide_dict[item['ranking']].upper()
-					if item['listings']: ranking += ' (x%02d)' % len(item['listings'])
-					listitem = self.make_listitem()
-					listitem.setProperty('tikiskins.extras.name', name)
-					listitem.setProperty('tikiskins.extras.ranking', ranking)
-					listitem.setProperty('tikiskins.extras.thumbnail', icon)
-					listitem.setProperty('tikiskins.extras.listings', json.dumps(item['listings']))
-					yield listitem
-				except: pass
-		try:
-			icon_path = media_path()
-			data = mdblist_api.mdbl_parentsguide(self.imdb_id, self.media_type)
-			item_list = list(builder())
-			self.setProperty('tikiskins.extras.imdb_parentsguide.number', '(x%02d)' % len(item_list))
-			self.item_action_dict[parentsguide_id] = 'tikiskins.extras.listings'
-			self.add_items(parentsguide_id, item_list)
-		except: pass
-
-	def make_videos(self):
-		if not videos_id in self.enabled_lists: return
-		def builder():
-			for count, item in enumerate(data, 1):
-				try:
-					listitem = self.make_listitem()
-					listitem.setProperty('tikiskins.extras.name', '%01d. %s' % (count, item['title']))
-					listitem.setProperty('tikiskins.extras.thumbnail', item['poster'])
-					listitem.setProperty('tikiskins.extras.qualities', json.dumps(item['videos']))
-					yield listitem
-				except: pass
-		try:
-			data = imdb_api.imdb_videos(self.imdb_id)
-			item_list = list(builder())
-			self.setProperty('tikiskins.extras.imdb_videos.number', '(x%02d)' % len(item_list))
-			self.item_action_dict[videos_id] = 'tikiskins.extras.qualities'
-			self.add_items(videos_id, item_list)
-		except: pass
-
-	def make_artwork(self, image_type):
-		if image_type == 'posters':
-			if not posters_id in self.enabled_lists: return
-			_id = posters_id
-		else:
-			if not backdrops_id in self.enabled_lists: return
-			_id = backdrops_id
-		def builder():
-			for count, item in enumerate(data, 1):
-				try:
-					thumb_url = tmdb_image_base % ('w780', item['file_path'])
-					name = '%sx%s' % (item['height'], item['width'])
-					listitem = self.make_listitem()
-					listitem.setProperty('tikiskins.extras.name', '%01d. %s' % (count, name))
-					listitem.setProperty('tikiskins.extras.thumbnail', thumb_url)
-					listitem.setProperty('tikiskins.extras.all_images', json_all_images)
-					yield listitem
-				except: pass
-		try:
-			dbtype = 'movie' if self.media_type == 'movie' else 'tv'
-			data = tmdb_api.tmdb_media_images(dbtype, self.tmdb_id)[image_type]
-			data.sort(key=lambda x: x['file_path'])
-			json_all_images = json.dumps([(tmdb_image_base % ('original', i['file_path']), '%sx%s' % (i['height'], i['width'])) for i in data])
-			item_list = list(builder())
-			self.setProperty('tikiskins.extras.tmdb_artwork.%s.number' % image_type, '(x%02d)' % len(item_list))
-			self.item_action_dict[_id] = 'tikiskins.extras.all_images'
-			self.add_items(_id, item_list)
+			self.make_tmdb_listitems(recommended_id, data, 'recommended')
 		except: pass
 
 	def make_year(self):
-		if not year_id in self.enabled_lists: return
 		try:
-			function = tmdb_api.tmdb_movies_year if self.media_type == 'movie' else tmdb_api.tmdb_tv_year
+			if self.is_movie: function = tmdb_api.tmdb_movies_year
+			else: function = tmdb_api.tmdb_tv_year
 			data = self.remove_current_tmdb_mediaitem(function(self.year, 1)['results'])
-			item_list = list(self.make_tmdb_listitems(data))
-			self.setProperty('tikiskins.extras.more_from_year.number', '(x%02d)' % len(item_list))
-			self.item_action_dict[year_id] = 'tikiskins.extras.tmdb_id'
-			self.add_items(year_id, item_list)
+			self.make_tmdb_listitems(year_id, data, 'more_from_year')
 		except: pass
 
 	def make_genres(self):
-		if not genres_id in self.enabled_lists: return
 		try:
-			function = tmdb_api.tmdb_movies_genres if self.media_type == 'movie' else tmdb_api.tmdb_tv_genres
-			genre_dict = dialogs.genres_choice(self.media_type, self.genre, '', return_genres=True)
+			if self.is_movie: function = tmdb_api.tmdb_movies_genres
+			else: function = tmdb_api.tmdb_tv_genres
+			genre_dict = dialogs.genres_choice(self.mediatype, self.genre, '', return_genres=True)
 			genre_list = ','.join([i['value'][0] for i in genre_dict])
 			data = self.remove_current_tmdb_mediaitem(function(genre_list, 1)['results'])
-			item_list = list(self.make_tmdb_listitems(data))
-			self.setProperty('tikiskins.extras.more_from_genres.number', '(x%02d)' % len(item_list))
-			self.item_action_dict[genres_id] = 'tikiskins.extras.tmdb_id'
-			self.add_items(genres_id, item_list)
+			self.make_tmdb_listitems(genres_id, data, 'more_from_genres')
 		except: pass
 
 	def make_network(self):
-		if not networks_id in self.enabled_lists: return
 		try:
 			network = self.meta['studio']
-			if self.media_type == 'movie': network_id = [i['id'] for i in tmdb_api.tmdb_company_id(network)['results'] if i['name'] == network][0]
-			else: network_id = [item['id'] for item in networks if 'name' in item and item['name'] == network][0]
-			function = tmdb_api.tmdb_movies_networks if self.media_type == 'movie' else tmdb_api.tmdb_tv_networks
+			if self.is_movie:
+				network_id = next(i['id'] for i in tmdb_api.tmdb_company_id(network)['results'] if i['name'] == network)
+			else:
+				network_id = next(item['id'] for item in meta_networks if item.get('name') == network)
+			if self.is_movie: function = tmdb_api.tmdb_movies_networks
+			else: function = tmdb_api.tmdb_tv_networks
 			data = self.remove_current_tmdb_mediaitem(function(network_id, 1)['results'])
-			item_list = list(self.make_tmdb_listitems(data))
-			self.setProperty('tikiskins.extras.more_from_networks.number', '(x%02d)' % len(item_list))
-			self.item_action_dict[networks_id] = 'tikiskins.extras.tmdb_id'
-			self.add_items(networks_id, item_list)
+			self.make_tmdb_listitems(networks_id, data, 'more_from_networks')
 		except: pass
 
 	def make_collection(self):
-		if not collection_id in self.enabled_lists: return
-		try: coll_id = self.meta['extra_info']['collection_id']
-		except: coll_id = self.meta['extra_info']['ei_collection_id']
-		if not coll_id: return
+		if collection_id not in self.enabled_lists: return
 		try:
+			coll_id = self.meta['extra_info'].get('collection_id') or self.meta['extra_info'].get('ei_collection_id')
+			if not coll_id: return
 			data = tmdb_api.tmdb_movies_collection(coll_id)
-			poster_path = data['poster_path']
-			if poster_path: poster = tmdb_image_base % (self.poster_resolution, poster_path)
-			else: poster = poster_empty
+			poster = tmdb_image_base % (self.poster_resolution, data['poster_path']) if data.get('poster_path') else poster_empty
 			self.setProperty('tikiskins.extras.more_from_collection.name', data['name'])
 			self.setProperty('tikiskins.extras.more_from_collection.overview', data['overview'])
 			self.setProperty('tikiskins.extras.more_from_collection.poster', poster)
-			item_list = list(self.make_tmdb_listitems(sorted(data['parts'], key=lambda k: k['release_date'] or '2050')))
-			self.setProperty('tikiskins.extras.more_from_collection.number', '(x%02d)' % len(item_list))
-			self.item_action_dict[collection_id] = 'tikiskins.extras.tmdb_id'
-			self.add_items(collection_id, item_list)
+			parts = sorted(data['parts'], key=lambda k: k['release_date'] or '2050')
+			self.make_tmdb_listitems(collection_id, parts, 'more_from_collection')
 		except: pass
+
+	def make_ratings(self):
+		data = mdblist_api.mdbl_ratings_info(self.mediatype, self.imdb_id)
+		if not data: return
+		for i in data: self.setProperty('tikiskins.extras.rating.%s' % i['source'], i['value'])
+
+	def make_imdb_extended_info(self):
+		try: self.imdb_extended_info = imdb_api.imdb_extended_info(self.imdb_id)
+		except: self.imdb_extended_info = {}
+		self.make_parentsguide()
+		self.make_reviews()
+		self.make_trivia()
+		self.make_blunders()
+
+	def make_parentsguide(self):
+		if parentsguide_id not in self.enabled_lists: return
+		icon_path = media_path()
+		data = self.imdb_extended_info.get('parentsguide', [])
+		item_list = []
+		for item in data:
+			try:
+				name, icon = parentsguide_dict[item['title']]
+				icon = '%s%s' % (icon_path, icon)
+				ranking = parentsguide_dict[item['ranking']].upper()
+				if item['listings']: ranking += ' (x%02d)' % len(item['listings'])
+				listitem = self.make_listitem()
+				listitem.setProperty('tikiskins.extras.name', name)
+				listitem.setProperty('tikiskins.extras.ranking', ranking)
+				listitem.setProperty('tikiskins.extras.thumbnail', icon)
+				listitem.setProperty('tikiskins.extras.listings', json.dumps(item['listings']))
+				item_list.append(listitem)
+			except: pass
+		if not item_list: return
+		self.setProperty('tikiskins.extras.imdb_parentsguide.number', '(x%02d)' % len(item_list))
+		self.item_action_dict[parentsguide_id] = 'tikiskins.extras.listings'
+		self.add_items(parentsguide_id, item_list)
+
+	def make_reviews(self):
+		if reviews_id not in self.enabled_lists: return
+		spoiler = ls(32985).upper()
+		heading = (
+			'[B][COLOR red][%s][/COLOR][CR][I]%02d. %s - %s/10 - %s[/I][/B]\n\n%s',
+			'[B][I]%02d. %s - %s/10 - %s[/I][/B]\n\n%s'
+		)
+		data = self.imdb_extended_info.get('reviews', [])
+		item_list = []
+		for count, item in enumerate(data, 1):
+			provider = item['provider_id'].upper()
+			updated_at = item['updated_at'] or 'NA'
+			rating = item['rating'] or 'NA'
+			if 'spoiler' in item and item['spoiler']:
+				content = heading[0] % (spoiler, count, updated_at, rating, provider, item['content'])
+			else: content = heading[1] % (count, updated_at, rating, provider, item['content'])
+			listitem = self.make_listitem()
+			listitem.setProperty('tikiskins.extras.text', content)
+			item_list.append(listitem)
+		if not item_list: return
+		self.setProperty('tikiskins.extras.imdb_reviews.number', '(x%02d)' % len(item_list))
+		self.item_action_dict[reviews_id] = 'tikiskins.extras.text'
+		self.add_items(reviews_id, item_list)
+
+	def make_trivia(self):
+		if trivia_id not in self.enabled_lists: return
+		trivia = ls(32984).upper()
+		heading = '[B]%s %02d.[/B][CR][CR]%s'
+		data = self.imdb_extended_info.get('trivia', [])
+		item_list = []
+		for count, item in enumerate(data, 1):
+			try:
+				listitem = self.make_listitem()
+				listitem.setProperty('tikiskins.extras.text', heading % (trivia, count, item))
+				item_list.append(listitem)
+			except: pass
+		if not item_list: return
+		self.setProperty('tikiskins.extras.imdb_trivia.number', '(x%02d)' % len(item_list))
+		self.item_action_dict[trivia_id] = 'tikiskins.extras.text'
+		self.add_items(trivia_id, item_list)
+
+	def make_blunders(self):
+		if blunders_id not in self.enabled_lists: return
+		blunders = ls(32986).upper()
+		heading = '[B]%s %02d.[/B][CR][CR]%s'
+		data = self.imdb_extended_info.get('blunders', [])
+		item_list = []
+		for count, item in enumerate(data, 1):
+			try:
+				listitem = self.make_listitem()
+				listitem.setProperty('tikiskins.extras.text', heading % (blunders, count, item))
+				item_list.append(listitem)
+			except: pass
+		if not item_list: return
+		self.setProperty('tikiskins.extras.imdb_blunders.number', '(x%02d)' % len(item_list))
+		self.item_action_dict[blunders_id] = 'tikiskins.extras.text'
+		self.add_items(blunders_id, item_list)
+
+	def make_videos(self):
+		if videos_id not in self.enabled_lists: return
+		data = []
+		item_list = []
+		for count, item in enumerate(data, 1):
+			try:
+				listitem = self.make_listitem()
+				listitem.setProperty('tikiskins.extras.name', '%01d. %s' % (count, item['title']))
+				listitem.setProperty('tikiskins.extras.thumbnail', item['poster'])
+				listitem.setProperty('tikiskins.extras.qualities', json.dumps(item['videos']))
+				item_list.append(listitem)
+			except: pass
+		if not item_list: return
+		self.setProperty('tikiskins.extras.imdb_videos.number', '(x%02d)' % len(item_list))
+		self.item_action_dict[videos_id] = 'tikiskins.extras.qualities'
+		self.add_items(videos_id, item_list)
+
+	def make_artwork(self, image_type):
+		_id = posters_id if image_type == 'posters' else backdrops_id
+		if _id not in self.enabled_lists: return
+		dbtype = 'movie' if self.is_movie else 'tv'
+		data = tmdb_api.tmdb_media_images(dbtype, self.tmdb_id)[image_type]
+		data.sort(key=lambda x: x['file_path'])
+		json_all_images = json.dumps([(tmdb_image_base % ('original', i['file_path']), '%sx%s' % (i['height'], i['width'])) for i in data])
+		item_list = []
+		for count, item in enumerate(data, 1):
+			try:
+				thumb_url = tmdb_image_base % ('w780', item['file_path'])
+				name = '%sx%s' % (item['height'], item['width'])
+				listitem = self.make_listitem()
+				listitem.setProperty('tikiskins.extras.name', '%01d. %s' % (count, name))
+				listitem.setProperty('tikiskins.extras.thumbnail', thumb_url)
+				listitem.setProperty('tikiskins.extras.all_images', json_all_images)
+				item_list.append(listitem)
+			except: pass
+		if not item_list: return
+		self.setProperty('tikiskins.extras.tmdb_artwork.%s.number' % image_type, '(x%02d)' % len(item_list))
+		self.item_action_dict[_id] = 'tikiskins.extras.all_images'
+		self.add_items(_id, item_list)
 
 	def get_release_year(self, release_data):
 		try:
@@ -441,9 +409,8 @@ class Extras(BaseDialog):
 			kodi_clock = self.get_infolabel('System.Time')
 			if any(i in kodi_clock for i in ['AM', 'PM']): _format = '%I:%M %p'
 			else: _format = '%H:%M'
-			current_time = datetime.now()
 			remaining_time = ((100 - int(self.percent_watched))/100) * self.duration_data
-			finish_time = current_time + timedelta(minutes=remaining_time)
+			finish_time = datetime.now() + timedelta(minutes=remaining_time)
 			finished = finish_time.strftime(_format)
 		return '%s: %s' % (ls(32791), finished)
 
@@ -457,32 +424,28 @@ class Extras(BaseDialog):
 			watched_info = ws.get_watched_info_movie(self.watched_indicators)
 			playcount, overlay = ws.get_watched_status_movie(watched_info, str(self.tmdb_id))
 			self.meta.update({'playcount': playcount, 'overlay': overlay})
-			if playcount == 1: self.percent_watched = '100'
-			else: self.percent_watched = '0'
+			self.percent_watched = '100' if playcount == 1 else '0'
 		else: self.percent_watched = str(int(float(resume_point)))
 		progress_status = '%s%% %s' % (self.percent_watched, ls(32475))
 		return progress_status
 
 	def get_last_aired(self):
 		extra_info = self.meta['extra_info']
-		if extra_info.get('last_episode_to_air', False):
-			last_ep = extra_info['last_episode_to_air']
-			last_aired = 'S%.2dE%.2d' % (last_ep['season_number'], last_ep['episode_number'])
-		else: return ''
+		if not extra_info.get('last_episode_to_air', False): return ''
+		last_ep = extra_info['last_episode_to_air']
+		last_aired = 'S%.2dE%.2d' % (last_ep['season_number'], last_ep['episode_number'])
 		return '%s: %s' % (ls(32634), last_aired)
 
 	def get_next_aired(self):
 		extra_info = self.meta['extra_info']
-		if extra_info.get('next_episode_to_air', False):
-			next_ep = extra_info['next_episode_to_air']
-			next_aired = 'S%.2dE%.2d' % (next_ep['season_number'], next_ep['episode_number'])
-		else: return ''
+		if not extra_info.get('next_episode_to_air', False): return ''
+		next_ep = extra_info['next_episode_to_air']
+		next_aired = 'S%.2dE%.2d' % (next_ep['season_number'], next_ep['episode_number'])
 		return '%s: %s' % (ls(32635), next_aired)
 
 	def get_next_episode(self):
-		watched_info = ws.get_watched_info_tv(self.watched_indicators)
-		ep_list = ws.get_next_episodes(watched_info)
-		try: info = [i for i in ep_list if i['media_ids']['tmdb'] == self.tmdb_id][0]
+		ep_list = ws.get_next_episodes(self.watched_indicators)
+		try: info = [i for i in ep_list if i['media_ids']['tmdb'] == str(self.tmdb_id)][0]
 		except: return ''
 		current_season = info['season']
 		current_episode = info['episode']
@@ -511,7 +474,8 @@ class Extras(BaseDialog):
 		all_episodes = settings.default_all_episodes()
 		show_all_episodes = True if all_episodes in (1, 2) else False
 		if show_all_episodes:
-			if all_episodes == 1 and total_seasons > 1: url_params = {'mode': 'build_season_list', 'tmdb_id': self.tmdb_id}
+			if all_episodes == 1 and total_seasons > 1:
+				url_params = {'mode': 'build_season_list', 'tmdb_id': self.tmdb_id}
 			else: url_params = {'mode': 'build_episode_list', 'tmdb_id': self.tmdb_id, 'season': 'all'}
 		else: url_params = {'mode': 'build_season_list', 'tmdb_id': self.tmdb_id}
 		return url_params
@@ -520,22 +484,19 @@ class Extras(BaseDialog):
 		poster = self.meta.get(self.poster_main) or self.meta.get(self.poster_backup) or backup_thumbnail
 		self.current_poster = poster
 		if 'image.tmdb' in self.current_poster:
-			try: poster = self.current_poster.replace('w185', 'original').replace('w342', 'original').replace('w780', 'original')
-			except: pass
-		elif 'fanart.tv' in self.current_poster:
-			if not self.check_poster_cached(self.current_poster): self.current_poster = self.meta.get(self.poster_backup) or backup_thumbnail
+			for res in ('w185', 'w342', 'w780'): poster = poster.replace(res, 'original')
+		elif 'fanart.tv' in poster and not self.check_poster_cached(poster):
+			self.current_poster = self.meta.get(self.poster_backup) or backup_thumbnail
 		return poster
-
-	def original_fanart(self):
-		fanart = self.meta.get(self.fanart_main) or self.meta.get(self.fanart_backup) or fanart_empty
-		return fanart
 
 	def remove_current_tmdb_mediaitem(self, data):
 		return [i for i in data if int(i['id']) != self.tmdb_id]
 
-	def make_tmdb_listitems(self, data):
-		name_key = 'title' if self.media_type == 'movie' else 'name'
-		release_key = 'release_date' if self.media_type == 'movie' else 'first_air_date'
+	def make_tmdb_listitems(self, list_id, data, prop_name):
+		if list_id not in self.enabled_lists or not data: return
+		name_key = 'title' if self.is_movie else 'name'
+		release_key = 'release_date' if self.is_movie else 'first_air_date'
+		item_list = []
 		for item in data:
 			try:
 				poster_path = item['poster_path']
@@ -548,8 +509,12 @@ class Extras(BaseDialog):
 				listitem.setProperty('tikiskins.extras.vote_average', '%.1f' % item['vote_average'])
 				listitem.setProperty('tikiskins.extras.thumbnail', thumbnail)
 				listitem.setProperty('tikiskins.extras.tmdb_id', str(item['id']))
-				yield listitem
+				item_list.append(listitem)
 			except: pass
+		if not item_list: return
+		self.setProperty('tikiskins.extras.%s.number' % prop_name, '(x%02d)' % len(item_list))
+		self.item_action_dict[list_id] = 'tikiskins.extras.tmdb_id'
+		self.add_items(list_id, item_list)
 
 	def listitem_check(self):
 		return self.get_infolabel('ListItem.Title') == self.meta['title']
@@ -558,16 +523,14 @@ class Extras(BaseDialog):
 		self.getControl(_id).addItems(items)
 
 	def set_poster(self):
-		if self.current_poster:
-			self.getControl(200).setImage(self.current_poster)
-			self.getControl(201).setImage(self.poster)
-			total_time = 0
-			while not self.check_poster_cached(self.poster):
-				if total_time >= 200: break
-				total_time += 1
-				self.sleep(50)
-			self.getControl(200).setImage(self.poster)
-		else: self.setProperty('tikiskins.extras.active_poster', 'false')
+		if not self.current_poster: return self.setProperty('tikiskins.extras.active_poster', 'false')
+		self.getControl(200).setImage(self.current_poster)
+		self.getControl(201).setImage(self.poster)
+		total_time = 0
+		while not self.check_poster_cached(self.poster) and total_time < 200:
+			total_time += 1
+			self.sleep(50)
+		self.getControl(200).setImage(self.poster)
 
 	def check_poster_cached(self, poster):
 		try:
@@ -582,10 +545,12 @@ class Extras(BaseDialog):
 		self.is_widget = kwargs['is_widget'].lower()
 		self.is_home = kwargs['is_home'].lower()
 		self.meta = kwargs['meta']
-		self.media_type = self.meta['mediatype']#movie, tvshow
+		self.mediatype = self.meta['mediatype']#movie, tvshow
+		self.is_movie = self.mediatype in ('movie', 'movies')
 		self.tmdb_id = self.meta['tmdb_id']
 		self.imdb_id = self.meta['imdb_id']
-		if self.is_widget == 'true' or self.is_home == 'true': self.folder_runner = 'ActivateWindow(Videos,%s,return)'
+		if self.is_widget == 'true' or self.is_home == 'true':
+			self.folder_runner = 'ActivateWindow(Videos,%s,return)'
 		else: self.folder_runner = 'Container.Update(%s)'
 		self.plugin_runner = 'RunPlugin(%s)'
 		self.enabled_lists = settings.extras_enabled_menus()
@@ -597,8 +562,8 @@ class Extras(BaseDialog):
 		self.year = str(self.meta['year'])
 		self.rootname = self.meta['rootname']
 		self.poster = self.original_poster()
-		self.fanart = self.original_fanart()
-		self.clearlogo = self.meta['clearlogo'] if settings.get_fanart_data() else self.meta['tmdblogo'] or ''
+		self.fanart = self.meta.get(self.fanart_main) or self.meta.get(self.fanart_backup) or fanart_empty
+		self.clearlogo = self.meta['clearlogo'] or ''
 		self.plot = self.meta['tvshow_plot'] if 'tvshow_plot' in self.meta else self.meta['plot']
 		if not self.plot: self.plot = ''
 		self.rating = '%.2f' % self.meta['rating']
@@ -609,7 +574,7 @@ class Extras(BaseDialog):
 		if not self.network: self.network = ''
 		self.duration_data = int(float(self.meta['duration'])/60)
 		self.duration = self.get_duration()
-		if self.media_type == 'movie':
+		if self.is_movie:
 			self.progress = self.get_progress()
 			self.finish_watching = self.get_finish()
 			self.last_aired_episode, self.next_aired_episode, self.next_episode = '', '', ''
@@ -617,33 +582,36 @@ class Extras(BaseDialog):
 		else:
 			self.progress, self.finish_watching = '', ''
 			self.last_aired_episode = self.get_last_aired()
-			if self.status not in ('', 'Ended', 'Canceled'): self.next_aired_episode = self.get_next_aired()
+			if self.status not in ('', 'Ended', 'Canceled'):
+				self.next_aired_episode = self.get_next_aired()
 			else: self.next_aired_episode = ''
 			self.next_episode = self.get_next_episode()
 			self.stingers = ''
 
 	def set_properties(self):
-		self.setProperty('tikiskins.extras.media_type', self.media_type)
-		self.setProperty('tikiskins.extras.fanart', self.fanart)
-		self.setProperty('tikiskins.extras.clearlogo', self.clearlogo)
-		self.setProperty('tikiskins.extras.title', self.title)
-		self.setProperty('tikiskins.extras.plot', self.plot)
-		self.setProperty('tikiskins.extras.year', self.year)
-		self.setProperty('tikiskins.extras.rating', self.rating)
-		self.setProperty('tikiskins.extras.mpaa', self.mpaa)
-		self.setProperty('tikiskins.extras.status', self.status)
-		self.setProperty('tikiskins.extras.genre', self.genre)
-		self.setProperty('tikiskins.extras.network', self.network)
-		self.setProperty('tikiskins.extras.duration', self.duration)
-		self.setProperty('tikiskins.extras.progress', self.progress)
-		self.setProperty('tikiskins.extras.finish_watching', self.finish_watching)
-		self.setProperty('tikiskins.extras.last_aired_episode', self.last_aired_episode)
-		self.setProperty('tikiskins.extras.next_aired_episode', self.next_aired_episode)
-		self.setProperty('tikiskins.extras.next_episode', self.next_episode)
-		self.setProperty('tikiskins.extras.stingers', self.stingers)
-		self.setProperty('tikiskins.extras.enable_scrollbars', self.enable_scrollbars)
+		for k, v in {
+			'tikiskins.extras.media_type': self.mediatype,
+			'tikiskins.extras.fanart': self.fanart,
+			'tikiskins.extras.clearlogo': self.clearlogo,
+			'tikiskins.extras.title': self.title,
+			'tikiskins.extras.plot': self.plot,
+			'tikiskins.extras.year': self.year,
+			'tikiskins.extras.rating': self.rating,
+			'tikiskins.extras.mpaa': self.mpaa,
+			'tikiskins.extras.status': self.status,
+			'tikiskins.extras.genre': self.genre,
+			'tikiskins.extras.network': self.network,
+			'tikiskins.extras.duration': self.duration,
+			'tikiskins.extras.progress': self.progress,
+			'tikiskins.extras.finish_watching': self.finish_watching,
+			'tikiskins.extras.last_aired_episode': self.last_aired_episode,
+			'tikiskins.extras.next_aired_episode': self.next_aired_episode,
+			'tikiskins.extras.next_episode': self.next_episode,
+			'tikiskins.extras.stingers': self.stingers,
+			'tikiskins.extras.enable_scrollbars': self.enable_scrollbars
+		}.items(): self.setProperty(k, str(v))
 
-class ShowTextMedia(BaseDialog):
+class TextviewerMedia(BaseDialog):
 	def __init__(self, *args, **kwargs):
 		BaseDialog.__init__(self, args)
 		self.text = kwargs.get('text')
@@ -720,20 +688,21 @@ class ExtrasChooser(BaseDialog):
 				yield listitem
 		self.item_list = list(builder())
 
-def media_extra_info(media_type, meta):
+def media_extra_info(mediatype, meta):
 	extra_info = meta.get('extra_info')
 	body = []
 	append = body.append
-	tagline_str, premiered_str, rating_str, votes_str, runtime_str = ls(32619), ls(32620), ls(32621), ls(32623), ls(32622)
+	tagline_str, plot_str, premiered_str, rating_str, votes_str, runtime_str = ls(32619), 'Plot', ls(32620), ls(32621), ls(32623), ls(32622)
 	genres_str, budget_str, revenue_str, director_str, writer_str = ls(32624), ls(32625), ls(32626), ls(32627), ls(32628)
 	studio_str, collection_str, homepage_str, status_str, type_str, classification_str = ls(32615), ls(32499), ls(32629), ls(32630), ls(32631), ls(32632)
 	network_str, created_by_str, last_aired_str, next_aired_str, seasons_str, episodes_str = ls(32480), ls(32633), ls(32634), ls(32635), ls(32636), ls(32506)
 	try:
-		if media_type == 'movie':
+		if mediatype == 'movie':
 			def _process_budget_revenue(info):
 				if isinstance(info, int): info = '${:,}'.format(info)
 				return info
 			if 'tagline' in meta and meta['tagline']: append('[B]%s:[/B] %s' % (tagline_str, meta['tagline']))
+			if 'plot' in meta and meta['plot']: append('[B]%s:[/B] %s' % (plot_str, meta['plot']))
 			if 'alternative_titles' in meta and meta['alternative_titles']: append('[B]%s:[/B] %s' % ('Aliases', ', '.join(meta['alternative_titles'])))
 			if 'status' in extra_info: append('[B]%s:[/B] %s' % (status_str, extra_info['status']))
 			append('[B]%s:[/B] %s' % (premiered_str, meta['premiered']))
@@ -748,6 +717,7 @@ def media_extra_info(media_type, meta):
 			if extra_info.get('collection_name'): append('[B]%s:[/B] %s' % (collection_str, extra_info['collection_name']))
 			if extra_info.get('homepage'): append('[B]%s:[/B] %s' % (homepage_str, extra_info['homepage']))
 		else:
+			if 'plot' in meta and meta['plot']: append('[B]%s:[/B] %s' % (plot_str, meta['plot']))
 			if 'type' in extra_info: append('[B]%s:[/B] %s' % (type_str, extra_info['type']))
 			if 'alternative_titles' in meta and meta['alternative_titles']: append('[B]%s:[/B] %s' % ('Aliases', ', '.join(meta['alternative_titles'])))
 			if 'status' in extra_info: append('[B]%s:[/B] %s' % (status_str, extra_info['status']))

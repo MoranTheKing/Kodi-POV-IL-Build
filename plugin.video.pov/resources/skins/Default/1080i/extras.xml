@@ -943,7 +943,7 @@
 					<control type="panel" id="2053">
 						<pagecontrol>4053</pagecontrol>
 						<top>45</top>
-						<width>1180</width>
+						<width>1820</width>
 						<height>360</height>
 						<onup>2052</onup>
 						<ondown>4053</ondown>
@@ -1039,7 +1039,7 @@
 					<control type="panel" id="2054">
 						<pagecontrol>4054</pagecontrol>
 						<top>45</top>
-						<width>1180</width>
+						<width>1820</width>
 						<height>360</height>
 						<onup>2053</onup>
 						<ondown>4054</ondown>

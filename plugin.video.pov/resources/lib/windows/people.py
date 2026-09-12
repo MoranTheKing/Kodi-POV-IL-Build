@@ -1,13 +1,12 @@
 import json
 from threading import Thread
 from windows import BaseDialog
-from indexers.tmdb_api import tmdb_people_info, tmdb_people_full_info, tmdb_image_base
-from indexers.imdb_api import imdb_videos
-from indexers.images import Images
+from indexers import metadata, tmdb_api
+from menus.images import Images
 from modules import dialogs
-from modules.utils import calculate_age
-from modules.kodi_utils import media_path, notification, show_text, local_string as ls
-from modules.settings import extras_enable_scrollbars, extras_exclude_non_acting, get_resolution
+from modules.utils import calculate_age, get_datetime
+from modules.kodi_utils import media_path, notification, local_string as ls
+from modules.settings import extras_enable_scrollbars, extras_exclude_non_acting, get_resolution, metadata_user_info
 # from modules.kodi_utils import logger
 
 fanart = BaseDialog.fanart
@@ -41,44 +40,46 @@ class People(BaseDialog):
 	def onClick(self, controlID):
 		self.control_id = None
 		if controlID in button_ids:
+			actor = {'actor_name': self.person_name, 'actor_id': self.person_id, 'actor_image': self.person_image}
+			kwargs = {'text': self.person_biography, 'poster': self.person_image}
 			if controlID == 10:
-				params = {'mode': 'people_image_results', 'actor_name': self.person_name, 'actor_id': self.person_id,
-						'actor_image': self.person_image, 'page_no': 1, 'rolling_count': 0}
-				Images().run(params)
+				Images().run({**actor, 'mode': 'people_image_results', 'page_no': 1, 'rolling_count': 0})
 			elif controlID == 11:
-				params = {'mode': 'people_tagged_image_results', 'actor_name': self.person_name, 'actor_id': self.person_id}
-				Images().run(params)
+				Images().run({**actor, 'mode': 'people_tagged_image_results'})
 			elif controlID == 50:
-				show_text(self.person_name, self.person_biography, font_size='large')
+				self.open_window(('windows.extras', 'TextviewerMedia'), 'textviewer_media.xml', **kwargs)
 		else: self.control_id = controlID
 
 	def onAction(self, action):
 		if action in self.closing_actions: self.close()
 		if not self.control_id: return
-		if action in self.selection_actions:
-			chosen_listitem = self.get_listitem(self.control_id)
-			chosen_var = chosen_listitem.getProperty(self.item_action_dict[self.control_id])
-			if self.control_id in (2050, 2051, 2053):
-				if self.control_id in (2050, 2053): media_type = 'movie'
-				else: media_type = 'tvshow'
-				params = {'tmdb_id': chosen_var, 'media_type': media_type, 'is_widget': 'false'}
-				return dialogs.extras_menu(params)
-			elif self.control_id == 2052:
-				params = json.loads(chosen_var)
-				chosen = dialogs.imdb_videos_choice(params['videos'], params['thumb'])
-				if not chosen: return
-				return self.open_window(('windows.videoplayer', 'VideoPlayer'), 'videoplayer.xml', video=chosen)
+		if action not in self.selection_actions: return
+		chosen_listitem = self.get_listitem(self.control_id)
+		chosen_var = chosen_listitem.getProperty(self.item_action_dict[self.control_id])
+		if self.control_id in (2050, 2051, 2053):
+			mediatype = 'movie' if self.control_id in (2050, 2053) else 'tvshow'
+			function = metadata.movie_meta if mediatype == 'movie' else metadata.tvshow_meta
+			meta = function('tmdb_id', chosen_var, metadata_user_info(), get_datetime())
+			if not meta: return
+			kwargs = {'meta': meta, 'is_widget': 'false', 'is_home': 'false'}
+			return self.open_window(('windows.extras', 'Extras'), 'extras.xml', **kwargs)
+		if self.control_id == 2052:
+			params = json.loads(chosen_var)
+			chosen = dialogs.imdb_videos_choice(params['videos'], params['thumb'])
+			if not chosen: return
+			return self.open_window(('windows.videoplayer', 'VideoPlayer'), 'videoplayer.xml', video=chosen)
 
 	def make_person_data(self):
 		if self.kwargs['query']:
-			try: self.person_id = tmdb_people_info(self.kwargs['query'])[0]['id']
+			try: self.person_id = tmdb_api.tmdb_people_info(self.kwargs['query'])[0]['id']
 			except: notification(32760)
 		else: self.person_id = self.kwargs['actor_id']
-		person_info = tmdb_people_full_info(self.person_id)
-		if person_info.get('biography') in ('', None): person_info = tmdb_people_full_info(self.person_id, 'en')
+		person_info = tmdb_api.tmdb_people_full_info(self.person_id)
+		if person_info.get('biography') in ('', None):
+			person_info = tmdb_api.tmdb_people_full_info(self.person_id, 'en')
 		self.person_name = person_info['name']
 		image_path = person_info['profile_path']
-		if image_path: self.person_image = tmdb_image_base % ('h632', image_path)
+		if image_path: self.person_image = tmdb_api.tmdb_image_base % ('h632', image_path)
 		else: self.person_image = backup_cast_thumbnail
 		try: self.person_gender = gender_dict[person_info.get('gender')]
 		except: self.person_gender = ''
@@ -105,28 +106,28 @@ class People(BaseDialog):
 		self.tvshow_data = [i for i in acting_data if i['media_type'] == 'tv']
 		self.director_data = [i for i in directing_data if i['job'].lower() == 'director']
 
-	def make_more_from(self, media_type):
+	def make_more_from(self, mediatype):
 		try:
-			if media_type == 'movie':
-				list_type = media_type
+			if mediatype == 'movie':
+				list_type = mediatype
 				_id = more_from_movies_id
 				data = self.movie_data
 				if self.exclude_non_acting:
-					try: data = [i for i in data if not 99 in i['genre_ids'] and not i['character'].lower() in roles_exclude]
+					try: data = [i for i in data if 99 not in i['genre_ids'] and i['character'].lower() not in roles_exclude]
 					except: pass
-			elif media_type == 'tvshow':
-				list_type = media_type
+			elif mediatype == 'tvshow':
+				list_type = mediatype
 				_id = more_from_tvshows_id
 				data = self.tvshow_data
 				if self.exclude_non_acting:
-					try: data = [i for i in data if not any(x in genres_exclude for x in i['genre_ids']) and not i['character'].lower() in roles_exclude]
+					try: data = [i for i in data if not any(x in genres_exclude for x in i['genre_ids']) and i['character'].lower() not in roles_exclude]
 					except: pass
 			else:#director
 				list_type = 'movie'
 				_id = more_from_director_id
 				data = self.director_data
 			item_list = list(self.make_tmdb_listitems(data, list_type))
-			self.setProperty('tikiskins.person.more_from_%s.number' % media_type, '(x%02d)' % len(item_list))
+			self.setProperty('tikiskins.person.more_from_%s.number' % mediatype, '(x%02d)' % len(item_list))
 			self.item_action_dict[_id] = 'tikiskins.person.tmdb_id'
 			control = self.getControl(_id)
 			control.addItems(item_list)
@@ -143,7 +144,7 @@ class People(BaseDialog):
 					yield listitem
 				except: pass
 		try:
-			data = imdb_videos(self.imdb_id)
+			data = []
 			item_list = list(builder())
 			self.setProperty('tikiskins.person.imdb_videos.number', '(x%02d)' % len(item_list))
 			self.item_action_dict[imdb_videos_id] = 'tikiskins.person.params'
@@ -151,11 +152,11 @@ class People(BaseDialog):
 			control.addItems(item_list)
 		except: pass
 
-	def make_tmdb_listitems(self, data, media_type):
+	def make_tmdb_listitems(self, data, mediatype):
 		used_ids = []
 		append = used_ids.append
-		name_key = 'title' if media_type == 'movie' else 'name'
-		release_key = 'release_date' if media_type == 'movie' else 'first_air_date'
+		name_key = 'title' if mediatype == 'movie' else 'name'
+		release_key = 'release_date' if mediatype == 'movie' else 'first_air_date'
 		for item in sorted(data, key=lambda x: x.get(release_key) or '', reverse=True):
 			try:
 				tmdb_id = item['id']
@@ -163,7 +164,7 @@ class People(BaseDialog):
 				listitem = self.make_listitem()
 				poster_path = item['poster_path']
 				if not poster_path: thumbnail = backup_thumbnail
-				else: thumbnail = tmdb_image_base % (self.poster_resolution, poster_path)
+				else: thumbnail = tmdb_api.tmdb_image_base % (self.poster_resolution, poster_path)
 				year = item.get(release_key)
 				if year in (None, ''): year = 'N/A'
 				else:

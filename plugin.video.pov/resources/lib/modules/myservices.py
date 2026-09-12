@@ -10,7 +10,7 @@ get_setting, set_setting, sleep = kodi_utils.get_setting, kodi_utils.set_setting
 notification, confirm_dialog = kodi_utils.notification, kodi_utils.confirm_dialog
 user_agent = 'POV/%s' % kodi_utils.get_addoninfo('version')
 qr_str = 'https://api.qrserver.com/v1/create-qr-code/?size=256x256&qzone=1%s'
-meta_keys = 'title year poster fanart clearlogo tmdblogo'
+meta_keys = 'title year poster fanart clearlogo'
 code_str, nav2_str, await_str = 'PIN CODE: [B]%s[/B]', 'LOCATION: [B]%s[/B]', 'REMAINING: [B]%02d:%02d[/B]'
 auth_str, noauth_str = 'Authorized: Select to Remove', 'Unauthorized: Select to Add'
 timeout = 10.05
@@ -21,31 +21,29 @@ def watch_indicators(function):
 			'At successful activation, watched status and resume progress will be set to [B]%s[/B]. '
 			'To change settings after activation, use the addon settings category:[CR]'
 			'[B]Features/Watched Indicators/Watched Status Provider[/B]'
-		) % instance.__class__.__name__)
+		) % instance.__class__.__name__, top_space=False)
 	return wrapper
 
 def _make_progress_dialog(**kwargs):
-	progress_dialog = create_window(('windows.sources', 'ProgressMedia'), 'progress_media.xml', **kwargs)
+	progress_dialog = create_window(('windows.progress', 'ProgressMedia'), 'progress_media.xml', **kwargs)
 	Thread(target=progress_dialog.run).start()
 	return progress_dialog
 
 def authorize():
 	def _builder():
-		for name, api in services:
+		for api in services:
 			item = kodi_utils.make_listitem()
-			item.setLabel('[B]%s[/B]' % name.upper())
+			item.setLabel('[B]%s[/B]' % api.__name__.upper())
 			item.setLabel2(auth_str if api().token else noauth_str)
 			item.setArt({'icon': '%s%s' % (icon_path, api.icon)})
-			yield(item)
-	icon_path, services = kodi_utils.media_path(), (
-		('trakt', Trakt), ('mdblist', MDBList), ('tmdblist', TMDbList),
-		('real-debrid', RealDebrid), ('premiumize.me', Premiumize), ('alldebrid', AllDebrid),
-		('torbox', TorBox), ('offcloud', Offcloud), ('easydebrid', EasyDebrid), ('easynews', EasyNews)
-	)
+			yield item
+	services, icon_path = (
+		Trakt, MDBList, TMDBList, Premiumize, TorBox, Offcloud, RealDebrid, AllDebrid, EasyNews
+	), kodi_utils.media_path()
 	service = kodi_utils.dialog.select('My Services', list(_builder()), useDetails=True)
 	if service < 0: return
-	try: success = services[service][1]().set()
-	except Exception as e: kodi_utils.logger('myservices error', str(e))
+	try: success = services[service]().set()
+	except: kodi_utils.logger('myservices error', f"\n{__import__('traceback').format_exc()}")
 	else: return success
 	return notification(32574)
 
@@ -57,9 +55,9 @@ class RepeatTimer(Timer):
 class RealDebrid:
 	icon = 'realdebrid.png'
 	def __init__(self):
-		self.token = get_setting('rd.token')
-		self.client_id = get_setting('rd.client_id') or 'X245A4XAIBGVM'
 		self.secret = get_setting('rd.secret')
+		self.token = get_setting('rd.token')
+		self.client_id = 'X245A4XAIBGVM'
 
 	def base_url(self, path):
 		return 'https://app.real-debrid.com/%s' % path
@@ -72,7 +70,6 @@ class RealDebrid:
 		self.secret = data['client_secret']
 
 	def set(self):
-		cls_name = 'Real Debrid'
 		if self.token:
 			if not confirm_dialog(): return
 			set_setting('rd.username', '')
@@ -81,7 +78,7 @@ class RealDebrid:
 			set_setting('rd.refresh', '')
 			set_setting('rd.secret', '')
 			clear_cache('rd_cloud', silent=True)
-			return notification('Removed %s Authorization' % cls_name)
+			return notification('Removed %s Authorization' % self.__class__.__name__)
 
 		params = {'client_id': self.client_id, 'new_credentials': 'yes'}
 		response = requests.get(self.base_url('oauth/v2/device/code'), params=params, timeout=timeout)
@@ -118,14 +115,14 @@ class RealDebrid:
 		set_setting('rd.token', token)
 		set_setting('rd.refresh', refresh)
 		set_setting('rd.secret', secret)
-		notification('Set %s Authorization' % cls_name)
+		notification('Set %s Authorization' % self.__class__.__name__)
 		return True
 
 class Premiumize:
 	icon = 'premiumize.png'
 	def __init__(self):
 		self.token = get_setting('pm.token')
-		self.client_id = '663882072'
+		self.client_id = '384733001'
 
 	def base_url(self, path):
 		return 'https://www.premiumize.me/%s' % path
@@ -137,13 +134,12 @@ class Premiumize:
 		self.token = data['access_token']
 
 	def set(self):
-		cls_name = 'Premiumize.me'
 		if self.token:
 			if not confirm_dialog(): return
 			set_setting('pm.account_id', '')
 			set_setting('pm.token', '')
 			clear_cache('pm_cloud', silent=True)
-			return notification('Removed %s Authorization' % cls_name)
+			return notification('Removed %s Authorization' % self.__class__.__name__)
 
 		data = {'client_id': self.client_id, 'response_type': 'device_code'}
 		response = requests.post(self.base_url('token'), json=data, timeout=timeout)
@@ -174,7 +170,7 @@ class Premiumize:
 		token = str(data['access_token'])
 		set_setting('pm.account_id', str(username))
 		set_setting('pm.token', token)
-		notification('Set %s Authorization' % cls_name)
+		notification('Set %s Authorization' % self.__class__.__name__)
 		return True
 
 class AllDebrid:
@@ -191,13 +187,12 @@ class AllDebrid:
 		self.token = result.get('apikey', '')
 
 	def set(self):
-		cls_name = self.__class__.__name__
 		if self.token:
 			if not confirm_dialog(): return
 			set_setting('ad.account_id', '')
 			set_setting('ad.token', '')
 			clear_cache('ad_cloud', silent=True)
-			return notification('Removed %s Authorization' % cls_name)
+			return notification('Removed %s Authorization' % self.__class__.__name__)
 
 		response = requests.get(self.base_url('v4/pin/get'), timeout=timeout)
 		result = response.json()['data']
@@ -226,7 +221,7 @@ class AllDebrid:
 		username = result['user']['username']
 		set_setting('ad.account_id', str(username))
 		set_setting('ad.token', self.token)
-		notification('Set %s Authorization' % cls_name)
+		notification('Set %s Authorization' % self.__class__.__name__)
 		return True
 
 class TorBox:
@@ -244,13 +239,12 @@ class TorBox:
 		self.token = data
 
 	def set(self):
-		cls_name = self.__class__.__name__
 		if self.token:
 			if not confirm_dialog(): return
 			set_setting('tb.token', '')
 			set_setting('tb.account_id', '')
 			clear_cache('tb_cloud', silent=True)
-			return notification('Removed %s Authorization' % cls_name)
+			return notification('Removed %s Authorization' % self.__class__.__name__)
 
 		params = {'app': user_agent}
 		response = requests.get(self.base_url('user/auth/device/start'), params=params, timeout=timeout)
@@ -280,7 +274,7 @@ class TorBox:
 		customer = result['data']['customer']
 		set_setting('tb.account_id', str(customer))
 		set_setting('tb.token', self.token)
-		notification('Set %s Authorization' % cls_name)
+		notification('Set %s Authorization' % self.__class__.__name__)
 		return True
 
 class Offcloud:
@@ -289,58 +283,50 @@ class Offcloud:
 		self.token = get_setting('oc.token')
 
 	def base_url(self, path):
-		return 'https://offcloud.com/api/%s' % path
+		return 'https://offcloud.com/%s' % path
+
+	def poll_auth(self, data):
+		response = requests.post(self.base_url('oauth/token'), json=data, timeout=timeout)
+		if not response.ok: return
+		data.update(response.json())
+		self.token = data['access_token']
 
 	def set(self):
-		cls_name = self.__class__.__name__
 		if self.token:
 			if not confirm_dialog(): return
 			set_setting('oc.token', '')
 			set_setting('oc.account_id', '')
 			clear_cache('oc_cloud', silent=True)
-			return notification('Removed %s Authorization' % cls_name)
+			return notification('Removed %s Authorization' % self.__class__.__name__)
 
-		username = kodi_utils.dialog.input('Offcloud Email:')
-		password = kodi_utils.dialog.input('Offcloud Password:', option=2)
-		if not all((username, password)): return
-		data = {'username': username, 'password': password}
-		response = requests.post(self.base_url('login'), json=data, timeout=timeout)
+		response = requests.post(self.base_url('oauth/device/code'), timeout=timeout)
 		result = response.json()
-		user_id = result.get('userId')
-		if not user_id: return notification(32574)
-		result = requests.post(self.base_url('key'), cookies=response.cookies, timeout=timeout).json()
-		api_key = result.get('apiKey')
-		if not api_key: return notification(32574)
-		set_setting('oc.account_id', str(user_id))
-		set_setting('oc.token', api_key)
-		notification('Set %s Authorization' % cls_name)
-		return True
-
-class EasyDebrid:
-	icon = 'easydebrid.png'
-	def __init__(self):
-		self.token = get_setting('ed.token')
-
-	def base_url(self, path):
-		return 'https://easydebrid.com/api/v1/%s' % path
-
-	def set(self):
-		cls_name = self.__class__.__name__
-		if self.token:
-			if not confirm_dialog(): return
-			set_setting('ed.token', '')
-			set_setting('ed.account_id', '')
-			return notification('Removed %s Authorization' % cls_name)
-
-		api_key = kodi_utils.dialog.input('EasyDebrid API Key:')
-		if not api_key: return
-		headers = {'Authorization': 'Bearer %s' % api_key}
-		response = requests.get(self.base_url('user/details'), headers=headers, timeout=timeout)
+		data = {'device_code': result['device_code'], 'grant_type': 'urn:ietf:params:oauth:grant-type:device_code'}
+		expires_in, expires_at = result['expires_in'], result['expires_in'] + time.monotonic()
+		try: qr_icon = qr_str % '&data=%s' % quote(result['verification_uri_complete'])
+		except: qr_icon = ''
+		meta = {**dict.fromkeys(meta_keys.split(), ''), 'poster': qr_icon}
+		detail = code_str % result['user_code'], nav2_str % result['verification_uri']
+		progress_dialog = _make_progress_dialog(meta=meta)
+		timer = RepeatTimer(result['interval'], self.poll_auth, args=(data,))
+		timer.start()
+		for i in range(1, expires_in + 1):
+			if self.token or progress_dialog.iscanceled(): break
+			lines = await_str % divmod(expires_at - time.monotonic(), 60), *detail
+			progress = 100 - int(100 * i / expires_in)
+			progress_dialog.update('[CR]'.join(lines), progress)
+			sleep(1000)
+		timer.cancel()
+		progress_dialog.close()
+		if progress_dialog.iscanceled(): return False
+		if not self.token: return notification(32574)
+		params = {'key': self.token}
+		response = requests.get(self.base_url('api/account/info'), params=params, timeout=timeout)
 		result = response.json()
-		customer = result['id']
-		set_setting('ed.account_id', str(customer))
-		set_setting('ed.token', api_key)
-		notification('Set %s Authorization' % cls_name)
+		customer = result['user_id']
+		set_setting('oc.account_id', str(customer))
+		set_setting('oc.token', self.token)
+		notification('Set %s Authorization' % self.__class__.__name__)
 		return True
 
 class EasyNews:
@@ -352,26 +338,26 @@ class EasyNews:
 
 	def set(self):
 		from debrids.easynews_api import EasyNewsAPI, clear_media_results_database
-		cls_name = self.__class__.__name__
 		if self.token:
 			if not confirm_dialog(): return
 			set_setting('easynews_user', '')
 			set_setting('easynews_password', '')
 			set_setting('provider.easynews', 'false')
 			clear_media_results_database()
-			return notification('Removed %s Authorization' % cls_name)
+			return notification('Removed %s Authorization' % self.__class__.__name__)
 
-		username = kodi_utils.dialog.input('EasyNews Username:')
-		password = kodi_utils.dialog.input('EasyNews Password:')
+		username = kodi_utils.dialog.input('EasyNews Username:').strip()
+		password = kodi_utils.dialog.input('EasyNews Password:').strip()
 		if not all((username, password)): return
-		api = EasyNewsAPI()
-		api.username, api.password = username, password
-		account_info, usage_info = api.account()
-		if not account_info or not usage_info: return notification(32574)
+#		Account web page strangely blocked for some users, will work with vpn
+#		api = EasyNewsAPI()
+#		api.username, api.password = username, password
+#		account_info, usage_info = api.account()
+#		if not account_info or not usage_info: return notification(32574)
 		set_setting('easynews_user', username)
 		set_setting('easynews_password', password)
 		set_setting('provider.easynews', 'true')
-		notification('Set %s Authorization' % cls_name)
+		notification('Set %s Authorization' % self.__class__.__name__)
 		return True
 
 class Trakt:
@@ -382,7 +368,7 @@ class Trakt:
 		self.secret = get_setting('trakt.client_secret')
 
 	def base_url(self, path):
-		return 'https://api.trakt.tv/%s' % path
+		return 'https://auth.trakt.tv/%s' % path
 
 	def poll_auth(self, data):
 		response = requests.post(self.base_url('oauth/device/token'), json=data, timeout=timeout)
@@ -392,7 +378,6 @@ class Trakt:
 
 	@watch_indicators
 	def set(self):
-		cls_name = self.__class__.__name__
 		if self.token:
 			if not confirm_dialog(): return
 			data = {'token': self.token, 'client_id': self.client_id, 'client_secret': self.secret}
@@ -405,7 +390,7 @@ class Trakt:
 			set_setting('watched_indicators', '0')
 			sleep(500)
 			clear_cache('trakt', silent=True)
-			return notification('Removed %s Authorization' % cls_name)
+			return notification('Removed %s Authorization' % self.__class__.__name__)
 
 		data = {'client_id': self.client_id, 'client_secret': self.secret, 'code': ''}
 		response = requests.post(self.base_url('oauth/device/code'), json=data, timeout=timeout)
@@ -432,7 +417,7 @@ class Trakt:
 		sleep(500)
 		headers = {'trakt-api-key': self.client_id, 'trakt-api-version': '2', 'Content-Type': 'application/json'}
 		headers.update({'Authorization': 'Bearer %s' % self.token})
-		response = requests.get(self.base_url('users/me'), headers=headers, timeout=timeout)
+		response = requests.get('https://api.trakt.tv/users/me', headers=headers, timeout=timeout)
 		username = response.json()['username']
 		expires = int(data['created_at']) + int(data['expires_in'])
 		refresh, token = data['refresh_token'], data['access_token']
@@ -442,7 +427,7 @@ class Trakt:
 		set_setting('trakt.expires', str(expires))
 		set_setting('trakt_indicators_active', 'true')
 		set_setting('watched_indicators', '1')
-		notification('Set %s Authorization' % cls_name)
+		notification('Set %s Authorization' % self.__class__.__name__)
 		sleep(500)
 		clear_cache('trakt', silent=True)
 		return True
@@ -450,44 +435,79 @@ class Trakt:
 class MDBList:
 	icon = 'mdblist.png'
 	def __init__(self):
+		self.grant_type = 'urn:ietf:params:oauth:grant-type:device_code'
+		self.client_id = get_setting('mdblist.client_id')
 		self.token = get_setting('mdblist.token')
+		self.created_at = time.time()
 
 	def base_url(self, path):
 		return 'https://api.mdblist.com/%s' % path
 
+	def poll_auth(self, data):
+		response = requests.post(self.base_url('oauth/token/'), data=data, timeout=timeout)
+		if not response.ok: return
+		data.update(response.json())
+		self.token = data['access_token']
+
 	@watch_indicators
 	def set(self):
-		cls_name = self.__class__.__name__
 		if self.token:
 			if not confirm_dialog(): return
 			set_setting('mdblist_user', '')
 			set_setting('mdblist.token', '')
+			set_setting('mdblist.refresh', '')
+			set_setting('mdblist.expires', '')
 			set_setting('mdbl_indicators_active', 'false')
 			set_setting('watched_indicators', '0')
 			sleep(500)
 			clear_cache('mdblist', silent=True)
-			return notification('Removed %s Authorization' % cls_name)
+			return notification('Removed %s Authorization' % self.__class__.__name__)
 
-		api_key = kodi_utils.dialog.input('MDBList API Key:')
-		if not api_key: return
-		params = {'apikey': api_key}
-		response = requests.get(self.base_url('user'), params=params, timeout=timeout)
+		data = {'client_id': self.client_id, 'scope': 'write'}
+		response = requests.post(self.base_url('oauth/device-authorization/'), data=data, timeout=timeout)
+		result = response.json()
+		data = {'device_code': result['device_code'], 'client_id': self.client_id, 'grant_type': self.grant_type}
+		expires_in, expires_at = result['expires_in'], result['expires_in'] + time.monotonic()
+		try: qr_icon = qr_str % '&data=%s' % quote(result['verification_uri'])
+		except: qr_icon = ''
+		meta = {**dict.fromkeys(meta_keys.split(), ''), 'poster': qr_icon}
+		detail = code_str % result['user_code'], nav2_str % result['verification_uri']
+		progress_dialog = _make_progress_dialog(meta=meta)
+		timer = RepeatTimer(result['interval'], self.poll_auth, args=(data,))
+		timer.start()
+		for i in range(1, expires_in + 1):
+			if self.token or progress_dialog.iscanceled(): break
+			lines = await_str % divmod(expires_at - time.monotonic(), 60), *detail
+			progress = 100 - int(100 * i / expires_in)
+			progress_dialog.update('[CR]'.join(lines), progress)
+			sleep(1000)
+		timer.cancel()
+		progress_dialog.close()
+		if progress_dialog.iscanceled(): return False
+		if not self.token: return notification(32574)
+		headers = {'Authorization': 'Bearer %s' % self.token}
+		response = requests.get(self.base_url('user'), headers=headers, timeout=timeout)
 		result = response.json()
 		user_id, username = result['user_id'], result['username']
+		expires = int(self.created_at) + int(data['expires_in'])
+		refresh, token = data['refresh_token'], data['access_token']
 		set_setting('mdblist_user', str(username))
-		set_setting('mdblist.token', api_key)
+		set_setting('mdblist.token', token)
+		set_setting('mdblist.refresh', refresh)
+		set_setting('mdblist.expires', str(expires))
 		set_setting('mdbl_indicators_active', 'true')
 		set_setting('watched_indicators', '2')
-		notification('Set %s Authorization' % cls_name)
+		notification('Set %s Authorization' % self.__class__.__name__)
 		sleep(500)
 		clear_cache('mdblist', silent=True)
 		return True
 
-class TMDbList:
+class TMDBList:
 	icon = 'tmdb.png'
 	def __init__(self):
 		self.read = get_setting('tmdb_read_token')
 		self.token = get_setting('tmdb.token')
+		self.session_id = get_setting('tmdb.session_id')
 		self.headers = {'Authorization': 'Bearer %s' % self.read}
 
 	def base_url(self, path):
@@ -500,9 +520,15 @@ class TMDbList:
 		self.token = data['access_token']
 
 	def set(self):
-		cls_name = self.__class__.__name__
 		if self.token:
 			if not confirm_dialog(): return
+			data = {'session_id': self.session_id}
+			response = requests.delete(self.base_url('3/authentication/session'), json=data, headers=self.headers, timeout=timeout)
+			result = response.json()
+			if not result['success']: return notification(32574)
+			set_setting('tmdb.session_account_id', '')
+			set_setting('tmdb.session_id', '')
+			set_setting('tmdb.username', '')
 			data = {'access_token': self.token}
 			response = requests.delete(self.base_url('4/auth/access_token'), json=data, headers=self.headers, timeout=timeout)
 			result = response.json()
@@ -510,16 +536,7 @@ class TMDbList:
 			set_setting('tmdb.account_id', '')
 			set_setting('tmdb.token', '')
 			clear_cache('tmdblist', silent=True)
-			notification('Removed %s Authorization' % cls_name)
-			session_id = get_setting('tmdb.session_id')
-			data = {'session_id': session_id}
-			response = requests.delete(self.base_url('3/authentication/session'), json=data, headers=self.headers, timeout=timeout)
-			result = response.json()
-			if not result['success']: return
-			set_setting('tmdb.session_account_id', '')
-			set_setting('tmdb.session_id', '')
-			set_setting('tmdb.username', '')
-			return
+			return notification('Removed %s Authorization' % self.__class__.__name__)
 
 		response = requests.post(self.base_url('4/auth/request_token'), headers=self.headers, timeout=timeout)
 		result = response.json()
@@ -550,7 +567,7 @@ class TMDbList:
 		account_id, access_token = str(data['account_id']), str(data['access_token'])
 		set_setting('tmdb.account_id', account_id)
 		set_setting('tmdb.token', access_token)
-		notification('Set %s Authorization' % cls_name)
+		notification('Set %s Authorization' % self.__class__.__name__)
 		sleep(500)
 		if not self.token and not get_setting('tmdb.token'): return
 		access_token = self.token or get_setting('tmdb.token')
@@ -562,26 +579,10 @@ class TMDbList:
 		params = {'session_id': session_id}
 		response = requests.get(self.base_url('3/account'), params=params, headers=self.headers, timeout=timeout)
 		result = response.json()
-		if not 'id' in result: return
+		if 'id' not in result: return
 		username, session_account_id = str(result['username']), str(result['id'])
 		set_setting('tmdb.username', username)
 		set_setting('tmdb.session_id', session_id)
 		set_setting('tmdb.session_account_id', session_account_id)
 		return True
-
-def refer_link(service):
-	url = {'realdebrid': 'https://tinyurl.com/2db65q28', 'torbox': 'https://tinyurl.com/2d2ra6jq'}[service]
-	expires_in, expires_at = 20, 20 + time.monotonic()
-	try: qr_icon = qr_str % '&data=%s' % quote(url)
-	except: qr_icon = kodi_utils.media_path('%s.png' % service)
-	meta = {**dict.fromkeys(meta_keys.split(), ''), 'poster': qr_icon}
-	detail = nav2_str % url, ''
-	progress_dialog = _make_progress_dialog(meta=meta)
-	for i in range(1, expires_in + 1):
-		if progress_dialog.iscanceled(): break
-		lines = await_str % divmod(expires_at - time.monotonic(), 60), *detail
-		progress = 100 - int(100 * i / expires_in)
-		progress_dialog.update('[CR]'.join(lines), progress)
-		sleep(1000)
-	progress_dialog.close()
 
