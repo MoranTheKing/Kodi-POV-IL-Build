@@ -358,7 +358,22 @@
 
 <include>_FixedCachedOSd</include>
 
-<!-- <include>PauseTendViewType</include> -->
+<control type="group">
+	<visible>$EXP[sliderdialogfalseortrue]</visible>
+	<control type="image">
+		<top>-100</top>
+		<left>-40</left>
+		<width>120%</width>
+		<height>350</height>
+		<top>0</top>
+		<texture>frame/osdfade.png</texture>
+	</control>
+	<visible>$EXP[__AdvancedPlayerVisiblity] + !Player.Paused</visible>
+	<include>RightOsdTopBar</include>
+	<include>LeftOsdTopBar</include>
+</control>
+
+<include>PauseTendViewType</include>
 
 <control type="group">
 	<visible>$EXP[sliderdialogfalseortrue]</visible>
@@ -889,26 +904,22 @@
 		<top>0</top>
 		<right>10</right>
 		<width>500</width>
-		<control type="group">
-		<height max="80">auto</height>
 		<control type="label">
 			<align>right</align>
 			<height max="80">auto</height>
 			<font>font_clock</font>
 			<label>$INFO[System.Time]</label>
 		</control>
-		<control type="image">
-			<right>200</right>
-			<height max="80">auto</height>
-			<aspectratio align="right" aligny="top">keep</aspectratio>
-			<texture>kodirdil/studiologos/$INFO[VideoPlayer.Studio].png</texture>
-		</control>
-		</control>
 		<control type="label">
 			<align>right</align>
 			<height max="45">auto</height>
 			<font>font45</font>
 			<label>$INFO[System.Date]</label>
+		</control>
+		<control type="image">
+			<height max="80">auto</height>
+			<aspectratio align="right" aligny="top">keep</aspectratio>
+			<texture>kodirdil/studiologos/$INFO[VideoPlayer.Studio].png</texture>
 		</control>
 	</control>
 	</include>

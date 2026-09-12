@@ -41,7 +41,6 @@
 					<onright>531</onright>
 					<onup>55</onup>
 					<ondown>55</ondown>
-					<visible>String.IsEmpty(Skin.String(lock.view.type)) | String.IsEqual(Skin.String(lock.view.type),widelistviewtype)</visible>
 					<viewtype label="$LOCALIZE[31107]">list</viewtype>
 					<focusedlayout height="85" condition="Container.Content(tvshows) | Container.Content(seasons) | Container.Content(episodes) | Container.Content(movies) | Container.Content(musicvideos) | Container.Content(videos) | Container.Content(games) | Window.IsActive(videoplaylist) | Window.IsActive(musicplaylist)">
 						<control type="image">

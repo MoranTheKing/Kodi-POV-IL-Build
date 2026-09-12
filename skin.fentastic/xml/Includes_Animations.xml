@@ -223,20 +223,20 @@
 	<!-- TOP 2 BOTTOM ANIMATION -->
 	<include name="top2bottomslideanimation">
 		<animation type="WindowOpen">
-			<effect type="slide" start="0,-120" end="0,0" time="350" tween="sine" easing="inout"/>
-			<effect type="fade" start="0" end="100" time="350" tween="sine" easing="inout"/>
+			<effect type="slide" start="0,-20" end="0,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
 		</animation>
 		<animation type="WindowClose">
-			<effect type="slide" start="0,0" end="0,-120" time="350" tween="sine" easing="inout"/>
-			<effect type="fade" start="100" end="0" time="350" tween="sine" easing="inout"/>
+			<effect type="slide" start="0,0" end="0,-20" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
 		</animation>
 		<animation type="Visible">
-			<effect type="slide" start="0,-120" end="0,0" time="350" tween="sine" easing="inout"/>
-			<effect type="fade" start="0" end="100" time="350" tween="sine" easing="inout"/>
+			<effect type="slide" start="0,-20" end="0,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
 		</animation>
 		<animation type="Hidden">
-			<effect type="slide" start="0,0" end="0,-120" time="350" tween="sine" easing="inout"/>
-			<effect type="fade" start="100" end="0" time="350" tween="sine" easing="inout"/>
+			<effect type="slide" start="0,0" end="0,-20" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
 		</animation>
 	</include>
 	<!-- END TOP 2 BOTTOM ANIMATION -->
@@ -244,20 +244,20 @@
 	<!-- BOTTOM 2 TOP ANIMATION -->
 	<include name="bottom2topslideanimation">
 		<animation type="WindowOpen">
-			<effect type="slide" start="0,120" end="0,0" time="350" tween="sine" easing="inout"/>
-			<effect type="fade" start="0" end="100" time="350" tween="sine" easing="inout"/>
+			<effect type="slide" start="0,20" end="0,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
 		</animation>
 		<animation type="WindowClose">
-			<effect type="slide" start="0,0" end="0,120" time="350" tween="sine" easing="inout"/>
-			<effect type="fade" start="100" end="0" time="350" tween="sine" easing="inout"/>
+			<effect type="slide" start="0,0" end="0,20" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
 		</animation>
 		<animation type="Visible">
-			<effect type="slide" start="0,120" end="0,0" time="350" tween="sine" easing="inout"/>
-			<effect type="fade" start="0" end="100" time="350" tween="sine" easing="inout"/>
+			<effect type="slide" start="0,20" end="0,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
 		</animation>
 		<animation type="Hidden">
-			<effect type="slide" start="0,0" end="0,120" time="350" tween="sine" easing="inout"/>
-			<effect type="fade" start="100" end="0" time="350" tween="sine" easing="inout"/>
+			<effect type="slide" start="0,0" end="0,20" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
 		</animation>
 	</include>
 	<!-- END TOP 2 BOTTOM ANIMATION -->
@@ -265,20 +265,20 @@
 	<!-- LEFT 2 RIGHT ANIMATION -->
 	<include name="left2rightslideanimation">
 		<animation type="WindowOpen">
-			<effect type="slide" start="-120,0" end="0,0" time="350" tween="sine" easing="inout"/>
-			<effect type="fade" start="0" end="100" time="350" tween="sine" easing="inout"/>
+			<effect type="slide" start="-120,0" end="0,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
 		</animation>
 		<animation type="WindowClose">
-			<effect type="slide" start="0,0" end="-120,0" time="350" tween="sine" easing="inout"/>
-			<effect type="fade" start="100" end="0" time="350" tween="sine" easing="inout"/>
+			<effect type="slide" start="0,0" end="-120,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
 		</animation>
 		<animation type="Visible">
-			<effect type="slide" start="-120,0" end="0,0" time="350" tween="sine" easing="inout"/>
-			<effect type="fade" start="0" end="100" time="350" tween="sine" easing="inout"/>
+			<effect type="slide" start="-120,0" end="0,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
 		</animation>
 		<animation type="Hidden">
-			<effect type="slide" start="0,0" end="-120,0" time="350" tween="sine" easing="inout"/>
-			<effect type="fade" start="100" end="0" time="350" tween="sine" easing="inout"/>
+			<effect type="slide" start="0,0" end="-120,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
 		</animation>
 	</include>
 	<!-- END LEFT 2 RIGHT ANIMATION -->
@@ -286,20 +286,20 @@
 	<!-- RIGHT 2 LEFT ANIMATION -->
 	<include name="right2leftslideanimation">
 		<animation type="WindowOpen">
-			<effect type="slide" start="120,0" end="0,0" time="350" tween="sine" easing="inout"/>
-			<effect type="fade" start="0" end="100" time="350" tween="sine" easing="inout"/>
+			<effect type="slide" start="120,0" end="0,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
 		</animation>
 		<animation type="WindowClose">
-			<effect type="slide" start="0,0" end="120,0" time="350" tween="sine" easing="inout"/>
-			<effect type="fade" start="100" end="0" time="350" tween="sine" easing="inout"/>
+			<effect type="slide" start="0,0" end="120,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
 		</animation>
 		<animation type="Visible">
-			<effect type="slide" start="120,0" end="0,0" time="350" tween="sine" easing="inout"/>
-			<effect type="fade" start="0" end="100" time="350" tween="sine" easing="inout"/>
+			<effect type="slide" start="20,0" end="0,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="0" end="100" time="150" tween="sine" easing="inout"/>
 		</animation>
 		<animation type="Hidden">
-			<effect type="slide" start="0,0" end="120,0" time="350" tween="sine" easing="inout"/>
-			<effect type="fade" start="100" end="0" time="350" tween="sine" easing="inout"/>
+			<effect type="slide" start="0,0" end="120,0" time="150" tween="sine" easing="inout"/>
+			<effect type="fade" start="100" end="0" time="150" tween="sine" easing="inout"/>
 		</animation>
 	</include>
 	<!-- END RIGHT 2 LEFT ANIMATION -->
@@ -333,83 +333,6 @@
 	</animation>		
 	<animation type="WindowClose">
 		<effect type="fade" start="100" end="0" time="250" delay="150"/>
-	</animation>
-	</include>
-	
-	
-	<include name="GlobaRight2LeftAnimation" reversible="false">
-	<animation type="WindowOpen">
-		<effect type="slide" start="50,0" end="0,0" time="450" tween="sine" easing="inout"/>
-		<effect type="fade" start="0" end="100" time="450" tween="sine" easing="inout"/>
-	</animation>
-	<animation type="WindowClose">
-		<effect type="slide" start="0,0" end="50,0" time="450" tween="sine" easing="inout"/>
-		<effect type="fade" start="100" end="0" time="450" tween="sine" easing="inout"/>
-	</animation>
-		<animation type="Visible">
-		<effect type="slide" start="50,0" end="0,0" time="450" tween="sine" easing="inout"/>
-		<effect type="fade" start="0" end="100" time="450" tween="sine" easing="inout"/>
-	</animation>
-	<animation type="Hidden">
-		<effect type="slide" start="0,0" end="50,0" time="450" tween="sine" easing="inout"/>
-		<effect type="fade" start="100" end="0" time="450" tween="sine" easing="inout"/>
-	</animation>
-	</include>
-
-	<include name="GlobaLeft2RightAnimation" reversible="false">
-	<animation type="WindowOpen">
-		<effect type="slide" start="-50,0" end="0,0" time="450" tween="sine" easing="inout"/>
-		<effect type="fade" start="0" end="100" time="450" tween="sine" easing="inout"/>
-	</animation>
-	<animation type="WindowClose">
-		<effect type="slide" start="0,0" end="-50,0" time="450" tween="sine" easing="inout"/>
-		<effect type="fade" start="100" end="0" time="450" tween="sine" easing="inout"/>
-	</animation>
-		<animation type="Visible">
-		<effect type="slide" start="-50,0" end="0,0" time="450" tween="sine" easing="inout"/>
-		<effect type="fade" start="0" end="100" time="450" tween="sine" easing="inout"/>
-	</animation>
-	<animation type="Hidden">
-		<effect type="slide" start="0,0" end="-50,0" time="450" tween="sine" easing="inout"/>
-		<effect type="fade" start="100" end="0" time="450" tween="sine" easing="inout"/>
-	</animation>
-	</include>
-	
-	<include name="GlobalDown2TopAnimation" reversible="false">
-	<animation type="WindowOpen">
-		<effect type="slide" start="0,50" end="0,0" time="450" tween="sine" easing="inout"/>
-		<effect type="fade" start="0" end="100" time="450" tween="sine" easing="inout"/>
-	</animation>
-	<animation type="WindowClose">
-		<effect type="slide" start="0,0" end="0,50" time="450" tween="sine" easing="inout"/>
-		<effect type="fade" start="100" end="0" time="450" tween="sine" easing="inout"/>
-	</animation>
-		<animation type="Visible">
-		<effect type="slide" start="0,50" end="0,0" time="450" tween="sine" easing="inout"/>
-		<effect type="fade" start="0" end="100" time="450" tween="sine" easing="inout"/>
-	</animation>
-	<animation type="Hidden">
-		<effect type="slide" start="0,0" end="0,50" time="450" tween="sine" easing="inout"/>
-		<effect type="fade" start="100" end="0" time="450" tween="sine" easing="inout"/>
-	</animation>
-	</include>
-	
-	<include name="GlobalTop2DownAnimation" reversible="false">
-	<animation type="WindowOpen">
-		<effect type="slide" start="0,-50" end="0,0" time="450" tween="sine" easing="inout"/>
-		<effect type="fade" start="0" end="100" time="450" tween="sine" easing="inout"/>
-	</animation>
-	<animation type="WindowClose">
-		<effect type="slide" start="0,0" end="0,-50" time="450" tween="sine" easing="inout"/>
-		<effect type="fade" start="100" end="0" time="450" tween="sine" easing="inout"/>
-	</animation>
-		<animation type="Visible">
-		<effect type="slide" start="0,-50" end="0,0" time="450" tween="sine" easing="inout"/>
-		<effect type="fade" start="0" end="100" time="450" tween="sine" easing="inout"/>
-	</animation>
-	<animation type="Hidden">
-		<effect type="slide" start="0,0" end="0,-50" time="450" tween="sine" easing="inout"/>
-		<effect type="fade" start="100" end="0" time="450" tween="sine" easing="inout"/>
 	</animation>
 	</include>
 	

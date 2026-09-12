@@ -22,52 +22,8 @@
 	<value>osd/fullscreen/buttons</value>
 	</variable>
 	
-	<variable name="631viewtypeicon">
-	<value condition="$EXP[__tvshow] | $EXP[__season] | $EXP[__episode] | $EXP[__Movies]">$INFO[ListItem.Art(fanart)]</value>
-	<value condition="![$EXP[__tvshow] | $EXP[__season] | $EXP[__episode] | $EXP[__Movies]]">$INFO[ListItem.Icon]</value>
-	<value>$INFO[ListItem.Icon]</value>
-	</variable>
-	
 	<variable name="StudioStatustvshow">
 	<value condition="!String.IsEmpty(ListItem.Studio) + $EXP[__tvshow] | $EXP[__season] | $EXP[__episode] | $EXP[__Movies]">[COLOR red]רשת:[/COLOR] $INFO[ListItem.Studio]</value>
-	</variable>
-	
-	
-	<variable name="PausedInfoViewOSDTitle">
-	<value condition="!String.IsEmpty(VideoPlayer.TvShowTitle)">$INFO[VideoPlayer.TvShowTitle] $INFO[VideoPlayer.Year,(,)]</value>
-	<value condition="!String.IsEmpty(VideoPlayer.Title)">$INFO[VideoPlayer.Title] $INFO[VideoPlayer.Year,(,)]</value>
-	</variable>
-
-	
-	<variable name="SkinVariables_DBID_Lookup">
-    <!-- אם המשתמש ממוקד בסרט -->
-    <value condition="String.IsEqual(ListItem.DBType, movie)">plugin://script.skinvariables/?info=get_dbitem_movie_details&amp;dbid=$VAR[setIdContainer]</value>
-    
-    <!-- אם המשתמש ממוקד באוסף סרטים (Set) -->
-    <value condition="String.IsEqual(ListItem.DBType, set)">plugin://script.skinvariables/?info=get_dbitem_movieset_details&amp;dbid=$VAR[setIdContainer]</value>
-    
-    <!-- אם המשתמש ממוקד בסדרת טלוויזיה -->
-    <value condition="String.IsEqual(ListItem.DBType, tvshow)">plugin://script.skinvariables/?info=get_dbitem_tvshow_details&amp;dbid=$VAR[setIdContainer]</value>
-    
-    <!-- אם המשתמש ממוקד בעונה ספציפית -->
-    <value condition="String.IsEqual(ListItem.DBType, season)">plugin://script.skinvariables/?info=get_dbitem_season_details&amp;dbid=$VAR[setIdContainer]</value>
-    
-    <!-- אם המשתמש ממוקד בפרק ספציפי -->
-    <value condition="String.IsEqual(ListItem.DBType, episode)">plugin://script.skinvariables/?info=get_dbitem_episode_details&amp;dbid=$VAR[setIdContainer]</value>
-    
-    <!-- אם המשתמש ממוקד בהרחבה/תוסף (Addon) -->
-    <value condition="String.IsEqual(ListItem.DBType, addon)">plugin://script.skinvariables/?info=get_dbitem_addon_details&amp;dbid=$VAR[setIdContainer]</value>
-</variable>
-
-<variable name="setIdContainer">
-	<value condition="Control.HasFocus(50)">$INFO[Container(50).ListItem.DBID]</value>
-	<value condition="Control.HasFocus(51)">$INFO[Container(51).ListItem.DBID]</value>
-	<value condition="Control.HasFocus(52)">$INFO[Container(52).ListItem.DBID]</value>
-</variable>
-	
-	<variable name="LockViewLayoutSetFocusColor">
-	<value condition="!String.IsEmpty(Skin.String(viewtypelockfocuscolor)">$INFO[Skin.String(viewtypelockfocuscolor)]</value>
-	<value>FFFFFF</value>
 	</variable>
 	
 	<variable name="LockedPlayerOSd">
@@ -75,48 +31,6 @@
 	<value condition="$EXP[__AdvancedPlayerVisiblity]">https://www.iconsdb.com/icons/preview/white/lock-7-xxl.png</value>
 	<value condition="$EXP[__NetflixPlayerVisiblity]">https://www.iconsdb.com/icons/preview/white/lock-7-xxl.png</value>
 	<value condition="$EXP[__PrettyplayerPlayerVisiblity]">https://www.iconsdb.com/icons/preview/white/lock-7-xxl.png</value>
-	</variable>
-	
-	<variable name="LockViewTypes_VAR">
-	<value condition="String.IsEqual(Skin.String(lock.view.type),posterviewtype)">https://www.iconsdb.com/icons/preview/white/lock-7-xxl.png</value>
-	<value condition="String.IsEqual(Skin.String(lock.view.type),shitposterviewtype)">https://www.iconsdb.com/icons/preview/white/lock-7-xxl.png</value>
-	<value condition="String.IsEqual(Skin.String(lock.view.type),panelviewtype)">https://www.iconsdb.com/icons/preview/white/lock-7-xxl.png</value>
-	<value condition="String.IsEqual(Skin.String(lock.view.type),widelistviewtype)">https://www.iconsdb.com/icons/preview/white/lock-7-xxl.png</value>
-	<value condition="String.IsEqual(Skin.String(lock.view.type),widepanelviewtype)">https://www.iconsdb.com/icons/preview/white/lock-7-xxl.png</value>
-	<value condition="String.IsEqual(Skin.String(lock.view.type),widepanelpostersviewtype)">https://www.iconsdb.com/icons/preview/white/lock-7-xxl.png</value>
-	<value condition="String.IsEqual(Skin.String(lock.view.type),widepanelfanartsviewtype)">https://www.iconsdb.com/icons/preview/white/lock-7-xxl.png</value>
-	<value condition="String.IsEqual(Skin.String(lock.view.type),listviewtype)">https://www.iconsdb.com/icons/preview/white/lock-7-xxl.png</value>
-	<value condition="String.IsEqual(Skin.String(lock.view.type),AdvancedViewList)">https://www.iconsdb.com/icons/preview/white/lock-7-xxl.png</value>	
-	<value condition="String.IsEqual(Skin.String(lock.view.type),AdvancedWideViewList)">https://www.iconsdb.com/icons/preview/white/lock-7-xxl.png</value>
-	</variable>
-	
-	
-	<variable name="__viewtypelockimage__">
-	<value condition="Container(9001).HasFocus(100)">viewtypes/51.png</value>
-	<value condition="Container(9001).HasFocus(101)">viewtypes/53.png</value>
-	<value condition="Container(9001).HasFocus(102)">viewtypes/54.png</value>
-	<value condition="Container(9001).HasFocus(103)">viewtypes/55.png</value>
-	<value condition="Container(9001).HasFocus(104)">viewtypes/56.png</value>
-	<value condition="Container(9001).HasFocus(105)">viewtypes/500.png</value>
-	<value condition="Container(9001).HasFocus(106)">viewtypes/504.png</value>
-	<value condition="Container(9001).HasFocus(107)">viewtypes/50.png</value>
-	<value condition="Container(9001).HasFocus(108)">viewtypes/502.png</value>
-	<value condition="Container(9001).HasFocus(109)">viewtypes/630.png</value>
-	<value condition="Container(9001).HasFocus(110)">viewtypes/631.png</value>
-	</variable>
-	
-	<variable name="LockedViewTypeLabel">
-	<value condition="String.IsEqual(Skin.String(lock.view.type),posterviewtype)">התצוגה נעולה על תצוגת פוסטרים</value>
-	<value condition="String.IsEqual(Skin.String(lock.view.type),shitposterviewtype)">התצוגה נעולה על תצוגת פוסטרים shift</value>
-	<value condition="String.IsEqual(Skin.String(lock.view.type),panelviewtype)">התצוגה נעולה על קיר פוסטרים</value>
-	<value condition="String.IsEqual(Skin.String(lock.view.type),widelistviewtype)">התצוגה נעולה על רשימה פשוטה</value>
-	<value condition="String.IsEqual(Skin.String(lock.view.type),widepanelviewtype)">התצוגה נעולה על קיר פנארט</value>
-	<value condition="String.IsEqual(Skin.String(lock.view.type),widepanelpostersviewtype)">התצוגה נעולה על קיר פוסטרים ללא מידע</value>
-	<value condition="String.IsEqual(Skin.String(lock.view.type),widepanelfanartsviewtype)">התצוגה נעולה על קיר פנארט ללא מידע</value>
-	<value condition="String.IsEqual(Skin.String(lock.view.type),listviewtype)">התצוגה נעולה על תצוגת רשימה</value>
-	<value condition="String.IsEqual(Skin.String(lock.view.type),smallviewtype)">התצוגה נעולה על רשימה עם פנארט</value>
-	<value condition="String.IsEqual(Skin.String(lock.view.type),AdvancedViewList)">התצוגה נעולה על רשימה תצוגה מתקדמת</value>
-	<value condition="String.IsEqual(Skin.String(lock.view.type),AdvancedWideViewList)">התצוגה נעולה על רשימה רחבה תצוגה מתקדמת</value>
 	</variable>
 	
 	<variable name="LockedPlayerLabelOSd">
@@ -161,32 +75,6 @@
 	<value condition="ControlGroup(201).HasFocus(43311)">העבר קדימה</value>
 	<value condition="ControlGroup(201).HasFocus(43312)">הבא</value>
 	</variable>
-	
-	<variable name="__FixSeasonLabel__">
-	<value condition="String.Contains(ListItem.Label,Season 1)">עונה 1</value>
-	<value condition="String.Contains(ListItem.Label,Season 2)">עונה 2</value>
-	<value condition="String.Contains(ListItem.Label,Season 3)">עונה 3</value>
-	<value condition="String.Contains(ListItem.Label,Season 4)">עונה 4</value>
-	<value condition="String.Contains(ListItem.Label,Season 5)">עונה 5</value>
-	<value condition="String.Contains(ListItem.Label,Season 6)">עונה 6</value>
-	<value condition="String.Contains(ListItem.Label,Season 7)">עונה 7</value>
-	<value condition="String.Contains(ListItem.Label,Season 8)">עונה 8</value>
-	<value condition="String.Contains(ListItem.Label,Season 9)">עונה 9</value>
-	<value condition="String.Contains(ListItem.Label,Season 10)">עונה 10</value>
-	<value condition="String.Contains(ListItem.Label,Season 11)">עונה 11</value>
-	<value condition="String.Contains(ListItem.Label,Season 12)">עונה 12</value>
-	<value condition="String.Contains(ListItem.Label,Season 13)">עונה 13</value>
-	<value condition="String.Contains(ListItem.Label,Season 14)">עונה 14</value>
-	<value condition="String.Contains(ListItem.Label,Season 15)">עונה 15</value>
-	<value condition="String.Contains(ListItem.Label,Season 16)">עונה 16</value>
-	<value condition="String.Contains(ListItem.Label,Season 17)">עונה 17</value>
-	<value>$INFO[ListItem.Label]</value>
-	</variable>
-	
-	<variable name="TrailerTrueOrFalse">
-	<value condition="String.IsEmpty(ListItem.Trailer)">אין קדימון</value>
-	<value condition="!String.IsEmpty(ListItem.Trailer)">יש קדימון</value>
-	</variable>
 
 	<variable name="NetFlixMenuRightLabel">
 	<value condition="$EXP[__Movies_OSD] + !$EXP[__CheckIdanplus_OSD]">לחץ לרשימת הסרטים שלך WatchList ב טראקט</value>
@@ -225,13 +113,6 @@
 	<value condition="String.IsEqual(ListItem.Status,in production)">[COLOR red]מצב הסדרה:[/COLOR] הסדרה בהפקה | </value>
 	<value condition="String.IsEqual(ListItem.Status,planned)">[COLOR red]מצב הסדרה:[/COLOR] הסדרה בתכנון | </value>
 	<value condition="String.IsEqual(ListItem.Status,ended)">[COLOR red]מצב הסדרה:[/COLOR] הסדרה הסתיימה | </value>
-	</variable>
-	
-	<variable name="translatestatusnocolor">
-	<value condition="String.IsEqual(ListItem.Status,returning series)">סדרה חוזרת</value>
-	<value condition="String.IsEqual(ListItem.Status,in production)">הסדרה בהפקה</value>
-	<value condition="String.IsEqual(ListItem.Status,planned)">הסדרה בתכנון</value>
-	<value condition="String.IsEqual(ListItem.Status,ended)">הסדרה הסתיימה</value>
 	</variable>
 	
 	<variable name="osd_middle_info_next_var">
@@ -278,15 +159,6 @@
 	<value condition="String.IsEqual(ListItem.Duration(hh),02) + $EXP[__Movies] | $EXP[__episode]">[COLOR red]אורך:[/COLOR] שעתיים ו $INFO[ListItem.Duration(mm)] דקות | </value>
 	<value condition="String.IsEqual(ListItem.Duration(hh),03) + $EXP[__Movies] | $EXP[__episode]">[COLOR red]אורך:[/COLOR] שלוש שעות ו $INFO[ListItem.Duration(mm)] דקות | </value>
 	<value condition="String.IsEqual(ListItem.Duration(hh),04) + $EXP[__Movies] | $EXP[__episode]">[COLOR red]אורך:[/COLOR] ארבע שעות ו $INFO[ListItem.Duration(mm)] דקות | </value>
-	</variable>
-	
-	
-	<variable name="GetDurationCleanTime">
-	<value condition="String.IsEqual(ListItem.Duration(hh),00) + $EXP[__Movies] | $EXP[__episode]">$INFO[ListItem.Duration(mm)] דקות</value>
-	<value condition="String.IsEqual(ListItem.Duration(hh),01) + $EXP[__Movies] | $EXP[__episode]">שעה ו $INFO[ListItem.Duration(mm)] דקות </value>
-	<value condition="String.IsEqual(ListItem.Duration(hh),02) + $EXP[__Movies] | $EXP[__episode]">שעתיים ו $INFO[ListItem.Duration(mm)] דקות</value>
-	<value condition="String.IsEqual(ListItem.Duration(hh),03) + $EXP[__Movies] | $EXP[__episode]">שלוש שעות ו $INFO[ListItem.Duration(mm)] דקות</value>
-	<value condition="String.IsEqual(ListItem.Duration(hh),04) + $EXP[__Movies] | $EXP[__episode]">ארבע שעות ו $INFO[ListItem.Duration(mm)] דקות</value>
 	</variable>
 	
 	<variable name="netflix_playerpaused_label">
@@ -343,10 +215,6 @@
 	
 	<variable name="__FixTmdbOsd__">
 	<value>$INFO[VideoPlayer.UniqueID(tmdb)]</value>
-	</variable>
-	
-	<variable name="__FixTmdbVAR__">
-	<value>$INFO[ListItem.UniqueID(tmdb)]</value>
 	</variable>
 	
 	<variable name="OsdSeasonInfo">
@@ -440,33 +308,6 @@
 	<value condition="!String.IsEmpty(Player.Art(landscape)">$INFO[Player.Art(landscape)]</value>
 	<value condition="!String.IsEmpty(VideoPlayer.Cover)">$INFO[VideoPlayer.Cover]</value>
 	<value>$INFO[VideoPlayer.Cover]</value>
-	</variable>
-	
-	<variable name="PausedTendIconOSD">
-	<value condition="$EXP[__Movies_OSD]">$INFO[Player.Art(fanart)]</value>
-	<value condition="$EXP[__episode_OSD]">$INFO[Player.Icon]</value>
-	<value>$INFO[VideoPlayer.Cover]</value>
-	</variable>
-	
-	<variable name="RatingAndVotesOSD">
-	<value condition="!String.IsEmpty(VideoPlayer.RatingAndVotes)">[COLOR button_focus]|[/COLOR] $INFO[VideoPlayer.RatingAndVotes]</value>
-	</variable>
-	
-	<variable name="TagLineOsd_">
-	<value condition="!String.IsEmpty(VideoPlayer.TagLine)">[COLOR button_focus]|[/COLOR] $INFO[VideoPlayer.TagLine]</value>
-	</variable>
-	
-	<variable name="SetHenDurationAndTimeOSD">
-	<value condition="String.IsEqual(VideoPlayer.Duration(hh),00)">[COLOR button_focus]|[/COLOR] דקות $INFO[VideoPlayer.Duration(mm)]</value>
-	<value condition="String.IsEqual(VideoPlayer.Duration(hh),01)">[COLOR button_focus]|[/COLOR] שעה ו $INFO[VideoPlayer.Duration(mm)] דקות</value>
-	<value condition="String.IsEqual(VideoPlayer.Duration(hh),02)">[COLOR button_focus]|[/COLOR] שעתיים ו $INFO[VideoPlayer.Duration(mm)] דקות</value>
-	<value condition="String.IsEqual(VideoPlayer.Duration(hh),03)">[COLOR button_focus]|[/COLOR] שלוש שעות ו $INFO[VideoPlayer.Duration(mm)] דקות</value>
-	<value condition="String.IsEqual(VideoPlayer.Duration(hh),04)">[COLOR button_focus]|[/COLOR] ארבע שעות ו $INFO[VideoPlayer.Duration(mm)] דקות</value>
-	<value>$INFO[VideoPlayer.Duration]</value>
-	</variable>
-	
-	<variable name="BuildDataOSd">
-	<value>$VAR[RatingAndVotesOSD] $VAR[TagLineOsd_] $VAR[SetHenDurationAndTimeOSD]</value>
 	</variable>
 	
 	<variable name="texturepreviousimage">
@@ -1075,7 +916,7 @@
 	</variable>
 
 	<variable name="OsdInfoLabelVar">
-		<value condition="Player.Chapter + player.chaptercount">מקטע[COLOR button_focus] $INFO[Player.Chapter,(,)][/COLOR] / קטע[COLOR button_focus] $INFO[Player.ChapterCount,(,)][/COLOR]</value>
+		<value condition="Player.Chapter + player.chaptercount">פרק[COLOR button_focus] $INFO[Player.Chapter,(,)][/COLOR] / כמות[COLOR button_focus] $INFO[Player.ChapterCount,(,)][/COLOR]</value>
 		<value condition="![Player.Chapter + player.chaptercount)] + VideoPlayer.Content(episodes)">עונה $INFO[VideoPlayer.Season,[COLOR button_focus](,)[/COLOR]] / פרק $INFO[VideoPlayer.Episode,[COLOR button_focus](,)[/COLOR]]</value>
 		<value condition="![Player.Chapter + player.chaptercount)] + VideoPlayer.Content(movies) + !String.IsEmpty(VideoPlayer.TagLine)">$INFO[VideoPlayer.TagLine]</value>
 		<value condition="![Player.Chapter + player.chaptercount)] + VideoPlayer.Content(LiveTv)">מתחיל $INFO[VideoPlayer.StartTime,[COLOR button_focus](,)[/COLOR]] / מסתיים $INFO[VideoPlayer.EndTime,[COLOR button_focus](,)[/COLOR]]</value>

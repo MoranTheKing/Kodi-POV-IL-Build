@@ -2,11 +2,14 @@
 <window type="dialog" id="1128">
 	<zorder>4</zorder>
 	<include>modalDialogInOutVerticalVisible</include>
-	<visible>Player.Seeking | Player.Forwarding | Player.Rewinding | Player.Caching | Player.HasPerformedSeek(3) | [Window.IsActive(videoosd) + Player.Paused]</visible>
-	<visible>![Window.IsActive(subtitlesearch) | Window.IsActive(1133) | Window.IsActive(1132)]</visible>
+	<visible>Player.Seeking | Player.Forwarding | Player.Rewinding | Player.Caching  | Player.Paused | Player.HasPerformedSeek(3)</visible>
+	<visible>!Window.IsActive(subtitlesearch)</visible>
 	<controls>
 	
 	<include>SeekBarEnabled</include>
+	<include content="SeekBarEnabled">
+	<param name="visible">$EXP[__NetflixPlayerVisiblity] | $EXP[__AdvancedPlayerVisiblity] | $EXP[__PrettyplayerPlayerVisiblity] + $EXP[__seekvisibilty]</param>
+	</include>
 		
 	</controls>
 </window>
