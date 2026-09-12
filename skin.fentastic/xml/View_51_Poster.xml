@@ -38,7 +38,7 @@
 					<ondown>5199</ondown>
 					<onright>false</onright>
 					<hitrect x="100" y="0" w="800" h="400" />
-					<visible>String.IsEqual(Skin.String(lock.view.type),posterviewtype)</visible>
+					<visible>[String.IsEmpty(Skin.String(lock.view.type)) + [Container.Content(movies) | Container.Content(seasons) | Container.Content(sets) | Container.Content(tvshows) | Container.Content(games)]] | String.IsEqual(Skin.String(lock.view.type),posterviewtype)</visible>
 					<!-- <visible>Container.Content(movies) | Container.Content(seasons) | Container.Content(sets) | Container.Content(tvshows) | Container.Content(games)</visible> -->
 					<preloaditems>1</preloaditems>
 					<viewtype label="20021">icon</viewtype>

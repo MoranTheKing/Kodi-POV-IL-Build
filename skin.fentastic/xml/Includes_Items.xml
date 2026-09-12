@@ -315,6 +315,7 @@
 <item id="104">
 <label>קיר פנארט</label> <!-- 56 -->
 <property name="lock5">$VAR[LockViewTypes_VAR]</property>
+<onclick>Skin.SetString(lock.view.type,widepanelviewtype)</onclick>
 </item>
 <item id="105">
 <label>קיר פוסטרים ללא מידע</label> <!-- 500 -->
@@ -347,6 +348,12 @@
 <label>רשימה רחבה תצוגה מתקדמת</label> <!-- 631 -->
 <property name="lock11">$VAR[LockViewTypes_VAR]</property>
 <onclick>Skin.SetString(lock.view.type,AdvancedWideViewList)</onclick>
+</item>
+
+<item id="111">
+<label>שחרור נעילה (חזרה לתצוגות רגילות)</label>
+<property name="lock12">$VAR[LockViewTypes_VAR]</property>
+<onclick>Skin.Reset(lock.view.type)</onclick>
 </item>
 
 </content>

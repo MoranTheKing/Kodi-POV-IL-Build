@@ -3,22 +3,21 @@
 	<onload>Skin.TimerStart(1110_topbaroverlay)</onload>
 	<!-- <visible>Window.IsActive(videoosd)</visible> -->
 	<depth>DepthOSD</depth>
-	<include>GlobalTop2DownAnimation</include>
+	<include>Animation_TopSlide</include>
 	<zorder>0</zorder>
-	<visible>!Player.Paused + [Window.IsActive(fullscreenvideo) | Window.IsActive(videoosd)]</visible>
 	<controls>
 	
+	
 	<control type="group">
-	<include>GlobalTop2DownAnimation</include>
-	<visible>!Player.Paused + [Window.IsActive(fullscreenvideo) | Window.IsActive(videoosd)]</visible>
-	<control type="image">
-		<top>-250</top>
-		<height>550</height>
-		<texture flipy="true" colordiffuse="black">shadows/shadow_mask2.png</texture>
-	</control>
+	<visible>$EXP[__SimplePlayerVisiblity] + !Player.Paused</visible>
 	<include>RightOsdTopBar</include>
 	<include>LeftOsdTopBar</include>
 	</control>
 	
+	<control type="group">
+	<visible>!$EXP[__SimplePlayerVisiblity]</visible>
+	<include>RightOsdTopBar</include>
+	<include>LeftOsdTopBar</include>
+	</control>
 	</controls>
 </window>
