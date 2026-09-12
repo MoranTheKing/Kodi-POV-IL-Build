@@ -594,21 +594,6 @@
 	</control>
 	</control>
 </control>
-
-<control type="group">
-	<visible>$EXP[sliderdialogfalseortrue]</visible>
-	<control type="image">
-		<top>-100</top>
-		<left>-40</left>
-		<width>120%</width>
-		<height>350</height>
-		<top>0</top>
-		<texture>frame/osdfade.png</texture>
-	</control>
-	<visible>$EXP[__PrettyplayerPlayerVisiblity]</visible>
-	<include>RightOsdTopBar</include>
-	<include>LeftOsdTopBar</include>
-</control>
 </include>
 		
 
