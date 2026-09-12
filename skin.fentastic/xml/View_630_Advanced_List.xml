@@ -15,7 +15,6 @@
         <height>750</height>
         <centertop>55%</centertop>
         <centerleft>60%</centerleft>
-        <include>GlobaLeft2RightAnimation</include>
         
         <control type="group">
             <include>GlobaLeft2RightAnimation</include>
@@ -39,10 +38,10 @@
         <control type="group">
             <include>GlobalTop2DownAnimation</include>
             <control type="image">
-                <left>180</left>
-                <top>-50</top>
-                <width>150</width>
-                <height>40</height>
+				<top>-140</top>
+				<centerleft>50%</centerleft>
+                <width>380</width>
+                <height>120</height>
                 <fadetime>350</fadetime>
                 <aspectratio align="center" aligny="bottom">strech</aspectratio>
                 <texture>$INFO[ListItem.Art(clearlogo)]</texture>
@@ -72,6 +71,7 @@
             <font>font10</font>
             <textcolor>98FFFFFF</textcolor>
             <label>בין השנים $INFO[Control.GetLabel(55005)]</label>
+			<visible>$EXP[__tvshow]</visible>
         </control>
         </control>
 		
@@ -110,8 +110,8 @@
                 <onleft>9000</onleft>
 				<include>GlobaRight2LeftAnimation</include>
 				<include content="ViewTypeBaseLayout_">
-					<param name="layoutheight">105</param>
-					<param name="groupheight">100</param>
+					<param name="layoutheight">100</param>
+					<param name="groupheight">115</param>
 				</include>                  
             </control>
         </control>
@@ -133,7 +133,6 @@
         <height>750</height>
         <centertop>55%</centertop>
         <centerleft>50%</centerleft>
-        <include>GlobaLeft2RightAnimation</include>
         
         <control type="group">
             <include>GlobaLeft2RightAnimation</include>
@@ -149,10 +148,10 @@
         <control type="group">
             <include>GlobaLeft2RightAnimation</include>
             <control type="image">
-                <left>580</left>
-                <top>-50</top>
-                <width>150</width>
-                <height>40</height>
+               <centerleft>50%</centerleft>
+                <top>-150</top>
+                <width>320</width>
+                <height>140</height>
                 <fadetime>350</fadetime>
                 <aspectratio align="center" aligny="bottom">strech</aspectratio>
                 <texture>$INFO[ListItem.Art(clearlogo)]</texture>
@@ -182,6 +181,7 @@
             <font>font10</font>
             <textcolor>98FFFFFF</textcolor>
             <label>בין השנים $INFO[Control.GetLabel(55005)]</label>
+			<visible>$EXP[__tvshow]</visible>
         </control>
         </control>
 		

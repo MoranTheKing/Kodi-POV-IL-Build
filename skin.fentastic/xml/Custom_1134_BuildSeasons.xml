@@ -68,39 +68,45 @@
 	<height>100</height>
 	<centertop>74%</centertop>
 	<centerleft>50%</centerleft>
-	<width>1412</width>
+	<width>50%</width>
 	<onright>false</onright>
 	<onleft>false</onleft>
-	<focusposition>3</focusposition>
-	<movement>3</movement>
+	<focusposition>2</focusposition>
+	<movement>2</movement>
 	<onback>5001</onback>
 	<onclick>ReplaceWindow(1135)</onclick>
 	<orientation>horizontal</orientation>
 	<scrolltime tween="cubic">550</scrolltime>
-	<itemlayout width="202" height="65">
+	<itemlayout width="195" height="65">
 	<control type="group">
-	<width>200</width>
-	<control type="label">
-		<font>font10</font>
-		<align>center</align>
-		<aligny>center</aligny>
-		<label>$INFO[ListItem.Label]</label>
-	</control>
+	<width>180</width>
+		<control type="image">
+			<texture colordiffuse="25FFFFFF">masks/menu.png</texture>
+		</control>
+		<control type="label">
+			<font>font10</font>
+			<align>center</align>
+			<aligny>center</aligny>
+			<label>$INFO[ListItem.Label]</label>
+		</control>
 	</control>
 	</itemlayout>
-	<focusedlayout width="202" height="65">
+	<focusedlayout width="195" height="65">
 	<control type="group">
-	<width>200</width>
-	<control type="image">
-	<texture>masks/menu.png</texture>
-	</control>
-	<control type="label">
-		<font>font10</font>
-		<align>center</align>
-		<aligny>center</aligny>
-		<textcolor>black</textcolor>
-		<label>$INFO[ListItem.Label]</label>
-	</control>
+	<width>180</width>
+		<control type="image">
+			<texture colordiffuse="25FFFFFF">masks/menu.png</texture>
+		</control>
+		<control type="image">
+			<texture>masks/menu.png</texture>
+		</control>
+		<control type="label">
+			<font>font10</font>
+			<align>center</align>
+			<aligny>center</aligny>
+			<textcolor>black</textcolor>
+			<label>$INFO[ListItem.Label]</label>
+		</control>
 	</control>
 	<include>__EpisodesExtraction__</include>
 	</focusedlayout>

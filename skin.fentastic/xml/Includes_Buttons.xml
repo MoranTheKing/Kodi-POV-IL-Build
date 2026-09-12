@@ -500,6 +500,11 @@
 	<onfocus>SetProperty(_trailertrueorfalse,$VAR[TrailerTrueOrFalse],home)</onfocus>
 	</include>
 	
+	<include name="UmbrellaMoviePlayer">
+	<onfocus condition="$EXP[__Movies]">SetProperty(UmbrellaNoAutoPlayer,PlayMedia(plugin://plugin.video.umbrella/?action=play_Item&amp;title=$INFO[ListItem.Title]&amp;year=$INFO[ListItem.Year]&amp;imdb=$INFO[ListItem.IMDBNumber]&amp;tmdb=$VAR[__FixTmdbVAR__]&amp;rescrape=true&amp;select=0),home)</onfocus>
+	<onfocus condition="$EXP[__episode]">SetProperty(UmbrellaNoAutoPlayer,PlayMedia(plugin://plugin.video.umbrella/?action=play_Item&amp;title=$INFO[ListItem.Title]&amp;year=$INFO[ListItem.Year]&amp;imdb=$INFO[ListItem.IMDBNumber]&amp;tmdb=$VAR[__FixTmdbVAR__]&amp;season=$INFO[ListItem.Season]&amp;episode=$INFO[ListItem.Episode]&amp;tvshowtitle=$INFO[ListItem.TvShowTitle]&amp;premiered=$INFO[ListItem.Premiered]&amp;rescrape=true&amp;select=0),home)</onfocus>
+	</include>
+	
 	<include name="__ExtenedInfoButton__">
 	<control type="button">
 	<height>1</height>
@@ -525,6 +530,7 @@
 	<include>GetExtraInfoCheckmovie</include>
 	<include>__extendedinfobasedtopinfo__</include>
 	<include>CheckForTrailerTrueOrFalse</include>
+	<include>UmbrellaMoviePlayer</include>
 	</control>
 	</include>
 	

@@ -31,6 +31,12 @@
 	<variable name="StudioStatustvshow">
 	<value condition="!String.IsEmpty(ListItem.Studio) + $EXP[__tvshow] | $EXP[__season] | $EXP[__episode] | $EXP[__Movies]">[COLOR red]רשת:[/COLOR] $INFO[ListItem.Studio]</value>
 	</variable>
+	
+	
+	<variable name="PausedInfoViewOSDTitle">
+	<value condition="!String.IsEmpty(VideoPlayer.TvShowTitle)">$INFO[VideoPlayer.TvShowTitle] $INFO[VideoPlayer.Year,(,)]</value>
+	<value condition="!String.IsEmpty(VideoPlayer.Title)">$INFO[VideoPlayer.Title] $INFO[VideoPlayer.Year,(,)]</value>
+	</variable>
 
 	
 	<variable name="SkinVariables_DBID_Lookup">
@@ -274,6 +280,7 @@
 	<value condition="String.IsEqual(ListItem.Duration(hh),04) + $EXP[__Movies] | $EXP[__episode]">[COLOR red]אורך:[/COLOR] ארבע שעות ו $INFO[ListItem.Duration(mm)] דקות | </value>
 	</variable>
 	
+	
 	<variable name="GetDurationCleanTime">
 	<value condition="String.IsEqual(ListItem.Duration(hh),00) + $EXP[__Movies] | $EXP[__episode]">$INFO[ListItem.Duration(mm)] דקות</value>
 	<value condition="String.IsEqual(ListItem.Duration(hh),01) + $EXP[__Movies] | $EXP[__episode]">שעה ו $INFO[ListItem.Duration(mm)] דקות </value>
@@ -433,6 +440,33 @@
 	<value condition="!String.IsEmpty(Player.Art(landscape)">$INFO[Player.Art(landscape)]</value>
 	<value condition="!String.IsEmpty(VideoPlayer.Cover)">$INFO[VideoPlayer.Cover]</value>
 	<value>$INFO[VideoPlayer.Cover]</value>
+	</variable>
+	
+	<variable name="PausedTendIconOSD">
+	<value condition="$EXP[__Movies_OSD]">$INFO[Player.Art(fanart)]</value>
+	<value condition="$EXP[__episode_OSD]">$INFO[Player.Icon]</value>
+	<value>$INFO[VideoPlayer.Cover]</value>
+	</variable>
+	
+	<variable name="RatingAndVotesOSD">
+	<value condition="!String.IsEmpty(VideoPlayer.RatingAndVotes)">[COLOR button_focus]|[/COLOR] $INFO[VideoPlayer.RatingAndVotes]</value>
+	</variable>
+	
+	<variable name="TagLineOsd_">
+	<value condition="!String.IsEmpty(VideoPlayer.TagLine)">[COLOR button_focus]|[/COLOR] $INFO[VideoPlayer.TagLine]</value>
+	</variable>
+	
+	<variable name="SetHenDurationAndTimeOSD">
+	<value condition="String.IsEqual(VideoPlayer.Duration(hh),00)">[COLOR button_focus]|[/COLOR] דקות $INFO[VideoPlayer.Duration(mm)]</value>
+	<value condition="String.IsEqual(VideoPlayer.Duration(hh),01)">[COLOR button_focus]|[/COLOR] שעה ו $INFO[VideoPlayer.Duration(mm)] דקות</value>
+	<value condition="String.IsEqual(VideoPlayer.Duration(hh),02)">[COLOR button_focus]|[/COLOR] שעתיים ו $INFO[VideoPlayer.Duration(mm)] דקות</value>
+	<value condition="String.IsEqual(VideoPlayer.Duration(hh),03)">[COLOR button_focus]|[/COLOR] שלוש שעות ו $INFO[VideoPlayer.Duration(mm)] דקות</value>
+	<value condition="String.IsEqual(VideoPlayer.Duration(hh),04)">[COLOR button_focus]|[/COLOR] ארבע שעות ו $INFO[VideoPlayer.Duration(mm)] דקות</value>
+	<value>$INFO[VideoPlayer.Duration]</value>
+	</variable>
+	
+	<variable name="BuildDataOSd">
+	<value>$VAR[RatingAndVotesOSD] $VAR[TagLineOsd_] $VAR[SetHenDurationAndTimeOSD]</value>
 	</variable>
 	
 	<variable name="texturepreviousimage">
@@ -1041,7 +1075,7 @@
 	</variable>
 
 	<variable name="OsdInfoLabelVar">
-		<value condition="Player.Chapter + player.chaptercount">פרק[COLOR button_focus] $INFO[Player.Chapter,(,)][/COLOR] / כמות[COLOR button_focus] $INFO[Player.ChapterCount,(,)][/COLOR]</value>
+		<value condition="Player.Chapter + player.chaptercount">מקטע[COLOR button_focus] $INFO[Player.Chapter,(,)][/COLOR] / קטע[COLOR button_focus] $INFO[Player.ChapterCount,(,)][/COLOR]</value>
 		<value condition="![Player.Chapter + player.chaptercount)] + VideoPlayer.Content(episodes)">עונה $INFO[VideoPlayer.Season,[COLOR button_focus](,)[/COLOR]] / פרק $INFO[VideoPlayer.Episode,[COLOR button_focus](,)[/COLOR]]</value>
 		<value condition="![Player.Chapter + player.chaptercount)] + VideoPlayer.Content(movies) + !String.IsEmpty(VideoPlayer.TagLine)">$INFO[VideoPlayer.TagLine]</value>
 		<value condition="![Player.Chapter + player.chaptercount)] + VideoPlayer.Content(LiveTv)">מתחיל $INFO[VideoPlayer.StartTime,[COLOR button_focus](,)[/COLOR]] / מסתיים $INFO[VideoPlayer.EndTime,[COLOR button_focus](,)[/COLOR]]</value>

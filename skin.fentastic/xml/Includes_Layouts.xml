@@ -929,7 +929,7 @@
                             <left>80</left>
                             <align>left</align>
                             <aligny>center</aligny>
-                            <label>$VAR[__FixSeasonLabel__]</label>
+                            <label>$INFO[ListItem.Label]</label>
                         </control>
                         <control type="label">
                             <centertop>50%</centertop>
@@ -970,7 +970,8 @@
                             <aligny>center</aligny>
                             <font>font32_title</font>
                             <textcolor>black</textcolor>
-                            <label>$VAR[__FixSeasonLabel__]</label>
+							<scroll>true</scroll>
+                            <label>$INFO[ListItem.Label]</label>
                         </control>
                         <control type="label">
                             <centertop>50%</centertop>

@@ -824,21 +824,6 @@
 	<animation effect="fade" start="0" end="100" time="0">Hidden</animation>
 </control>
 
-<control type="group">
-	<visible>$EXP[sliderdialogfalseortrue]</visible>
-	<control type="image">
-		<top>-100</top>
-		<left>-40</left>
-		<width>120%</width>
-		<height>350</height>
-		<top>0</top>
-		<texture>frame/osdfade.png</texture>
-	</control>
-	<visible>$EXP[__NetflixPlayerVisiblity] + !Player.Paused</visible>
-	<include>RightOsdTopBar</include>
-	<include>LeftOsdTopBar</include>
-</control>
-
 <include>__OsdInfo__</include> <!-- current played info -->
 
 

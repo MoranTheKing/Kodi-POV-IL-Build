@@ -139,18 +139,23 @@
 		</control>
 		<control type="image">
 			<texture>colors/white.png</texture>
-			<colordiffuse>FF181818</colordiffuse>
-			<animation condition="true" effect="fade" start="100" end="70" time="0">Conditional</animation>
+			<colordiffuse>black</colordiffuse>
+			<animation condition="true" effect="fade" start="100" end="25" time="0">Conditional</animation>
 		</control>	
 		<control type="image">
-			<texture colordiffuse="black" background="true">common/trailerwindow.png</texture>
-			<animation condition="true" effect="fade" start="100" end="58" time="0">Conditional</animation>
+			<texture>colors/white.png</texture>
+			<colordiffuse>FF181818</colordiffuse>
+			<animation condition="true" effect="fade" start="100" end="55" time="0">Conditional</animation>
+		</control>	
+		<control type="image">
+			<texture colordiffuse="FF181818" background="true">common/trailerwindow.png</texture>
+			<animation condition="true" effect="fade" start="100" end="55" time="0">Conditional</animation>
 		</control>
 		<control type="image">
 			<include>__backgroundconfiganim__</include>
-			<animation condition="true" effect="fade" start="100" end="82" time="0">Conditional</animation>
+			<animation condition="true" effect="fade" start="100" end="55" time="0">Conditional</animation>
 			<texture flipx="true" background="true">shadows/shadow_mask.png</texture>
-			<colordiffuse>black</colordiffuse>
+			<colordiffuse>FF181818</colordiffuse>
 		</control>
 		</control>
 	</include>
@@ -2900,7 +2905,7 @@
 
 
 <include name="SeekBarEnabled">
-<param name="visible">String.IsEqual(Skin.String(__chooseplayer),__simpleplayer)</param>
+<param name="visible">true</param>
 <definition>
 <control type="group">
 	<visible>$PARAM[visible]</visible>
