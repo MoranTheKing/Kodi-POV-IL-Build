@@ -9,7 +9,7 @@
 			<texture colordiffuse="black">colors/white.png</texture>
 		</control>
 		<include content="AdvancedGlobalViewBackGround">
-		<param name="fanart">$VAR[viewtypefanartview]</param>
+		<param name="fanart">$VAR[NowPlayingFanartVar]</param>
 		</include>
 		<control type="image">
 		<height>2000</height>
@@ -161,9 +161,9 @@
 				</control>
 				<control type="image">
 					<right>10</right>
-					<centertop>80%</centertop>
+					<centertop>83%</centertop>
 					<width>50</width>
-					<height>17</height>
+					<height>15</height>
 					<texture>windows/subtitles/icon_sync.png</texture>
 					<visible>ListItem.property(sync)</visible>
 				</control>
@@ -235,9 +235,9 @@
 				</control>
 				<control type="image">
 					<right>10</right>
-					<centertop>80%</centertop>
+					<centertop>83%</centertop>
 					<width>50</width>
-					<height>17</height>
+					<height>15</height>
 					<texture>windows/subtitles/icon_sync.png</texture>
 					<visible>ListItem.property(sync)</visible>
 				</control>
