@@ -11,7 +11,6 @@
 				<param name="list_id" value="50" />
 				<param name="right" value="594" />
 				<param name="viewtype_label" value="$LOCALIZE[535]" />
-				<param name="lockview">listviewtype</param>
 			</include>
 			<control type="group">
 				<depth>DepthContentPanel</depth>
@@ -149,8 +148,7 @@
 				<onup>$PARAM[list_id]</onup>
 				<ondown>$PARAM[list_id]</ondown>
 				<viewtype label="$PARAM[viewtype_label]">list</viewtype>
-				<visible>String.IsEmpty(Skin.String(lock.view.type)) | String.IsEqual(Skin.String(lock.view.type),$PARAM[lockview])</visible>
-				
+				<visible>Container.Content(movies) | Container.Content(sets) | Container.Content(tvshows) | Container.Content(seasons) | Container.Content(games) | Window.IsActive(videoplaylist) | Window.IsActive(musicplaylist)</visible>
 				<focusedlayout height="85">
 					<control type="label">
 						<left>70</left>

@@ -10,7 +10,6 @@
 				<param name="right" value="1220" />
 				<param name="list_id" value="502" />
 				<param name="viewtype_label" value="$LOCALIZE[20445]" />
-				<param name="lockview">smallviewtype</param>
 			</include>
 			
 			<!-- KODI-RD-IL ADDITION -->
