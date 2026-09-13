@@ -151,8 +151,8 @@ msgid "Model Top-P"
 msgstr "Model Top-P"
 
 msgctxt "#32408"
-msgid "Controls nucleus sampling. Higher values are more varied; lower values are more focused."
-msgstr "Controls nucleus sampling. Higher values are more varied; lower values are more focused."
+msgid "Controls nucleus sampling. Higher values are more varied; lower values are more focused. Only affects Gemini 2.5 and 3.1. Google deprecated this parameter from Gemini 3.5 on, so it is hidden and not sent for newer models."
+msgstr "Controls nucleus sampling. Higher values are more varied; lower values are more focused. Only affects Gemini 2.5 and 3.1. Google deprecated this parameter from Gemini 3.5 on, so it is hidden and not sent for newer models."
 
 msgctxt "#32409"
 msgid "Thinking"
@@ -205,6 +205,34 @@ msgstr "Budget 1024"
 msgctxt "#32422"
 msgid "Budget 2048"
 msgstr "Budget 2048"
+
+msgctxt "#32423"
+msgid "Embedded-subtitle translation method"
+msgstr "Embedded-subtitle translation method"
+
+msgctxt "#32424"
+msgid "Choose how a foreign subtitle embedded in the video becomes Hebrew. Automatic first aligns an external subtitle to the embedded timings, then extracts the embedded text only if needed. Alignment only is gentler for debrid streams. Direct extraction uses the exact embedded text but can be slower or heavier while streaming. Local files only disables every embedded read over debrid/HTTP. Every failure falls back to the normal subtitle path."
+msgstr "Choose how a foreign subtitle embedded in the video becomes Hebrew. Automatic first aligns an external subtitle to the embedded timings, then extracts the embedded text only if needed. Alignment only is gentler for debrid streams. Direct extraction uses the exact embedded text but can be slower or heavier while streaming. Local files only disables every embedded read over debrid/HTTP. Every failure falls back to the normal subtitle path."
+
+msgctxt "#32425"
+msgid "Automatic (recommended)"
+msgstr "Automatic (recommended)"
+
+msgctxt "#32426"
+msgid "Timing alignment only (safer for streaming)"
+msgstr "Timing alignment only (safer for streaming)"
+
+msgctxt "#32427"
+msgid "Direct embedded-text extraction only"
+msgstr "Direct embedded-text extraction only"
+
+msgctxt "#32428"
+msgid "Local files only (no debrid/HTTP reads)"
+msgstr "Local files only (no debrid/HTTP reads)"
+
+msgctxt "#32429"
+msgid "Disabled"
+msgstr "Disabled"
 
 # Runtime messages
 msgctxt "#33000"
@@ -267,12 +295,12 @@ msgid "Optional. If you have DarkSubs installed, you do not need Wyzie at all --
 msgstr "Optional. If you have DarkSubs installed, you do not need Wyzie at all -- clicking any non-Hebrew subtitle in DarkSubs will trigger AI translation automatically. Wyzie is only useful if you have NO other subtitle addon and want a one-click online source from inside this addon. 1000 requests/day on the free tier at store.wyzie.io/redeem."
 
 msgctxt "#32230"
-msgid "3.1 Flash Lite (recommended, 500/day)"
-msgstr "3.1 Flash Lite (recommended, 500/day)"
+msgid "3.5 Flash Lite (recommended, 500/day)"
+msgstr "3.5 Flash Lite (recommended, 500/day)"
 
 msgctxt "#32231"
-msgid "3.1 Flash (premium, 250/day)"
-msgstr "3.1 Flash (premium, 250/day)"
+msgid "3.1 Flash (premium, 20/day free)"
+msgstr "3.1 Flash (premium, 20/day free)"
 
 msgctxt "#32232"
 msgid "2.5 Flash Lite (fallback)"
@@ -281,6 +309,14 @@ msgstr "2.5 Flash Lite (fallback)"
 msgctxt "#32233"
 msgid "2.5 Flash (fallback)"
 msgstr "2.5 Flash (fallback)"
+
+msgctxt "#32234"
+msgid "3.8 Flash (newest, 20/day free)"
+msgstr "3.8 Flash (newest, 20/day free)"
+
+msgctxt "#32235"
+msgid "Only affects Gemini 2.5 and 3.1. Google deprecated this parameter from Gemini 3.5 on, so it is hidden and not sent for newer models."
+msgstr "Only affects Gemini 2.5 and 3.1. Google deprecated this parameter from Gemini 3.5 on, so it is hidden and not sent for newer models."
 
 msgctxt "#32254"
 msgid "Test Wyzie connection"
@@ -299,7 +335,7 @@ msgid "RTL punctuation fix direction"
 msgstr "RTL punctuation fix direction"
 
 msgctxt "#32223"
-msgid "How to handle Hebrew end-of-sentence punctuation. Default 'reverse' moves trailing punct to the line start -- correct for Kodi setups that render source order without BiDi reorder (the observed default behaviour across Windows / Android / FENtastic). 'legacy' is the previous default (move leading punct to end) -- only use it if 'reverse' produces wrong output on your particular setup. 'off' disables the post-processor entirely."
+msgid "How to handle Hebrew right-to-left rendering. Default 'RTL base' wraps each Hebrew line in an explicit right-to-left embedding so the player's own BiDi places punctuation, numbers, English names and parentheses on the correct side -- the root-cause fix. If your player does not honour the marks, switch to 'Reverse', which only moves the end-of-sentence punctuation (the previous default). 'legacy' moves leading punct to the end. 'off' disables the post-processor entirely."
 msgstr ""
 
 msgctxt "#32224"
@@ -307,12 +343,16 @@ msgid "Legacy (move punct to end - old default, usually wrong)"
 msgstr "Legacy (move to end - old default, usually wrong)"
 
 msgctxt "#32225"
-msgid "Reverse (move punct to start - default, correct on most setups)"
-msgstr "Reverse (move to start - default, correct on most setups)"
+msgid "Reverse (move only end punctuation - use if RTL base looks wrong)"
+msgstr "Reverse (move only end punctuation - use if RTL base looks wrong)"
 
 msgctxt "#32226"
 msgid "Off (no punctuation processing)"
 msgstr "Off (no punctuation processing)"
+
+msgctxt "#32227"
+msgid "RTL base (default - fixes numbers/English/parentheses/period)"
+msgstr "RTL base (default - fixes numbers/English/parentheses/period)"
 
 msgctxt "#32500"
 msgid "Community pool"
@@ -491,9 +531,41 @@ msgid "By default only MoranSubs runs while the engine is on. Turn this on to ke
 msgstr "By default only MoranSubs runs while the engine is on. Turn this on to keep DarkSubs/All Subs enabled too -- it stays on across restarts and updates."
 
 msgctxt "#32546"
-msgid "Improve gender accuracy using an Arabic reference (experimental)"
-msgstr "Improve gender accuracy using an Arabic reference (experimental)"
+msgid "Improve gender accuracy using a reference subtitle (experimental)"
+msgstr "Improve gender accuracy using a reference subtitle (experimental)"
+
+msgctxt "#32548"
+msgid "Addons without automatic subtitle search"
+msgstr ""
+
+msgctxt "#32549"
+msgid "Comma-separated addon IDs (e.g. plugin.video.idanplus). Playback started from these addons never triggers the automatic Hebrew subtitle search. Live TV (PVR channels / streams with no duration) is always skipped automatically."
+msgstr ""
 
 msgctxt "#32547"
-msgid "When ON, AI translations fetch a human Arabic subtitle for the same title and use it ONLY to pin down per-line Hebrew gender (he/she, verb/adjective agreement) -- Arabic marks gender almost 1:1 with Hebrew. Falls back silently when no aligned Arabic sub is found. Works for any source language."
-msgstr "When ON, AI translations fetch a human Arabic subtitle for the same title and use it ONLY to pin down per-line Hebrew gender (he/she, verb/adjective agreement) -- Arabic marks gender almost 1:1 with Hebrew. Falls back silently when no aligned Arabic sub is found. Works for any source language."
+msgid "When ON, AI translations fetch a human subtitle of the same title in a gender-marking language and use it ONLY to pin down per-line Hebrew gender (he/she, verb/adjective agreement). Tries an out-of-sync Hebrew sub first, then Arabic (marks gender almost 1:1 with Hebrew), then Spanish/French/Russian and more. Falls back silently when nothing aligns. Works for any source language."
+msgstr "When ON, AI translations fetch a human subtitle of the same title in a gender-marking language and use it ONLY to pin down per-line Hebrew gender (he/she, verb/adjective agreement). Tries an out-of-sync Hebrew sub first, then Arabic (marks gender almost 1:1 with Hebrew), then Spanish/French/Russian and more. Falls back silently when nothing aligns. Works for any source language."
+
+msgctxt "#32550"
+msgid "Fast mode (paid Gemini API tier)"
+msgstr "Fast mode (paid Gemini API tier)"
+
+msgctxt "#32551"
+msgid "Turn ON only if you are on a PAID Gemini plan (billing enabled on your API key). The add-on normally paces requests and limits parallel chunks to stay under the free tier's ~15 requests/minute limit; a paid key has thousands, so this lifts those limits for much faster translation. Leave OFF for a free key (ON would just cause rate-limit errors and retries). Does not change translation quality -- that is set by the Model option."
+msgstr "Turn ON only if you are on a PAID Gemini plan (billing enabled on your API key). The add-on normally paces requests and limits parallel chunks to stay under the free tier's ~15 requests/minute limit; a paid key has thousands, so this lifts those limits for much faster translation. Leave OFF for a free key (ON would just cause rate-limit errors and retries). Does not change translation quality -- that is set by the Model option."
+
+msgctxt "#32552"
+msgid "Leave POV exactly as its author shipped it"
+msgstr "Leave POV exactly as its author shipped it"
+
+msgctxt "#32553"
+msgid "Turn ON to stop this add-on making any change to plugin.video.pov. It normally adjusts about twenty of POV's own files on every start (Hebrew menus, genre icons, source-quality labels, and more), and POV updates itself whenever its author publishes -- so if POV ever starts behaving oddly, turning this ON and reinstalling POV from its repository tells you in one step whether the cause was here. Leave OFF for normal use."
+msgstr "Turn ON to stop this add-on making any change to plugin.video.pov. It normally adjusts about twenty of POV's own files on every start (Hebrew menus, genre icons, source-quality labels, and more), and POV updates itself whenever its author publishes -- so if POV ever starts behaving oddly, turning this ON and reinstalling POV from its repository tells you in one step whether the cause was here. Leave OFF for normal use."
+
+msgctxt "#32554"
+msgid "POV: fast navigation (reuse Python interpreter)"
+msgstr "POV: fast navigation (reuse Python interpreter)"
+
+msgctxt "#32555"
+msgid "OFF (default, safe): POV gets a fresh Python interpreter for every menu press, so it reloads its own code each time -- measured at about 1.75 seconds of spinner on every category, on every press, and a repeat visit is no faster. ON: POV keeps one interpreter, so it loads its code once per Kodi session instead of once per press -- the first press after a start still pays it, and the presses after that should be much faster, though exactly how much has not been measured yet. But if several POV requests ever run at the same moment (home widgets refreshing together, or you pressing again before the previous list finished) they share that interpreter, and that is a native crash that closes Kodi completely. This add-on turned it OFF on 14 Aug 2026 after exactly such a crash. Turn ON only if you would rather have the speed and accept that risk. Takes effect after ONE Kodi restart. On that restart POV notices the change and asks to reload your profile -- say OK and it is active immediately; say Cancel and it is active at the next start instead. It only asks once."
+msgstr "OFF (default, safe): POV gets a fresh Python interpreter for every menu press, so it reloads its own code each time -- measured at about 1.75 seconds of spinner on every category, on every press, and a repeat visit is no faster. ON: POV keeps one interpreter, so it loads its code once per Kodi session instead of once per press -- the first press after a start still pays it, and the presses after that should be much faster, though exactly how much has not been measured yet. But if several POV requests ever run at the same moment (home widgets refreshing together, or you pressing again before the previous list finished) they share that interpreter, and that is a native crash that closes Kodi completely. This add-on turned it OFF on 14 Aug 2026 after exactly such a crash. Turn ON only if you would rather have the speed and accept that risk. Takes effect after ONE Kodi restart. On that restart POV notices the change and asks to reload your profile -- say OK and it is active immediately; say Cancel and it is active at the next start instead. It only asks once."

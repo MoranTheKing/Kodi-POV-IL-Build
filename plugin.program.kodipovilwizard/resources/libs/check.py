@@ -68,7 +68,7 @@ def check_paths():
         logging.log("[Path Check] Good!")
 
 
-def check_build(name, ret):
+def check_build(name, ret, release_id=None):
     # KODI-POV-IL - build.txt is RETIRED. The build is no longer described by a
     # remote OpenWizard-style text file and there is NO monolithic build / gui
     # ("quickfix") zip any more: the full install and all updates go through

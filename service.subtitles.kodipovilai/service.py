@@ -14,9 +14,16 @@
 # Fresh Install builds never ship the marker, so they rely on Kodi's
 # default "new user addons start disabled" behaviour.
 
+import json
 import os
 import threading
 import time
+
+# `json` IS USED, AND WAS NOT IMPORTED. Two nested functions in the SubSync
+# delay watch called json.dumps/json.loads with nothing named json in scope --
+# a NameError, swallowed by their own `except Exception`, on every call. See
+# _start_subsync_delay_watch, and tools/test_no_undefined_names.py, which is
+# what found it.
 
 try:
     import xbmc
@@ -36,7 +43,6 @@ BUILD_WIZARD_ID = 'plugin.program.kodipovilwizard'
 BUILD_MARKER = 'build_mode.json'
 BUILD_MARKER_TEXT = 'Kodi POV IL'
 _BUILD_MODE_CACHE = None
-_BUILD_SELF_HEAL_THREAD = None
 
 
 def _translate_path(path):
@@ -143,6 +149,98 @@ def _ensure_build_marker():
         pass
 
 
+REPAIRS_DONE_PROPERTY = 'kodipovil_startup_repairs_done'
+
+
+_REPAIRS_STARTED = None
+
+
+def _publish_repairs_state(value):
+    """Announce the repair pass to anyone waiting on it.
+
+    The value is this add-on's VERSION, not a bare 'true', and that is the
+    whole point. The quick update installs new files and then has to know
+    that the patchers have run FROM THE NEW CODE before it drops the other
+    add-ons' cached Python interpreters. A boolean cannot tell the difference
+    between 'the new service finished' and 'the old service, still running
+    from before the update, finished its own pass' -- and acting on the
+    second is exactly how a reload lands half-applied.
+    """
+    try:
+        import xbmcgui
+        xbmcgui.Window(10000).setProperty(REPAIRS_DONE_PROPERTY, value or '')
+    except Exception:
+        pass
+
+
+def _addon_version():
+    try:
+        import xbmcaddon
+        return xbmcaddon.Addon().getAddonInfo('version') or ''
+    except Exception:
+        return ''
+
+
+def _without(stamps, skin):
+    """The `<skin>=<version>` stamps that are not this skin's, blanks dropped."""
+    return [s for s in stamps if s and not s.startswith(skin + '=')]
+
+
+def _walk_all(roots):
+    """os.walk over several roots in turn, skipping the ones that are not
+    there. Written out because `break` inside the caller's nested loops has to
+    mean "stop scanning entirely", and chaining generators is the only shape
+    that keeps that true across two roots."""
+    for root in roots:
+        if not os.path.isdir(root):
+            continue
+        for item in os.walk(root):
+            yield item
+
+
+def _other_addon_version(addon_id):
+    """Version of SOME OTHER installed add-on, '' if it is not installed.
+
+    Deliberately separate from _addon_version(): that one answers for us, and
+    an id-taking overload of it would read at the call site like our own
+    version filtered by something.
+    """
+    try:
+        import xbmcaddon
+        return xbmcaddon.Addon(addon_id).getAddonInfo('version') or ''
+    except Exception:
+        return ''
+
+
+def _report_patcher_health():
+    """Say which of our repairs are applied right now, and which stopped.
+
+    RUNS LAST in the tuple below, and that is load-bearing: it reads the host
+    add-ons AFTER the pass has finished writing to them, so a repair that just
+    applied reads as applied. Anywhere earlier and it would report the state
+    the pass had not reached yet.
+
+    Why it exists: the loop at the end of _run_build_startup_repairs calls
+    `step()` and DISCARDS the return value, and all 123 step functions return
+    None anyway. An anchor that stops matching is not an exception, so it never
+    reaches the WARNING branch either -- it is a silent, ordinary-looking boot.
+    That is exactly how five repairs died on POV 6.08.14 with nobody the wiser
+    for days. patcher_health asks the host add-ons what they actually contain
+    instead of trusting any of that.
+    """
+    try:
+        from resources.lib import patcher_health, kodi_utils
+        st = patcher_health.run()
+        kodi_utils.log('patcher health: {0}'.format(st))
+    except Exception as e:
+        try:
+            from resources.lib import kodi_utils
+            kodi_utils.log('patcher health check unavailable: {0}'.format(e),
+                           level='WARNING')
+        except Exception:
+            pass
+
+
 def _run_build_startup_repairs():
     """Run build-only UI/POV repairs early in Kodi startup.
 
@@ -156,13 +254,146 @@ def _run_build_startup_repairs():
     except Exception:
         monitor = None
 
+    # Clear first: a stale value from the PREVIOUS service instance would
+    # otherwise satisfy a waiter the moment it looked, before this pass has
+    # touched anything.
+    _publish_repairs_state('')
+
+    # Stamped so the invoker guard can report how far ahead of POV's own
+    # check it actually got. The 19-second margin this ordering relies on was
+    # measured on ONE device; this is what turns any future field log into a
+    # second measurement instead of an assumption.
+    global _REPAIRS_STARTED
+    _REPAIRS_STARTED = time.time()
+
     steps = (
+        # BEFORE EVERYTHING, because it is racing a clock we do not control.
+        # POV runs its own ReuseLanguageInvokerCheck a few seconds into its
+        # service start, and if the setting and addon.xml disagree it throws
+        # an English "SETTING/XML mismatch" dialog at the user and offers to
+        # reload the profile. They disagree after any POV self-update: POV
+        # ships addon.xml with the flag ON, ours is the setting that says OFF,
+        # and POV is not in our quickfix at all -- it updates itself from
+        # repository.kodifitzwell, so its own addon.xml comes back.
+        #
+        # Measured on a reporter's device (2026-08-17):
+        #     21:00:39.430  our repair pass starts
+        #     21:00:59.399  POV's ReuseLanguageInvokerCheck   <- the dialog
+        #     21:01:08.934  this guard finally writes, 9.4s too late
+        # From ~29 steps in, it lost the race every time. From here it writes
+        # around 21:00:39, about 19 seconds ahead of POV's check, so in the
+        # common case POV finds the two halves already in agreement. It is a
+        # WIDENED MARGIN, not a synchronisation: this pass itself starts after
+        # ~35 other calls in main(), one of which (_ensure_pov_enabled) can
+        # retry for up to 10 seconds, so a slow enough device can still lose.
+        # The guard logs how far ahead it got, so a field log can say whether
+        # the margin holds rather than leaving it assumed.
+        #
+        # WHICH DIRECTION IT WRITES IS NO LONGER FIXED, and this comment used
+        # to say the opposite -- "it can only ever turn the flag OFF" -- which
+        # was true until 0.2.507 gave the direction to the
+        # `pov_fast_navigation` setting. It is still OFF for anyone who has
+        # not deliberately turned that on, and OFF is still the fix for the
+        # Arctic Fuse 3 native crash. What running it EARLIER buys is the same
+        # either way: it settles both halves before POV's own check looks at
+        # them, so POV never shows its mismatch dialog. Do not move it down on
+        # the strength of the old sentence.
+        _maybe_patch_pov_language_invoker,
+        # FIRST: heal Idan Plus before the user can navigate to it (a corrupt
+        # displayChannels.json otherwise crashes every channel load). Cheap,
+        # self-contained, and independent of the POV/skin repairs below.
+        _maybe_fix_pov_maincache_schema,
+        # Immediately after it, and for the same reason its own
+        # docstring gives: every POV menu that reads one of these
+        # caches is wrong until the table is rebuilt. That module
+        # covers maincache from a hardcoded schema; this one covers
+        # the other four the same POV upgrade transposed.
+        _maybe_repair_pov_cache_schema,
+        _maybe_patch_idanplus_channels,
         _maybe_patch_pov_genre_icons,
         _maybe_patch_pov_hebrew_genres,
         _maybe_patch_pov_hebrew_ui,
+        _maybe_patch_pov_anime_hebrew,
+        _maybe_fix_pov_container_refresh_crash,
+        _maybe_patch_mdblist_reauth,
+        _maybe_seed_pov_seasons_view,
+        _maybe_patch_pov_resume_cancel,
+        _maybe_patch_pov_scraper_settings,
+        _maybe_patch_pov_mdblist_like,
+        _maybe_patch_pov_aiostreams,
+        _maybe_patch_pov_resolve_diag,
+        _maybe_restore_pov_torbox,
+        _maybe_fix_pov_torbox_url,
         _maybe_patch_af3_home,
+        _maybe_quiet_update_nags,
+        _maybe_patch_pov_widget_crash_guard,
+        # _maybe_patch_pov_language_invoker used to sit here. Moved to the
+        # very front of this tuple -- see the note there. It is idempotent
+        # ('already_set' writes nothing), so the move is a reordering, not a
+        # second run.
+        _maybe_patch_pov_bookmark_refresh,
+        _maybe_patch_umbrella_language,
+        _maybe_patch_pov_navigator_read,
+        _maybe_reseed_genre_folders,
+        _maybe_fix_fentastic_clearlogo_var,
+        # POV scans one folder for internal scrapers and 6.08.14 renamed it,
+        # so third-party ones stopped being seen at all. Creates the old
+        # folder and teaches POV to scan both.
+        _maybe_shim_pov_internal_scrapers,
+        # POV 6.08.14 broke AllDebrid playback outright: torrent_info()
+        # subscripts a dict with [0]. Every magnet resolve raises KeyError(0).
+        _maybe_fix_pov_alldebrid_status,
+        _maybe_patch_skin_watched_poster,
+        _maybe_seed_recent_updates_tile,
+        _maybe_patch_pov_mdblist_sync,
+        _maybe_guard_pov_debrid_handlers,
+        _maybe_log_pov_debrid_errors,
+        _maybe_keep_sources_when_debrid_is_late,
+        _maybe_time_pov_directories,
+        _maybe_repair_addon_autoupdate,
+        _maybe_fix_idanplus_youtube_id,
+        _maybe_refresh_shared_sdh,
         _maybe_show_af3_first_launch_dialog,
+        _maybe_reload_for_tiles,
+        # LAST on purpose: it reports on the pass above, so it has
+        # to run after everything it reports on.
+        _report_patcher_health,
     )
+    # THE PACING IS A BUDGET NOW, NOT A CONSTANT PER STEP.
+    #
+    # The 0.25s below every step was introduced in b7ce297 ("Prevent quick
+    # update startup freezes") when this tuple had TWENTY-SIX entries -- 6.5
+    # seconds of yielding, which is what that change was tested at. It has 63
+    # now, so the same line costs 15.75 seconds of pure sleeping on every boot
+    # before a single step does any work, and nobody re-derived it as steps
+    # were added. Two independent reviews measured it; one field log shows the
+    # pass still running 53 seconds in.
+    #
+    # What the wait is FOR is not starving Kodi while the pass runs, and that
+    # is a property of the total time yielded, not of the per-step figure. So
+    # spread the same total the original was validated at over however many
+    # steps there are. A short pass is unchanged (the cap is the old value), a
+    # long one stops paying for its own length, and step 64 costs nothing.
+    # THE FLOOR IS A SECOND CONSTRAINT, and it wins. Below ~130 steps the
+    # budget binds and the pass yields 6.5s in total however long the tuple
+    # gets. Above that the floor binds instead and the total starts growing
+    # again -- which is correct, because a yield of nothing is not a yield and
+    # the freeze this line exists to prevent would come back. It is also the
+    # signal that the answer has stopped being "tune the constant": a pass that
+    # long wants splitting, not a smaller sleep. So it says so, once, instead
+    # of quietly costing seconds again the way 0.25 did.
+    _pace = max(0.05, min(0.25, 6.5 / max(1, len(steps))))
+    if _pace * len(steps) > 7.0:
+        try:
+            from resources.lib import kodi_utils
+            kodi_utils.log(
+                'the startup repair pass has {0} steps and now yields {1:.1f}s '
+                'in total; the per-step floor is binding, so this grows with '
+                'every step added from here -- split the pass rather than '
+                'shrinking the yield'.format(len(steps), _pace * len(steps)),
+                level='WARNING')
+        except Exception:
+            pass
     for step in steps:
         try:
             if monitor and monitor.abortRequested():
@@ -182,9 +413,31 @@ def _run_build_startup_repairs():
                     level='WARNING')
             except Exception:
                 pass
+        except BaseException as e:
+            # SystemExit or KeyboardInterrupt out of a step. `except Exception`
+            # does not catch either, so this used to leave the pass -- and
+            # everything queued behind it, including the step that puts Hebrew
+            # subtitles on screen -- with NOTHING in the log: the run simply
+            # stopped, indistinguishable from a hang. HANDOFF records a patcher
+            # raising SystemExit as a thing that has actually happened here.
+            #
+            # Deliberately re-raised rather than swallowed: an aborted pass must
+            # not reach _publish_repairs_state and look finished, because the
+            # waiter would then reload POV against half-applied patches. The
+            # only thing that changes is that it says so first.
+            try:
+                from resources.lib import kodi_utils
+                kodi_utils.log(
+                    'build startup repair {0} raised {1} and ended the whole '
+                    'pass: {2}'.format(getattr(step, '__name__', 'unknown'),
+                                       type(e).__name__, e),
+                    level='WARNING')
+            except Exception:
+                pass
+            raise
 
         try:
-            if monitor and monitor.waitForAbort(0.25):
+            if monitor and monitor.waitForAbort(_pace):
                 return
         except Exception:
             pass
@@ -198,6 +451,31 @@ def _run_build_startup_repairs():
                     level='WARNING')
             except Exception:
                 pass
+
+    # Only after every step has been through. An early return above means the
+    # pass was aborted, and an aborted pass must NOT look finished -- the
+    # waiter would then reload POV against half-applied patches.
+    _publish_repairs_state(_addon_version())
+
+
+# THE REPAIR PASS RUNS INLINE ON MAIN, ON PURPOSE. There used to be a
+# _start_build_startup_repairs() here that put _run_build_startup_repairs on a
+# daemon thread, and nothing ever called it -- main() calls the pass directly.
+# Deleted rather than wired up, because wiring it up is not a tidy-up, it is a
+# behaviour change with two dependants:
+#
+#   * pov_reload.wait_until_settled's bounds (30s, and 10s for an outage we did
+#     not cause) were chosen BECAUSE three of its four callers are steps in this
+#     inline pass, where a wait is the subtitle service not starting. Off the
+#     main thread those numbers could be far more generous -- and would have to
+#     be re-derived, not inherited.
+#   * _publish_repairs_state / REPAIRS_DONE_PROPERTY is what the wizard's
+#     hot_reload waits on before it cycles anything. Its ordering assumes the
+#     pass has finished when main() moves on.
+#
+# Moving it is a reasonable thing to want. It is not a reasonable thing to do
+# by accident, which a dead function sitting here invites.
+
 
 
 def _check_first_run_marker():
@@ -314,15 +592,24 @@ TEMP_PURGE_VERSION = '2'
 #         based on a wrong assumption about Kodi's BiDi behaviour
 #   v4 -- reverse-mode dialogue dash fix: move leading "- " to the
 #         logical line end so Kodi renders it on the right side.
-CACHE_RTL_FIX_VERSION = '4'
+#   v5 -- cue-timing repair: bound runaway cue durations. A mistyped timestamp
+#         in an AI translation could leave one line frozen on screen for the
+#         rest of the episode; this walk is the only mechanism that repairs an
+#         ALREADY-cached translation without the user replaying that title.
+#   v6: strip Arabic the AI leaked from the gender reference into a Hebrew
+#       line -- see srt.strip_leaked_arabic. NOT every file here is ours: the
+#       Google Translate fallback saves into this directory too, so the repair
+#       is gated per file by srt.may_carry_arabic_leak.
+CACHE_RTL_FIX_VERSION = '7'
 
 
 def _maybe_repair_rtl_cache():
-    """One-shot walk of cache/translated/, re-applying the current
-    fix_rtl_punctuation() to each file. Catches up translations
-    that got cached before the post-processor was in place or before
-    it handled a specific edge case. Marker-gated so it only runs
-    once per CACHE_RTL_FIX_VERSION bump."""
+    """One-shot walk of cache/translated/, re-applying the current display and
+    TIMING repairs to each file. Catches up translations that got cached before
+    a post-processor was in place or before it handled a specific edge case.
+    Marker-gated so it only runs once per CACHE_RTL_FIX_VERSION bump -- which is
+    why the constant must be bumped whenever a new repair is added here, or
+    every existing install skips the backfill forever."""
     try:
         from resources.lib import kodi_utils, srt
     except Exception:
@@ -346,7 +633,14 @@ def _maybe_repair_rtl_cache():
                         content = f.read()
                 except OSError:
                     continue
-                fixed = srt.fix_rtl_punctuation(content)
+                # cache/translated/ is NOT all our own output: the Google
+                # Translate fallback saves here too, marked by a '.google'
+                # sidecar. srt.may_carry_arabic_leak is the one place that rule
+                # lives -- see it before adding a repair path.
+                body = (srt.strip_leaked_arabic(content)
+                        if srt.may_carry_arabic_leak(p) else content)
+                fixed = srt.clamp_cue_durations(
+                    srt.fix_rtl_punctuation(body))
                 if fixed == content:
                     continue
                 tmp = p + '.aitmp'
@@ -372,9 +666,284 @@ def _maybe_repair_rtl_cache():
             pass
 
 
+
+def _maybe_refresh_shared_sdh():
+    """Warm the community-shared SDH set (Phase 3b) into the local cache from
+    this background service, so the subtitle-ranking path can read it without a
+    network call. use-gated + TTL-gated (at most once/day) inside refresh; a
+    no-op when the pool isn't in use. Best-effort."""
+    try:
+        from resources.lib import sdh_pool
+        sdh_pool.refresh_shared_sdh()
+    except Exception:
+        pass
+
+
+def _maybe_patch_idanplus_channels():
+    """Heal + harden Idan Plus (plugin.video.idanplus) channel loading.
+
+    A corrupt/partial displayChannels.json makes idanplus read its channel
+    map as a list and crash ("'list' object has no attribute 'items'"), so
+    no channel loads or plays and the addon can't self-repair. We move a
+    corrupt file aside (idanplus then rebuilds it from the remote list) and,
+    best-effort, harden common.py so a future corruption degrades to a
+    rebuild instead of a crash. No-op when idanplus isn't installed;
+    idempotent + safe every startup."""
+    try:
+        from resources.lib import idanplus_channels_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        status = idanplus_channels_patcher.ensure_patched()
+        if status != 'no_target':
+            kodi_utils.log(
+                'idanplus_channels_patcher: {0}'.format(status),
+                level='INFO')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'idanplus_channels_patcher run failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_patch_pov_navigator_read():
+    """Let POV read the navigator rows it ships.
+
+    Every row in navigator.db is stored as a Python repr, and POV reads them
+    all with json.loads. Shortcut folders therefore render empty ("חיבור
+    שירותים" opening onto nothing), and the main menus come back None, which
+    makes POV rebuild them from its own defaults over the build's. Nothing is
+    logged either way.
+
+    The fix is on POV's read path, not in the database: converting the rows to
+    JSON would break six other patchers here that match on the repr spelling.
+    See pov_navigator_read_patcher for the full reasoning."""
+    try:
+        from resources.lib import pov_navigator_read_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        status = pov_navigator_read_patcher.ensure_patched()
+        if status == 'patched':
+            kodi_utils.log('pov_navigator_read_patcher: patched',
+                           level='WARNING')
+        elif status in ('unmatched', 'compile_failed', 'write_failed',
+                        'read_failed'):
+            kodi_utils.log('pov_navigator_read_patcher: ' + status,
+                           level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log('pov_navigator_read_patcher run failed: '
+                           '{0}'.format(e), level='WARNING')
+        except Exception:
+            pass
+
+
+# ---------------------------------------------------------------------------
+# One switch that stops this add-on touching plugin.video.pov at all.
+#
+# We rewrite about twenty of POV's own source files on every startup. That is a
+# standing bet that POV's internals still look the way they did when each patch
+# was written, and POV updates itself from its own repository whenever its
+# author publishes -- so the bet can be lost at any time, on the user's device,
+# with no warning and no error: the patch still applies, and something
+# downstream quietly stops working. When that happens the first thing anyone
+# needs is a way to find out whether it was us, in one step, without a rebuild
+# and without guesswork.
+#
+# Turning this on makes every POV patcher a no-op from the next start. It does
+# not undo edits already on disk -- but POV rewrites its own files whenever it
+# updates, so reinstalling POV from its repository restores a clean copy
+# immediately, and with this on it stays clean.
+# ---------------------------------------------------------------------------
+POV_PATCHING_OFF_SETTING = '_pov_patching_off'
+_POV_SKIP_LOGGED = False
+
+
+def _skip_pov_patchers():
+    """True when POV patching is switched off. Says so once per start, so the
+    reason a device is behaving differently is in its log."""
+    try:
+        from resources.lib import kodi_utils
+        off = (kodi_utils.get_setting(POV_PATCHING_OFF_SETTING, '')
+               or '').strip().lower() == 'true'
+    except Exception:
+        return False
+    if not off:
+        return False
+    global _POV_SKIP_LOGGED
+    if not _POV_SKIP_LOGGED:
+        _POV_SKIP_LOGGED = True
+        try:
+            from resources.lib import kodi_utils
+            kodi_utils.log(
+                'POV patching is switched OFF in settings -- leaving '
+                'plugin.video.pov exactly as its own author shipped it. '
+                'Reinstall POV from its repository to drop any edits already '
+                'on disk.', level='WARNING')
+        except Exception:
+            pass
+    return True
+
+def _maybe_reseed_genre_folders():
+    """One-time restore of POV's FENtastic genre shortcut-folder rows in
+    navigator.db (movies/series by genre) when a POV self-update dropped them,
+    which empties the AF3/FENtastic 'by genre' home widgets. Restores only
+    missing/empty rows, then leaves them to the user's edits."""
+    try:
+        from resources.lib import pov_genre_folders_reseed_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        status = pov_genre_folders_reseed_patcher.maybe_reseed_genre_folders()
+        if status == 'reseeded':
+            kodi_utils.log(
+                'pov_genre_folders_reseed_patcher: restored genre folders',
+                level='INFO')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'pov_genre_folders_reseed_patcher run failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_repair_pov_cache_schema():
+    """Rebuild POV's cache tables when a POV update reordered their columns.
+
+    POV 6 renamed nothing and changed no code we own -- it swapped the order of
+    the columns in five of its own cache tables and kept CREATE TABLE IF NOT
+    EXISTS, so on an upgrade it writes every value into the wrong column of the
+    table the previous version left behind. See the module for the whole chain.
+    Not behind _skip_pov_patchers(): this repairs POV's DATA, not its code, and
+    isolating POV's code is not a reason to leave a poisoned cache in place.
+    """
+    try:
+        from resources.lib import pov_cache_schema_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        results = pov_cache_schema_patcher.ensure_patched()
+        rebuilt = [k for k, v in results.items() if v == 'rebuilt']
+        if rebuilt:
+            kodi_utils.log(
+                'pov_cache_schema_patcher: rebuilt {0} POV cache table(s) '
+                'left in the previous version\'s column order: {1}'.format(
+                    len(rebuilt), ', '.join(sorted(rebuilt))), level='INFO')
+    except Exception as e:
+        try:
+            from resources.lib import kodi_utils
+            kodi_utils.log('pov_cache_schema_patcher failed: {0}'.format(e),
+                           level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_patch_skin_watched_poster():
+    """Make the watched tick tell the truth: draw it in the Poster view, which
+    never had one, and stop the list views drawing it on everything.
+
+    Both halves are the same bug seen from opposite sides, and both are fixed
+    against the same source of truth -- the playcount -- so the two views can
+    no longer disagree about whether something was watched.
+
+    Deliberately NOT behind _skip_pov_patchers(): that switch exists to take
+    POV out of the loop while a POV problem is being isolated, and this edits
+    a skin. Gating it there would silently disable a repair that has nothing
+    to do with the add-on being isolated.
+    """
+    try:
+        from resources.lib import skin_watched_poster_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        results = skin_watched_poster_patcher.ensure_patched()
+        patched = [k for k, v in results.items() if v == 'patched']
+        if patched:
+            kodi_utils.log(
+                'skin_watched_poster_patcher: watched marks corrected in '
+                '{0}'.format(', '.join(patched)), level='INFO')
+        broken = [k for k, v in results.items()
+                  if v in ('unmatched', 'parse_failed', 'write_failed')]
+        if broken:
+            kodi_utils.log(
+                'skin_watched_poster_patcher: left alone: '
+                '{0}'.format(', '.join(broken)), level='WARNING')
+    except Exception as e:
+        try:
+            from resources.lib import kodi_utils
+            kodi_utils.log(
+                'skin_watched_poster_patcher failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+def _tile_reload_worker():
+    """Do ONE skin reload so freshly-cache-dropped tiles re-cache from disk. The
+    home focus is snapshotted + restored (via pov_reload) so the menu doesn't snap
+    to the first tile if the user was already navigating. No-op while playing."""
+    try:
+        import xbmc
+        if xbmc.getCondVisibility('Player.HasMedia'):
+            return
+        # Wait out any POV cycle FIRST. This function has always imported
+        # pov_reload -- for the focus snapshot -- and never asked it the one
+        # question that matters: rebuilding every window while POV cannot be
+        # constructed is what breaks the home screen. It applies to every skin,
+        # since unlike the other reload sites this one has no skin guard at all.
+        settled, saved = True, None
+        try:
+            from resources.lib import pov_reload
+            settled = pov_reload.wait_until_settled()
+            if settled:
+                saved = pov_reload._capture_home_focus()
+        except Exception:
+            settled, saved = True, None
+        if not settled:
+            return
+        xbmc.executebuiltin('ReloadSkin()')
+        try:
+            xbmc.sleep(1200)
+        except Exception:
+            pass
+        if saved:
+            try:
+                from resources.lib import pov_reload
+                pov_reload._restore_home_focus(saved)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
+def _maybe_reload_for_tiles():
+    """LAST startup step: if build_icons_patcher dropped stale tile textures this
+    boot (a TILE_REFRESH_GEN bump, or a FORCE_SYNC tile whose bytes changed), do
+    one skin reload so the fresh home-tile art shows now rather than only on the
+    next restart -- the cache entries are already gone, ReloadSkin re-caches them
+    from disk. Runs on a BACKGROUND thread: the reload + bounded focus-restore
+    (~1-11s) must not block the rest of main() (autosub listener registration,
+    etc.). Gen-triggered reloads are one-off per generation (marker-gated in the
+    patcher, and only after the marker actually persisted)."""
+    if not _TILE_REFRESH_NEEDED[0]:
+        return
+    _TILE_REFRESH_NEEDED[0] = False
+    try:
+        import threading
+        threading.Thread(target=_tile_reload_worker,
+                         name='pov-tile-reload', daemon=True).start()
+    except Exception:
+        # Couldn't spawn a thread -> run inline (still fully guarded).
+        _tile_reload_worker()
+
 def _maybe_patch_pov_genre_icons():
-    """Re-icon POV's genre navigator rows to the stable genre icon
-    set we ship (AF3 cached shortcut rows)."""
+    """Re-icon POV's genre navigator rows to the stable
+    povil_icons set we ship (AF3 cached shortcut rows)."""
+    if _skip_pov_patchers():
+        return
     try:
         from resources.lib import af3_home_patcher, kodi_utils
     except Exception:
@@ -399,6 +968,8 @@ def _maybe_patch_pov_hebrew_genres():
     reverted them to English everywhere. This rewrites each key to Hebrew
     while keeping the [tmdb_id, icon] value, so genres show in Hebrew again
     without changing what each genre loads. Compile-checked, idempotent."""
+    if _skip_pov_patchers():
+        return
     try:
         from resources.lib import pov_hebrew_genres_patcher, kodi_utils
     except Exception:
@@ -423,10 +994,267 @@ def _maybe_patch_pov_hebrew_genres():
             pass
 
 
+def _maybe_patch_pov_resume_cancel():
+    """Fix POV's 'stuck on BACK at the Resume/Restart prompt' (all skins): when
+    you pick a source for a mid-watched title, POVPlayer.run() shows the resume
+    prompt while a modal resolving window is open; pressing BACK returned
+    'cancel' and run() returned WITHOUT closing that window -> UI stuck until a
+    full Kodi restart. The cancel path now closes the dialog(s) first.
+    Idempotent, compile-checked, revertible."""
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_resume_cancel_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        status = pov_resume_cancel_patcher.ensure_patched()
+        if status == 'patched':
+            kodi_utils.log(
+                'pov_resume_cancel_patcher: BACK on the resume prompt no longer '
+                'hangs', level='INFO')
+        elif status in ('no_file', 'already_patched'):
+            pass
+        else:
+            kodi_utils.log(
+                'pov_resume_cancel_patcher: ' + status, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'pov_resume_cancel_patcher failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_patch_pov_mdblist_like():
+    """Give an MDBList list the same long-press menu a Trakt list already has:
+    Like List / Unlike List, which POV wired for Trakt and never for MDBList.
+    MDBList's API does support it (PUT/DELETE on lists/<id>/like) and POV
+    already reads the liked-lists bucket, so only the action was missing."""
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_mdblist_like_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        status = pov_mdblist_like_patcher.ensure_patched()
+        # Judge the VALUES, not the whole string. `'patched' in status` reads
+        # True for "api=unmatched, menu=patched" -- the substring is right
+        # there in the healthy half -- so a half-failed run logged INFO and the
+        # WARNING branch was unreachable for exactly the case worth seeing.
+        parts = [p.split('=', 1)[-1].strip()
+                 for p in status.split(',') if '=' in p]
+        # 'repatched' = an older injected version was reverted and the current
+        # one written over it. Healthy, and worth seeing: it is the only signal
+        # that a version bump actually reached this device, which is precisely
+        # what silently failed between v2 and v3.
+        if any(p not in ('patched', 'repatched', 'unchanged', 'no_file')
+               for p in parts):
+            kodi_utils.log('pov_mdblist_like_patcher: ' + status,
+                           level='WARNING')
+        elif 'patched' in parts or 'repatched' in parts:
+            kodi_utils.log('pov_mdblist_like_patcher: ' + status, level='INFO')
+    except Exception as e:
+        try:
+            kodi_utils.log('pov_mdblist_like_patcher failed: {0}'.format(e),
+                           level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_patch_pov_scraper_settings():
+    """One-time tune of POV's scraper settings for the build: keep pre-release
+    (CAM/SCR/TELE) and 3D results ON (the build owner wants them), and turn the
+    default-ON provider.piratebay OFF (build owner's instruction, 2026-08-15 --
+    it had been turned on here for source counts). Applied once per marker
+    version, only where the value still differs, so a user who later changes
+    any of these keeps their choice."""
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_scraper_settings_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        status = pov_scraper_settings_patcher.ensure_patched()
+        if status == 'patched':
+            kodi_utils.log(
+                'pov_scraper_settings_patcher: pre-release/3D on, piratebay '
+                'off, and the scraper/debrid timeout at POV '
+                "6.08's own default", level='INFO')
+        elif status in ('already', 'no_pov', 'unchanged'):
+            pass
+        else:
+            kodi_utils.log(
+                'pov_scraper_settings_patcher: ' + status, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'pov_scraper_settings_patcher failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_patch_pov_resolve_diag():
+    """Make POV's opaque 'selected_files failed' say how many files the debrid
+    actually returned. Diagnostic only -- it changes no behaviour, and it is the
+    difference between fixing the right thing and guessing."""
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_resolve_diag_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        status = pov_resolve_diag_patcher.ensure_patched()
+        if status == 'patched':
+            kodi_utils.log(
+                'pov_resolve_diag_patcher: resolve failures now report the '
+                'debrid file count', level='INFO')
+        elif status not in ('already', 'no_file'):
+            kodi_utils.log(
+                'pov_resolve_diag_patcher: ' + status, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log('pov_resolve_diag_patcher failed: {0}'.format(e),
+                           level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_patch_pov_aiostreams():
+    """Stop an AIOStreams that is switched on but has no credentials from
+    being the ONLY scraper POV asks.
+
+    POV's active_internal_scrapers() opens with
+    "if provider.aiostreams == 'true': return ['aiostreams']" -- a takeover,
+    not a filter -- and the aiostreams scraper returns nothing instantly when
+    aio.username/aio.password are empty. Result: "No Results" on every movie
+    and episode, with no network request made. POV dropped aiostreams in 6.04
+    and brought it back in 6.07; a 'true' left in the profile from the 6.03
+    era got its meaning back with it.
+
+    Both halves only ever fire when the credentials are empty, so a user who
+    actually uses AIOStreams is untouched."""
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_aiostreams_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        status = pov_aiostreams_patcher.disarm_setting()
+        if status not in ('off', 'configured', 'no_pov', 'disarmed'):
+            kodi_utils.log(
+                'pov_aiostreams_patcher: disarm ' + status, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'pov_aiostreams_patcher disarm failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+    try:
+        status = pov_aiostreams_patcher.ensure_patched()
+        if status == 'patched':
+            kodi_utils.log(
+                'pov_aiostreams_patcher: guarded POV\'s aiostreams takeover',
+                level='INFO')
+        elif status in ('already_patched', 'no_pov', 'no_file'):
+            pass
+        else:
+            kodi_utils.log(
+                'pov_aiostreams_patcher: ' + status, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'pov_aiostreams_patcher failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_restore_pov_torbox():
+    """Undo damage the build's own quick-update package did to POV.
+
+    Every quickfix zip up to 0.1.492 carried two of POV's files -- an old
+    debrids/torbox_api.py and a debrids/torbox.py that POV no longer has -- and
+    Kodi extracts a quickfix straight over the add-ons folder, so each update
+    replaced POV's TorBox client with the June copy. Harmless until POV 6.07.92
+    began reading api.defaults_to_cloud, which that copy does not define: the
+    source resolves, the URL is thrown away by the AttributeError, and POV walks
+    the rest of the list to the same end. Restores POV's own file where that
+    signature is present, and nowhere else."""
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_torbox_restore_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        status = pov_torbox_restore_patcher.ensure_patched()
+        if status in ('restored', 'not_damaged', 'no_pov'):
+            return
+        kodi_utils.log(
+            'pov_torbox_restore_patcher: ' + status, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'pov_torbox_restore_patcher failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_patch_pov_anime_hebrew():
+    """Hebrew-ise POV's Anime section: the anime menu names in
+    menu_lists.py are hardcoded English (unlike the id-based Movies/TV
+    menus), as are the anime breadcrumb titles in navigator.py.
+    Idempotent, compile-checked, self-healing."""
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_anime_hebrew_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        status = pov_anime_hebrew_patcher.ensure_patched()
+        if 'patched' in status:
+            kodi_utils.log(
+                'pov_anime_hebrew_patcher: ' + status, level='INFO')
+            # POV runs with reuselanguageinvoker, so its interpreter already
+            # imported menu_lists.py/navigator.py with the OLD English labels
+            # before this patch landed on disk. Cycle POV so it re-imports the
+            # Hebrew version THIS session instead of only after the next
+            # restart (the reason a freshly-updated device still showed the
+            # anime menu in English).
+            try:
+                from resources.lib import pov_reload
+                pov_reload.note_patched()
+            except Exception:
+                pass
+        elif any(bad in status for bad in
+                 ('failed', 'compile', 'write', 'read')):
+            kodi_utils.log(
+                'pov_anime_hebrew_patcher: ' + status, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'pov_anime_hebrew_patcher failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
 def _maybe_patch_pov_hebrew_ui():
     """Hebrew-ise POV's own in-app UI strings (resume dialog + search hub),
     which are English because POV ships only en_gb. Sets the Hebrew msgstr on
     the relevant ids in POV's strings.po. Idempotent, self-healing."""
+    if _skip_pov_patchers():
+        return
     try:
         from resources.lib import pov_hebrew_ui_patcher, kodi_utils
     except Exception:
@@ -451,6 +1279,1088 @@ def _maybe_patch_pov_hebrew_ui():
             pass
 
 
+def _maybe_seed_recent_updates_tile():
+    """Put the "10 העדכונים האחרונים" tile on the home screen, once ever.
+
+    Deliberately runs right after the personal-tiles restore, so it looks at a
+    favourites.xml that has already been repaired if it needed repairing --
+    otherwise a mid-repair file could be read as "no closing tag" and the offer
+    would be silently skipped for that boot.
+    """
+    try:
+        from resources.lib import recent_updates_tile_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        status = recent_updates_tile_patcher.ensure_patched()
+        if status not in ('already_seen', 'no_kodi', 'no_favourites'):
+            kodi_utils.log('recent_updates_tile_patcher: {0}'.format(status),
+                           level='INFO')
+    except Exception as e:
+        try:
+            kodi_utils.log('recent_updates_tile_patcher failed: {0}'.format(e),
+                           level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_patch_pov_mdblist_sync():
+    """Patch POV's indexers/mdblist_api.py (POV 6.x) for two MDBList
+    watched/progress-sync bugs that surface when MDBList is the Watched Status
+    Provider: (A) the user's full API key leaking into kodi.log via the error
+    logger, and (B) 'mark as watched' leaving the title PAUSED on MDBList (the
+    scrobble/clear resume-clear 404s) and not counting in Watch Stats. The patch
+    scrubs the key from the log and adds a scrobble/stop@100 on mark-watched.
+    Safe no-op without POV / on a POV version whose anchors moved."""
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_mdblist_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        status = pov_mdblist_patcher.ensure_patched()
+        if status == 'patched':
+            kodi_utils.log(
+                'pov_mdblist_patcher: MDBList sync patched (apikey redacted '
+                'in logs; mark-watched now clears resume + counts)',
+                level='INFO')
+        elif status in ('no_pov', 'no_file', 'already_patched'):
+            pass  # quiet steady-state
+        else:
+            kodi_utils.log(
+                'pov_mdblist_patcher: ' + status, level='WARNING')
+        # Stable Watchlist/Collection ids so the list manager doesn't crash
+        # under a Hebrew UI (POV routes on the English label otherwise).
+        try:
+            mstatus = pov_mdblist_patcher.ensure_manager_patched()
+            if mstatus == 'patched':
+                kodi_utils.log(
+                    'pov_mdblist_patcher: manager Watchlist/Collection ids '
+                    'stabilised', level='INFO')
+            elif mstatus not in ('no_pov', 'no_file', 'already_patched'):
+                kodi_utils.log(
+                    'pov_mdblist_patcher manager: ' + mstatus, level='WARNING')
+        except Exception:
+            pass
+        # Repair 'No MDBList Account Active' (empty mdblist_user despite a set
+        # token) so the sync monitor + list manager stop failing.
+        try:
+            hstatus = pov_mdblist_patcher.heal_mdblist_account()
+            if hstatus == 'healed':
+                kodi_utils.log(
+                    'pov_mdblist_patcher: healed empty mdblist_user '
+                    '(account was inactive)', level='INFO')
+            elif hstatus not in ('ok', 'no_pov'):
+                kodi_utils.log(
+                    'pov_mdblist_patcher heal: ' + hstatus, level='WARNING')
+        except Exception:
+            pass
+        # Default the personal-list sort (MDBList/Trakt/TMDB Watchlist +
+        # Collection) to 'recently added' so the newest title leads instead of
+        # A-Z. Two layers: (1) a code patch of POV's lists_sort_order reader
+        # (deterministic -- the source of truth, since cross-addon setting writes
+        # don't reliably reach POV's cached settings); (2) the setting write, as a
+        # best-effort so POV's own sort menu also shows "Date Added" selected.
+        try:
+            gstatus = pov_mdblist_patcher.ensure_sort_default_patched()
+            if gstatus == 'patched':
+                kodi_utils.log(
+                    'pov_mdblist_patcher: patched list-sort default -> recency',
+                    level='INFO')
+            elif gstatus not in ('no_pov', 'no_file', 'already_patched'):
+                kodi_utils.log(
+                    'pov_mdblist_patcher sort-default: ' + gstatus, level='WARNING')
+        except Exception:
+            pass
+        try:
+            sstatus = pov_mdblist_patcher.ensure_lists_sort_recent()
+            if sstatus == 'set':
+                kodi_utils.log(
+                    'pov_mdblist_patcher: defaulted list sort to recently-added',
+                    level='INFO')
+            elif sstatus not in ('ok', 'already', 'no_pov'):
+                kodi_utils.log(
+                    'pov_mdblist_patcher sort: ' + sstatus, level='WARNING')
+        except Exception:
+            pass
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'pov_mdblist_patcher failed: {0}'.format(e), level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_fix_pov_maincache_schema():
+    """POV's search-history menus crash with "'int' object is not iterable"
+    on any device upgraded from POV 5.x -- its maincache table kept the old
+    column order while 6.x writes positionally. See the module for the full
+    account. Runs first: it is a data repair, and every POV menu that reads
+    that cache is wrong until it is done."""
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_maincache_schema_fix, kodi_utils
+    except Exception:
+        return
+    try:
+        st = pov_maincache_schema_fix.repair()
+        if st == 'repaired':
+            kodi_utils.log(
+                'pov_maincache_schema_fix: POV search history repaired',
+                level='INFO')
+        elif st == 'failed':
+            kodi_utils.log('pov_maincache_schema_fix: failed', level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'pov_maincache_schema_fix failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_fix_idanplus_youtube_id():
+    """Idan Plus hands YouTube the word "watch" instead of a video id.
+
+    A field log showed five YouTube player clients each refusing the same
+    request with "This video is unavailable", and the id in every one of them
+    was the literal string 'watch'. GetYouTube reads the id out of the URL
+    PATH and truncates at '?', which is exactly where it lives in the ordinary
+    youtube.com/watch?v= form.
+
+    And the add-on builds that url itself: Kan's mobile API returns a BARE id
+    and kan.py wraps it into watch?v= before handing it over, so GetYouTube
+    fails to unwrap its own construction. This is not a regression and not
+    something Kan changed -- every Kan item of that type has always failed.
+
+    The injected line only fires where the add-on produced something that
+    cannot be a YouTube id (eleven characters of YouTube's own charset), which
+    is the signature of the failure, so no url it already resolved correctly
+    can reach it. And when Idan Plus fixes this itself, the anchor stops
+    matching, nothing is touched, and the log says so once per boot -- which
+    is the signal to retire the patcher. Two cleverer mechanisms for deciding
+    WHY the shape changed were tried and both failed review; the module
+    records what they were and how.
+
+    DELIBERATELY NOT behind _skip_pov_patchers(). That switch says to leave
+    plugin.video.pov as its author shipped it; this writes to
+    plugin.video.idanplus, a different add-on, and gating it on the POV switch
+    would silently tie two unrelated decisions together.
+    """
+    try:
+        from resources.lib import idanplus_youtube_id_patcher, kodi_utils
+        st = idanplus_youtube_id_patcher.ensure_patched()
+        if st in ('unmatched', 'compile_failed', 'write_failed',
+                  'revert_failed', 'read_failed'):
+            kodi_utils.log(
+                'idanplus_youtube_id_patcher: ' + st, level='WARNING')
+    except Exception as e:
+        try:
+            from resources.lib import kodi_utils
+            kodi_utils.log(
+                'idanplus_youtube_id_patcher failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_guard_pov_debrid_handlers():
+    """Stop POV's debrid error handlers deleting the error they report.
+
+    A field log showed 38 of 38 AllDebrid sources failing to play, every one
+    of them with `cannot access local variable 'torrent_id'`. The name is
+    assigned inside the try and read by the except, so when the provider
+    errs -- expired key, lapsed subscription, changed endpoint -- the handler
+    raises an UnboundLocalError that REPLACES the cause. The user sees "no
+    results"; the log cannot say why.
+
+    Binding those names before the try does not make the provider work, and
+    it does not do the same thing at all three sites -- a claim this docstring
+    made flatly until a review executed all three instead of reading them.
+
+    AllDebrid and Real-Debrid end their handlers `if errors: raise`, and the
+    caller that matters passes errors=True, so the provider's real error now
+    reaches the log verbatim. That is the reported case. TorBox has no
+    `errors` parameter and never re-raises: it gains the crash removed and its
+    own cleanup running, not the reason. Making it re-raise would invent an
+    error path into two call sites that have no try of their own, which is
+    more than a patcher into someone else's add-on gets to do.
+
+    See the module for the three sites, the fourth its sibling patcher owns,
+    and how they were found."""
+    # It writes into POV's own files, so it answers to the switch that says
+    # not to. The tuple around it is inconsistent about this and a good many
+    # steps still skip the check -- which is a reason to tighten those, never a
+    # licence to add one more.
+    #
+    # No count here on purpose. The comment used to name one, it was already
+    # stale by the time it was written (this very line moved the step into the
+    # other column), and two careful recounts afterwards disagreed with each
+    # other. A number nobody can reproduce is worse than no number.
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_debrid_unbound_guard_patcher, kodi_utils
+        st = pov_debrid_unbound_guard_patcher.ensure_patched()
+        bad = [p for p in st.split(', ')
+               if p.split('=')[-1] in ('unmatched', 'compile_failed',
+                                       'write_failed', 'revert_failed',
+                                       'read_failed')]
+        if bad:
+            kodi_utils.log(
+                'pov_debrid_unbound_guard_patcher: ' + st, level='WARNING')
+    except Exception as e:
+        try:
+            from resources.lib import kodi_utils
+            kodi_utils.log(
+                'pov_debrid_unbound_guard_patcher failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_fix_pov_alldebrid_status():
+    """POV 6.08.14 indexes a dict with [0] and every AllDebrid play fails.
+
+    indexers/alldebrid_api.py torrent_info() does `result['magnets'][0]` on a
+    call that returns a single object, so parse_magnet_pack raises KeyError(0)
+    and resolve_external_sources gives up on every source in turn. Two field
+    logs show it dozens of times each. See pov_alldebrid_status_fix.
+    """
+    try:
+        from resources.lib import pov_alldebrid_status_fix, kodi_utils
+        st = pov_alldebrid_status_fix.ensure_patched()
+        if st in ('unmatched', 'read_failed', 'write_failed',
+                  'compile_failed'):
+            kodi_utils.log('pov_alldebrid_status_fix: ' + st, level='WARNING')
+    except Exception as e:
+        try:
+            from resources.lib import kodi_utils
+            kodi_utils.log('pov_alldebrid_status_fix failed: {0}'.format(e),
+                           level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_shim_pov_internal_scrapers():
+    """Make POV look for internal scrapers where third-party ones land.
+
+    POV scans exactly ONE folder for them, and 6.08.14 renamed it from
+    resources/lib/scrapers/ to resources/lib/debrids/. An installer written
+    against the old name fails with ENOENT -- and POV would not have looked
+    there anyway -- so those sources stop appearing entirely. This creates the
+    old folder so the write succeeds, and edits the one line in POV's
+    sources.py so pkgutil scans both. POV's own folder stays first, so nothing
+    stale can shadow its modules. See pov_internal_scraper_shim.
+    """
+    try:
+        from resources.lib import pov_internal_scraper_shim, kodi_utils
+        st = pov_internal_scraper_shim.ensure_patched()
+        bad = [p for p in st.split(', ')
+               if p.split('=')[-1].startswith(('failed', 'no_internal',
+                                               'list_failed'))]
+        if bad:
+            kodi_utils.log('pov_internal_scraper_shim: ' + st, level='WARNING')
+    except Exception as e:
+        try:
+            from resources.lib import kodi_utils
+            kodi_utils.log('pov_internal_scraper_shim failed: {0}'.format(e),
+                           level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_fix_fentastic_clearlogo_var():
+    """Close brackets the skin left open, so the OSD logo can draw at all.
+
+    A user's log carries Kodi refusing an unparseable skin condition. The same
+    shape appears twenty-three times in the shipped skin; two of them are the
+    video OSD's clear-logo / studio-logo pair, and because both are false the
+    OSD draws NEITHER, on every device. See the module for why those two and
+    the ClearArtLogo variable are repaired and the rest are not.
+    """
+    try:
+        from resources.lib import fentastic_clearlogo_var_patcher, kodi_utils
+        st = fentastic_clearlogo_var_patcher.ensure_patched()
+        bad = [p for p in st.split(', ')
+               if p.split('=')[-1] in ('unmatched', 'write_failed',
+                                       'read_failed')]
+        if bad:
+            kodi_utils.log(
+                'fentastic_clearlogo_var_patcher: ' + st, level='WARNING')
+    except Exception as e:
+        try:
+            from resources.lib import kodi_utils
+            kodi_utils.log(
+                'fentastic_clearlogo_var_patcher failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_time_pov_directories():
+    """Put a number on the spinner.
+
+    A user reports a wait on every category press; the log they can produce is
+    info level and contains not one POV timing, so the only evidence is Kodi's
+    focus errors and the gaps between them -- which are the user's reading
+    time and the directory build added together. This logs one INFO line per
+    plugin call with the seconds and the route, so the next log answers the
+    question instead of raising it. It makes nothing faster; see the module.
+    """
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_directory_timing_patcher, kodi_utils
+        st = pov_directory_timing_patcher.ensure_patched()
+        if st in ('unmatched', 'compile_failed', 'write_failed',
+                  'revert_failed', 'read_failed'):
+            kodi_utils.log(
+                'pov_directory_timing_patcher: ' + st, level='WARNING')
+        elif st in ('patched', 'repatched'):
+            try:
+                from resources.lib import pov_reload
+                pov_reload.note_patched()
+            except Exception:
+                pass
+    except Exception as e:
+        try:
+            from resources.lib import kodi_utils
+            kodi_utils.log(
+                'pov_directory_timing_patcher failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_repair_addon_autoupdate():
+    """Un-stick a device where add-ons are found but never installed.
+
+    Two filters sit between "an update exists" and "Kodi installs it": the
+    update mode, and Kodi's update_rules table, whose installer-set pins are
+    invisible at info level and permanent once a repository stops answering.
+    See the module -- this reports both and repairs only what the build owns.
+    """
+    try:
+        from resources.lib import addon_autoupdate_repair, kodi_utils
+        st = addon_autoupdate_repair.ensure_repaired()
+        kodi_utils.log('addon_autoupdate_repair: ' + st, level='INFO')
+    except Exception as e:
+        try:
+            from resources.lib import kodi_utils
+            kodi_utils.log(
+                'addon_autoupdate_repair failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_log_pov_debrid_errors():
+    """Make a debrid refusal visible in the log instead of "no sources".
+
+    AllDebrid and TorBox both answer HTTP 200 and put the refusal in the body,
+    and POV's _request logs only when the status code is bad -- so the reason
+    the provider spelled out is dropped one line after it arrives. One log
+    line, no control-flow change. See the module for the envelopes and for the
+    two providers this deliberately leaves alone.
+    """
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_debrid_error_log_patcher, kodi_utils
+        st = pov_debrid_error_log_patcher.ensure_patched()
+        bad = [p for p in st.split(', ')
+               if p.split('=')[-1] in ('unmatched', 'compile_failed',
+                                       'write_failed', 'revert_failed',
+                                       'read_failed')]
+        if bad:
+            kodi_utils.log(
+                'pov_debrid_error_log_patcher: ' + st, level='WARNING')
+        elif any(p.endswith('=patched') or p.endswith('=repatched')
+                 for p in st.split(', ')):
+            # A patch into POV's warm interpreter does not take effect until
+            # it re-imports, and the cycle that forces that is armed by this
+            # call. Without it the line would first appear a boot later.
+            try:
+                from resources.lib import pov_reload
+                pov_reload.note_patched()
+            except Exception:
+                pass
+    except Exception as e:
+        try:
+            from resources.lib import kodi_utils
+            kodi_utils.log(
+                'pov_debrid_error_log_patcher failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_keep_sources_when_debrid_is_late():
+    """Stop a slow or refused debrid from erasing the whole source list.
+
+    POV builds final_sources only inside the loop over the debrid cache-check
+    threads that finished in time, so with one debrid configured a single late
+    answer discards every torrent the scrapers found -- and a check that failed
+    outright is recorded as an authoritative "not cached", which the default
+    "Display Uncached Torrents = off" filter then deletes. Both roads end at
+    "no results" on a title with hundreds of sources.
+
+    Two independent edits. A failed check returns an empty tuple, which
+    unpatched POV reads as "nothing cached" exactly as it always did, so
+    neither half needs the other to be safe -- see the module for the crash
+    window that ruled out the obvious `return None`.
+    """
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_debrid_timeout_patcher, kodi_utils
+        st = pov_debrid_timeout_patcher.ensure_patched()
+        bad = [p for p in st.split(', ')
+               if p.split('=')[-1] in ('unmatched', 'compile_failed',
+                                       'write_failed', 'revert_failed',
+                                       'read_failed')]
+        if bad:
+            kodi_utils.log(
+                'pov_debrid_timeout_patcher: ' + st, level='WARNING')
+        if any(p.endswith('=patched') or p.endswith('=repatched')
+               for p in st.split(', ')):
+            # A patch into POV's warm interpreter does not take effect until
+            # it re-imports, and the cycle that forces that is armed here.
+            try:
+                from resources.lib import pov_reload
+                pov_reload.note_patched()
+            except Exception:
+                pass
+    except Exception as e:
+        try:
+            from resources.lib import kodi_utils
+            kodi_utils.log(
+                'pov_debrid_timeout_patcher failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_patch_mdblist_reauth():
+    """Let an expired MDBList token heal itself instead of being reconnected.
+
+    POV refreshes only on a clock check and treats a 401 as just another
+    network error, so a token the server stops accepting is permanent: every
+    call fails, the sync monitor backs off half an hour, and the account has
+    to be authorised again by hand. Umbrella then compounds it with a dialog
+    telling the user to re-authenticate in a screen this build does not use.
+
+    Trakt has the identical defect in the file next door, and a field log
+    showed it failing in the same breath as the MDBList one recovered, so it
+    gets the same treatment. See the modules."""
+    # The switch guards the POV half ONLY. Written as an early return over
+    # both halves first, which silently took Umbrella's fix down with it --
+    # the switch's own text promises to stop changes to plugin.video.pov and
+    # says nothing about any other add-on, and turning it on to isolate a POV
+    # problem must not change Umbrella's behaviour as a side effect.
+    if not _skip_pov_patchers():
+        # ONE try EACH. Sharing a try meant an exception out of the MDBList
+        # patcher -- and it has unguarded paths, an os.listdir over
+        # __pycache__ among them -- skipped the Trakt one entirely. That
+        # reproduces the exact field symptom this round exists to close
+        # (MDBList fixed, Trakt still failing beside it), from a hiccup on
+        # the other side of the pair, behind a WARNING that reads as if it
+        # were only about MDBList.
+        for _mod_name in ('pov_mdblist_reauth_patcher',
+                          'pov_trakt_reauth_patcher'):
+            try:
+                from resources.lib import kodi_utils
+                _mod = __import__('resources.lib.' + _mod_name,
+                                  fromlist=[_mod_name])
+                st = _mod.ensure_patched()
+                if st in ('unmatched', 'compile_failed', 'write_failed'):
+                    kodi_utils.log(_mod_name + ': ' + st, level='WARNING')
+            except Exception as e:
+                try:
+                    from resources.lib import kodi_utils
+                    kodi_utils.log('{0} failed: {1}'.format(_mod_name, e),
+                                   level='WARNING')
+                except Exception:
+                    pass
+    try:
+        from resources.lib import umbrella_mdblist_token_patcher, kodi_utils
+        st = umbrella_mdblist_token_patcher.ensure_patched()
+        if st in ('unmatched', 'compile_failed', 'write_failed'):
+            kodi_utils.log(
+                'umbrella_mdblist_token_patcher: ' + st, level='WARNING')
+    except Exception as e:
+        try:
+            # Re-imported: if the import above is what raised, `kodi_utils` is
+            # unbound here and the handler would raise instead of logging.
+            from resources.lib import kodi_utils
+            kodi_utils.log(
+                'umbrella_mdblist_token_patcher failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+    try:
+        from resources.lib import umbrella_mdblist_sync_patcher, kodi_utils
+        st = umbrella_mdblist_sync_patcher.ensure_patched()
+        if st in ('unmatched', 'compile_failed', 'write_failed',
+                  'revert_failed'):
+            kodi_utils.log(
+                'umbrella_mdblist_sync_patcher: ' + st, level='WARNING')
+    except Exception as e:
+        try:
+            from resources.lib import kodi_utils
+            kodi_utils.log(
+                'umbrella_mdblist_sync_patcher failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_seed_pov_seasons_view():
+    """Open POV's season list in a view that draws a poster.
+
+    Reported as "per-season posters only work in NOX". They work everywhere;
+    the screen was a text list with no poster in the layout at all. Writes
+    POV's own views.db -- the same row POV's Set View writes -- once per skin,
+    over whatever is there, and then never again. See the module."""
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_seasons_view_seed, kodi_utils
+    except Exception:
+        return
+    try:
+        st = pov_seasons_view_seed.ensure_seeded()
+        if st == 'failed':
+            kodi_utils.log('pov_seasons_view_seed: failed', level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'pov_seasons_view_seed failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+def _maybe_patch_pov_addon_window():
+    """Stop POV's own service dying in the seconds Kodi calls POV unknown.
+
+    Kodi flips the enabled flag at once and finishes loading the add-on a
+    couple of seconds later, and it starts the add-on's service at the first
+    of those two moments. POV's import chain reads a setting on the way up
+    (tmdb_api, at module level), so inside that window the whole service dies
+    -- no Trakt sync monitor, no premium-account notification, for the rest of
+    the session, plus a red error in the log. We open that window ourselves
+    every time pov_reload cycles POV, but it is Kodi's window and a hand
+    toggle hits it too, so the wait belongs inside POV. NOT cycled afterwards:
+    cycling is the thing that opens the window, and the patch is on disk for
+    the next one either way."""
+    try:
+        from resources.lib import pov_addon_window_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        status = pov_addon_window_patcher.ensure_patched()
+        if status == 'patched':
+            kodi_utils.log(
+                'pov_addon_window_patcher: POV now waits out the '
+                'unknown-addon window instead of losing its service',
+                level='INFO')
+        elif status in ('read_failed', 'write_failed', 'compile_failed',
+                        'unmatched', 'partial'):
+            # 'partial' means one of the two patches went missing because POV
+            # rewrote the text it anchors on. The other one still being in
+            # place is exactly why it needs saying out loud: the file looks
+            # patched, and half of what it is patched for is gone.
+            kodi_utils.log(
+                'pov_addon_window_patcher: ' + status, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'pov_addon_window_patcher run failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_quiet_update_nags():
+    """Switch off the self-update check in Umbrella and Account Manager Lite.
+
+    Both nag at every start about a version the build pins deliberately, and
+    neither offers a way to take it -- taking it would strip the patches that
+    make them work here. Settings only, once each, and only while the value
+    is still the one they shipped."""
+    try:
+        from resources.lib import update_nag_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        status = update_nag_patcher.ensure_quiet()
+        if status == 'patched':
+            kodi_utils.log(
+                'update_nag_patcher: self-update notifications switched off',
+                level='INFO')
+        elif status == 'write_failed':
+            kodi_utils.log('update_nag_patcher: ' + status, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'update_nag_patcher run failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_fix_pov_container_refresh_crash():
+    """Revert the harmful container_refresh() widget-reload ping a previous
+    build injected into POV. That ping (UpdateLibrary(video,special://skin/foo)
+    after every Container.Refresh, including Trakt adds) reloaded all POV home
+    widgets at once -> concurrent router.py on POV's reuselanguageinvoker
+    interpreter -> CPython dict corruption -> native crash (confirmed from a
+    field log). Restoring container_refresh() to stock removes the crash; POV
+    is cycled so the fix applies this session, not only after a restart."""
+    try:
+        from resources.lib import pov_container_refresh_crash_fix, kodi_utils
+    except Exception:
+        return
+    try:
+        status = pov_container_refresh_crash_fix.ensure_patched()
+        if status == 'reverted':
+            kodi_utils.log(
+                'pov_container_refresh_crash_fix: reverted container_refresh '
+                'ping (prevents the Trakt-add native crash)', level='INFO')
+            try:
+                from resources.lib import pov_reload
+                pov_reload.note_patched()
+            except Exception:
+                pass
+        elif status in ('read_failed', 'write_failed', 'compile_failed'):
+            kodi_utils.log(
+                'pov_container_refresh_crash_fix: ' + status, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'pov_container_refresh_crash_fix run failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_patch_pov_widget_crash_guard():
+    """Stop the "add to Trakt -> refresh widgets -> Kodi native crash".
+    POV's SyncMonitor, when `trakt.sync_refresh_widgets` is ON, fires
+    UpdateLibrary(video,special://skin/foo) after a Trakt/MDBList sync; every
+    home widget then reloads at once, spawning concurrent POV router.py
+    invocations that share POV's reuselanguageinvoker interpreter and corrupt
+    CPython dict internals (SystemError: dictobject.c:1756) -> the app dies.
+    Confirmed from a field crash log. We force that single setting OFF (only
+    when it is actually on); widgets then refresh on the next navigation
+    instead of in a crash-inducing burst. No source files touched."""
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_widget_crash_guard, kodi_utils
+    except Exception:
+        return
+    try:
+        status = pov_widget_crash_guard.ensure_patched()
+        if status == 'patched':
+            kodi_utils.log(
+                'pov_widget_crash_guard: disabled POV trakt.sync_refresh_'
+                'widgets (was ON -- prevents the add-to-Trakt native crash)',
+                level='INFO')
+        elif status in ('read_failed', 'write_failed'):
+            kodi_utils.log(
+                'pov_widget_crash_guard: ' + status, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'pov_widget_crash_guard run failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_fix_pov_torbox_url():
+    """Restore playback. POV 6.08.12 asks TorBox to append the file name to the
+    download link (`append_name=true`); TorBox returns it unencoded, so the
+    link arrives with raw spaces and brackets and libcurl rejects it
+    (`URL using bad/illegal format`) without sending a byte. Every release name
+    has spaces, so nothing plays.
+
+    We ENCODE the link rather than removing POV's parameter: POV added it
+    deliberately and would re-add it in every release, and each of those
+    releases would break playback again until this patcher caught up. Encoding
+    keeps POV's feature and makes the URL valid, so a future POV that keeps
+    `append_name` needs nothing from us."""
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_torbox_url_fix, kodi_utils
+    except Exception:
+        return
+    try:
+        status = pov_torbox_url_fix.ensure_patched()
+        if status == 'patched':
+            kodi_utils.log(
+                'pov_torbox_url_fix: TorBox links are percent-encoded before '
+                'playback (restores playback on POV 6.08.12+)', level='INFO')
+            try:
+                from resources.lib import pov_reload
+                pov_reload.note_patched()
+            except Exception:
+                pass
+        elif status in ('read_failed', 'write_failed', 'compile_failed',
+                        'no_anchor'):
+            kodi_utils.log('pov_torbox_url_fix: ' + status, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log('pov_torbox_url_fix run failed: {0}'.format(e),
+                           level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_patch_pov_language_invoker():
+    """Hold POV's reuse-language-invoker flag where this device wants it.
+
+    BY DEFAULT that is OFF, which closes the crash class the two guards above
+    only narrow. Both of them remove a TRIGGER for "many POV invocations at
+    once"; this removes what makes that burst fatal. POV ships
+    <reuselanguageinvoker>true</reuselanguageinvoker>, so concurrent
+    invocations share one Python interpreter and corrupt CPython's internals
+    (a NULL refcount write inside python3.8.dll in the 2026-08-14 minidump,
+    on a thread the Kodi log identifies as POV's). With the flag off, each
+    invocation gets its own interpreter and the same burst is merely slower.
+
+    SLOWER TURNED OUT TO BE MEASURABLE, so since 0.2.507 the direction is the
+    `pov_fast_navigation` setting rather than a constant -- off out of the
+    box, so this step does exactly what it always did unless somebody has
+    deliberately asked for the speed back. The module header carries the
+    measurement and the reason the obvious "narrow it to Arctic Fuse 3"
+    shortcut is wrong.
+
+    POV keeps this flag in TWO places -- a hidden `reuse_language_invoker`
+    setting and its own addon.xml -- and runs a service that rewrites the xml
+    from the setting, so the module writes both, setting first. Effective from
+    the next Kodi start: Kodi has already read addon.xml by the time this pass
+    runs. See the module header for why we do not force it live."""
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_language_invoker_guard, kodi_utils
+    except Exception:
+        return
+    try:
+        # Read the direction ONCE, here, and hand the same value to the write
+        # and to the line that reports it. Reading it again for the log would
+        # be a second answer to a question the module's own docstring calls
+        # load-bearing, spent on prose.
+        try:
+            _dir = pov_language_invoker_guard._wanted()
+        except Exception:
+            _dir = None      # ensure_patched then decides for itself
+        status = pov_language_invoker_guard.ensure_patched(_dir)
+        try:
+            _since = ('%.2fs into the repair pass'
+                      % (time.time() - _REPAIRS_STARTED)
+                      if _REPAIRS_STARTED else 'pass start not stamped')
+        except Exception:
+            _since = 'unknown'
+        if status == 'patched':
+            kodi_utils.log(
+                'pov_language_invoker_guard: reuse-language-invoker set to '
+                '%s (setting + addon.xml) at %s -- %s. Kodi read POV\'s '
+                'addon.xml while building its add-on list, long before this '
+                'pass ran, so the value it is RUNNING on is still the old one '
+                'this session. POV notices that within a few seconds and '
+                'offers a profile reload, which applies it without a second '
+                'restart; declining just defers it to the next start. This '
+                'number is the margin we beat POV\'s check by'
+                % (_dir, _since, pov_language_invoker_guard.describe(_dir)),
+                level='INFO')
+        elif status == 'setting_only':
+            kodi_utils.log(
+                'pov_language_invoker_guard: setting written, addon.xml was '
+                'not -- POV reconciles it from the setting on its next start',
+                level='WARNING')
+        elif status in ('unreadable', 'no_tag', 'write_failed'):
+            kodi_utils.log(
+                'pov_language_invoker_guard: ' + status, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'pov_language_invoker_guard run failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_patch_umbrella_language():
+    """Umbrella (the opt-in pilot addon) ships its strings only in the
+    LEGACY language layout (resources/language/English/), so on a
+    Hebrew-interface Kodi every settings label resolves to an empty
+    string -- blank categories, blank labels. Mirror the English po into
+    the modern resource.language.en_gb folder Kodi actually looks for.
+    Additive-only and self-healing: an Umbrella self-update replaces the
+    addon folder, and this re-applies on the next startup. Instant no-op
+    for everyone who never installed the pilot."""
+    try:
+        from resources.lib import umbrella_language_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        status = umbrella_language_patcher.ensure_patched()
+        if status == 'patched':
+            kodi_utils.log(
+                'umbrella_language_patcher: modern en_gb strings installed',
+                level='INFO')
+        elif status in ('read_failed', 'write_failed'):
+            kodi_utils.log(
+                'umbrella_language_patcher: ' + status, level='WARNING')
+        # Hebrew for the menus themselves. Additive: we create the he_il
+        # folder Umbrella does not ship, so their updates keep applying and a
+        # string we did not translate simply falls back to English.
+        try:
+            from resources.lib import umbrella_hebrew_ui_patcher
+            if umbrella_hebrew_ui_patcher.ensure_patched() == 'patched':
+                kodi_utils.log(
+                    'umbrella_hebrew_ui_patcher: Hebrew menu strings '
+                    'installed', level='INFO')
+        except Exception:
+            pass
+        # ORDER IS LOAD-BEARING: the metadata language must move BEFORE the
+        # content filters are re-evaluated. api.language drives both, and
+        # Hebrew with the filters still on asks for titles ORIGINALLY MADE in
+        # Hebrew -- which empties every list.
+        lang = umbrella_language_patcher.ensure_api_language()
+        if lang == 'patched':
+            kodi_utils.log(
+                'umbrella_language_patcher: metadata language set to Hebrew',
+                level='INFO')
+        # Second, unrelated half: Umbrella's two language CONTENT FILTERS
+        # empty every list when its API language is not English.
+        filt = umbrella_language_patcher.ensure_content_filters_sane()
+        if filt == 'patched':
+            kodi_utils.log(
+                'umbrella_language_patcher: language content filters cleared',
+                level='INFO')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'umbrella_language_patcher run failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+    # Account Manager Lite (the other opt-in pilot) trips over the same
+    # locale-folder fallback, and the labels it loses are Authorize,
+    # Username, Password and API Key -- the controls a user has to press to
+    # connect an account. No-op for anyone who never installed it.
+    try:
+        from resources.lib import legacy_lang_mirror
+        if legacy_lang_mirror.mirror('script.module.acctmgr') == 'patched':
+            kodi_utils.log(
+                'legacy_lang_mirror: Account Manager Lite labels will render',
+                level='INFO')
+    except Exception:
+        pass
+    # Wiring + subtitle-matching hook for the same optional add-on.
+    try:
+        from resources.lib import umbrella_setup_patcher
+        prov = umbrella_setup_patcher.ensure_external_provider()
+        if prov == 'patched':
+            kodi_utils.log(
+                'umbrella_setup_patcher: CocoScrapers wired as the external '
+                'provider', level='INFO')
+        cps = umbrella_setup_patcher.ensure_coco_providers()
+        if cps == 'patched':
+            kodi_utils.log(
+                'umbrella_setup_patcher: extra CocoScrapers providers enabled',
+                level='INFO')
+        dfl = umbrella_setup_patcher.ensure_umbrella_defaults()
+        if dfl == 'patched':
+            kodi_utils.log(
+                'umbrella_setup_patcher: Umbrella defaults applied',
+                level='INFO')
+        hook = umbrella_setup_patcher.ensure_source_name_published()
+        if hook == 'patched':
+            kodi_utils.log(
+                'umbrella_setup_patcher: picked-source release name is now '
+                'published for subtitle matching', level='INFO')
+        elif hook in ('unmatched', 'compile_failed', 'write_failed'):
+            kodi_utils.log(
+                'umbrella_setup_patcher: ' + hook, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'umbrella_setup_patcher run failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+    # The Hebrew-subtitle match badge in Umbrella's OWN source window -- the
+    # same brain (he_sub_match) that already feeds POV's, so a title warmed
+    # from one add-on shows its badge immediately in the other. Separate from
+    # the block above because it patches a different Umbrella file and must
+    # not be lost if the wiring above raises.
+    try:
+        from resources.lib import umbrella_subtitle_match_patcher
+        st = umbrella_subtitle_match_patcher.ensure_patched()
+        if st == 'patched':
+            kodi_utils.log(
+                'umbrella_subtitle_match_patcher: Hebrew match % added to '
+                "Umbrella's source window", level='INFO')
+        elif st in ('unmatched', 'compile_failed', 'write_failed',
+                    'read_failed'):
+            kodi_utils.log(
+                'umbrella_subtitle_match_patcher: ' + st, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'umbrella_subtitle_match_patcher failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+    # Kodi's own "playback failed" after a deliberate back-out of the source
+    # list. It is a 20-second timer on consecutive unresolved plays, not a
+    # report about this playback -- see kodi_playlist_timeout_patcher.
+    try:
+        from resources.lib import kodi_playlist_timeout_patcher
+        st = kodi_playlist_timeout_patcher.ensure_patched()
+        if st in ('patched', 'created'):
+            kodi_utils.log(
+                'kodi_playlist_timeout_patcher: ' + st, level='INFO')
+        elif st in ('unmatched', 'bad_xml', 'write_failed', 'read_failed'):
+            kodi_utils.log(
+                'kodi_playlist_timeout_patcher: ' + st, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'kodi_playlist_timeout_patcher failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+    # Keep Umbrella on whatever MDBList and Trakt authorisations POV currently
+    # holds. POV owns the refreshing -- only its client_id can -- so this is
+    # what carries a refreshed token across to Umbrella, and what covers a
+    # user who authorised before this existed.
+    #
+    # MDBLIST FIRST, AND THE ORDER IS LOAD-BEARING. Both mirrors claim the
+    # same two Umbrella settings (indicators.alt / scrobble.source) and the
+    # claim is one-shot per key, so whichever runs first while they are still
+    # at the shipped Local wins permanently. This build prefers MDBList, and
+    # the keeper loop in _start_service_mirror_keeper runs them in this same
+    # order for the same reason -- if you change one, change both.
+    try:
+        from resources.lib import mdblist_umbrella_mirror
+        st = mdblist_umbrella_mirror.mirror()
+        if st == 'mirrored':
+            kodi_utils.log(
+                'mdblist_umbrella_mirror: Umbrella now shares POV\'s MDBList '
+                'authorisation', level='INFO')
+        elif st == 'write_failed':
+            kodi_utils.log(
+                'mdblist_umbrella_mirror: ' + st, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'mdblist_umbrella_mirror failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+    try:
+        from resources.lib import trakt_umbrella_mirror
+        st = trakt_umbrella_mirror.mirror()
+        if st == 'mirrored':
+            kodi_utils.log(
+                'trakt_umbrella_mirror: Umbrella now shares POV\'s Trakt '
+                'authorisation', level='INFO')
+        elif st in ('write_failed', 'incomplete'):
+            kodi_utils.log('trakt_umbrella_mirror: ' + st, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'trakt_umbrella_mirror failed: {0}'.format(e), level='WARNING')
+        except Exception:
+            pass
+    # Searching Umbrella in Hebrew found nothing: the percent-encoded query
+    # made Umbrella's own api_key substitution raise, so the request was
+    # never sent. See umbrella_tmdb_apikey_patcher for the full account.
+    try:
+        from resources.lib import umbrella_tmdb_apikey_patcher
+        st = umbrella_tmdb_apikey_patcher.ensure_patched()
+        if st == 'patched':
+            kodi_utils.log(
+                'umbrella_tmdb_apikey_patcher: non-ASCII search repaired',
+                level='INFO')
+        elif st in ('unmatched', 'compile_failed', 'write_failed',
+                    'read_failed'):
+            kodi_utils.log(
+                'umbrella_tmdb_apikey_patcher: ' + st, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'umbrella_tmdb_apikey_patcher failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+    # Two source-flow repairs: fire the Hebrew-availability warm at the START
+    # of the scrape so the badge is there on the FIRST entry rather than the
+    # second, and stop Kodi announcing "playback failed" when the user simply
+    # backed out of the source list.
+    try:
+        from resources.lib import umbrella_source_ux_patcher
+        st = umbrella_source_ux_patcher.ensure_patched()
+        if st == 'patched':
+            kodi_utils.log(
+                'umbrella_source_ux_patcher: prewarm + quiet cancel applied',
+                level='INFO')
+        elif st in ('unmatched', 'compile_failed', 'write_failed',
+                    'read_failed'):
+            kodi_utils.log(
+                'umbrella_source_ux_patcher: ' + st, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'umbrella_source_ux_patcher failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_patch_pov_bookmark_refresh():
+    """Stopping an episode mid-way left the user staring at a spinner (and
+    sometimes a bare '..' files screen) while the episode list rebuilt in a
+    race against the Trakt sync that the very same stop had scheduled: POV 6
+    fires container_refresh() BEFORE the progress write that invalidates the
+    Trakt caches. The patcher moves that one refresh AFTER the progress
+    write (the POV 5 ordering), so the old list stays live and navigable
+    and the single refresh lands when the data is ready. Self-healing:
+    re-applies every startup; no-ops on POV 5.x or a changed upstream."""
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_bookmark_refresh_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        status = pov_bookmark_refresh_patcher.ensure_patched()
+        if status == 'patched':
+            kodi_utils.log(
+                'pov_bookmark_refresh_patcher: set_bookmark now refreshes '
+                'after the progress write', level='INFO')
+        elif status in ('write_failed', 'read_failed', 'compile_failed'):
+            kodi_utils.log(
+                'pov_bookmark_refresh_patcher: ' + status, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'pov_bookmark_refresh_patcher run failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
 def _maybe_patch_pov_services():
     """Inject Gemini AI + Wyzie entries into the POV plugin's
     "My Services" menu (the one at /myservices in plugin.video.pov).
@@ -458,6 +2368,8 @@ def _maybe_patch_pov_services():
     has a hardcoded tuple of services with no extension point, so
     we patch the source file on disk and re-inject on every Kodi
     startup if the marker is missing."""
+    if _skip_pov_patchers():
+        return
     try:
         from resources.lib import pov_services_patcher, kodi_utils
     except Exception:
@@ -486,6 +2398,8 @@ def _maybe_patch_pov_remember_source():
     POV's sources.py to record the chosen source per media (gated by our
     `remember_source` setting, OFF by default). The patcher compile-checks the
     result before writing, so it can never break POV playback."""
+    if _skip_pov_patchers():
+        return
     try:
         from resources.lib import pov_remember_source_patcher, kodi_utils
     except Exception:
@@ -514,307 +2428,108 @@ def _maybe_patch_pov_remember_source():
             pass
 
 
-_AUTOSUB_STATE = {'last_file': None, 'busy': False, 'player': None}
+# The auto-on-play machinery (state, the on-play search/apply flow, and the
+# Player listener) lives in resources/lib/autosub_service.py -- extracted
+# VERBATIM so the standalone (repo-channel) service runs the exact same code.
 
 
-def _autosub_on_play():
-    """Phase C auto-on-play: when the built-in engine is on, search and apply
-    the best Hebrew subtitle automatically (replacing DarkSubs's autosub).
-    Runs in its own thread so it never blocks Kodi's playback callback."""
+def _start_service_mirror_keeper(monitor):
+    """Keep Umbrella on whatever MDBList and Trakt authorisations POV holds.
+
+    The startup mirror covers most of it, but POV refreshes its token
+    silently in the background -- with its own client_id, the only one that
+    can -- and a set-top box stays on for days. Once POV rotates the token,
+    the copy Umbrella reads from disk is stale, so the next Umbrella session
+    authenticates with a dead token. Umbrella also fixes its Authorization
+    header at module-import time and reuses its interpreter, so there is no
+    way to hand it a new token mid-session; what matters is that the value on
+    disk is right BEFORE it next imports.
+
+    A periodic re-mirror is two settings reads and writes only on a change,
+    so it costs nothing to run often. Deliberately NOT a patch to POV's own
+    mdbl_refresh(): another injection into somebody else's file, to achieve
+    what a cheap poll already achieves, is surface area for no gain.
+
+    Every minute, not every quarter of an hour, and that is what makes a
+    fresh connect land. MDBList gets an instant push -- POV's Connect
+    Services row fires our mirror the moment it returns -- but Trakt has no
+    such hook, and wiring one means wrapping another class on the screen
+    that takes the whole of Connect Services down if it raises. A minute of
+    lag is worth more than that risk. In the steady state a pass is a
+    handful of getSetting calls and no writes at all.
+
+    MDBLIST BEFORE TRAKT, and the startup pass in _maybe_patch_umbrella_
+    language uses the same order for the same reason: both claim the same
+    two watch-source settings, once, and first past the post wins."""
     try:
-        from resources.lib import kodi_utils, translate, subs_engine_bridge
+        from resources.lib import mdblist_umbrella_mirror
     except Exception:
         return
     try:
-        if not kodi_utils.get_bool('use_builtin_engine', False):
-            return
-        if not kodi_utils.get_bool('engine_autosub', True):
-            return
-        if not kodi_utils.hebrew_subtitle_wanted():
-            return
+        from resources.lib import trakt_umbrella_mirror
     except Exception:
-        return
-
-    if _AUTOSUB_STATE['busy']:
-        return
-    _AUTOSUB_STATE['busy'] = True
-    _eng_general = None
+        trakt_umbrella_mirror = None
     try:
-        # Show the DarkSubs-style top overlay IMMEDIATELY (with live per-source
-        # counts the engine fills into general.show_msg as it searches), so the
-        # user sees the same "loading subtitles" screen the moment playback
-        # starts -- not after the metadata wait below.
-        try:
-            subs_engine_bridge.ensure_engine_settings()
-            from resources.lib.subs_engine import general as _eng_general
-            _eng_general.break_all = False
-            _eng_general.with_dp = False
-            _eng_general.show_msg = 'MoranSubs — מחפש כתוביות עברית'
-            threading.Thread(target=_eng_general.show_results,
-                             args=(False,), daemon=True).start()
-        except Exception:
-            _eng_general = None
+        from resources.lib import pov_seasons_view_seed
+    except Exception:
+        pov_seasons_view_seed = None
+    try:
+        from resources.lib import umbrella_watch_prompt
+    except Exception:
+        umbrella_watch_prompt = None
 
-        # While auto-on-play drives, success/progress toasts from resolve() are
-        # suppressed -- the top overlay shows status instead (exactly like
-        # DarkSubs, which never toasts during autosub).
+    def _loop():
         try:
-            translate.set_quiet(True)
-        except Exception:
-            pass
-
-        def _final_overlay(msg, hold=5.0):
-            """Show a final status line in the top overlay for ~hold seconds
-            (DarkSubs shows its 'כתובית מוכנה' / 'אין כתוביות' line for ~5s
-            before the overlay closes). No-op if the overlay isn't up."""
-            if _eng_general is None:
+            if monitor.waitForAbort(90):   # let startup settle first
                 return
-            try:
-                _eng_general.show_msg = msg
-            except Exception:
-                return
-            waited = 0.0
-            while waited < hold:
+            while not monitor.abortRequested():
                 try:
-                    if not xbmc.Player().isPlayingVideo():
-                        break
-                except Exception:
-                    break
-                xbmc.sleep(200)
-                waited += 0.2
-
-        # Right after onAVStarted the player metadata (imdb/title) often
-        # isn't populated yet -- poll briefly until it is (mirrors how
-        # DarkSubs waits for the video before searching).
-        info = {}
-        for _ in range(40):  # up to ~8s
-            info = kodi_utils.current_video_info()
-            have_id = (info.get('imdb_id') or info.get('tmdb_id')
-                       or info.get('title'))
-            # Also wait for the release name to settle: on an auto-advance to
-            # the next episode the metadata transitions a moment after play,
-            # and the sync-% is computed from the release name -- searching
-            # (and caching) before it's ready yields 0% matches. Once we have
-            # both an id/title AND a release name, proceed.
-            try:
-                have_release = subs_engine_bridge._release_ready(info)
-            except Exception:
-                have_release = True
-            if have_id and have_release:
-                break
-            try:
-                if not xbmc.Player().isPlayingVideo():
-                    return
-            except Exception:
-                pass
-            xbmc.sleep(200)
-
-        f = info.get('filepath') or info.get('title') or ''
-        # onAVStarted can fire more than once for the same file; act once.
-        if f and f == _AUTOSUB_STATE['last_file']:
-            return
-        _AUTOSUB_STATE['last_file'] = f
-        if not (info.get('imdb_id') or info.get('tmdb_id')
-                or info.get('title')):
-            return
-
-        # Embedded Hebrew is the best, perfectly-synced subtitle -- apply it
-        # FIRST whenever the file has one. The demuxer often hasn't exposed the
-        # embedded streams yet this early after play, so poll while the stream
-        # list is still empty (then check once for a 'heb' track). Matches how
-        # DarkSubs waits for the stream list before deciding.
-        try:
-            _pl = xbmc.Player()
-            _heb_idx = None
-            _streams = []
-            for _ in range(80):  # up to ~8s, but only while streams aren't listed yet
-                try:
-                    _streams = _pl.getAvailableSubtitleStreams() or []
-                except Exception:
-                    _streams = []
-                if _streams:
-                    _heb_idx = next(
-                        (i for i, n in enumerate(_streams)
-                         if (n or '').strip().lower() == 'heb'), None)
-                    break  # streams listed -- decided (heb or not)
-                if not _pl.isPlayingVideo():
-                    break
-                xbmc.sleep(100)
-            # Snapshot these PLAY-START streams as the embedded baseline. This is
-            # the only moment we're sure no external sub (incl. one WE load
-            # below) is present, so the picker can later tell embedded from
-            # external and never mistake an AI translation for "embedded Hebrew".
-            try:
-                subs_engine_bridge.note_playback_streams(info, _streams)
-            except Exception:
-                pass
-            if _heb_idx is not None:
-                _pl.setSubtitleStream(_heb_idx)
-                _pl.showSubtitles(True)
-                try:
-                    import json as _json
-                    import urllib.parse as _up
-                    _elink = _up.quote(_json.dumps(
-                        {'type': 'engine', 'embedded': True,
-                         'stream_index': _heb_idx}, ensure_ascii=False))
-                    kodi_utils.set_current_subtitle(_elink)
+                    mdblist_umbrella_mirror.mirror()
                 except Exception:
                     pass
-                _final_overlay('[COLOR lightblue]הופעל תרגום מובנה בעברית[/COLOR]')
-                return  # embedded Hebrew applied -- it's the best, we're done
-        except Exception:
-            pass
-
-        # Non-modal search (the overlay above is the progress). list_candidates
-        # returns everything in priority order; the first 'he' row is the best
-        # Hebrew (embedded > human > pool > MT).
-        cands = translate.list_candidates(info, modal_progress=False)
-        # (list_candidates already queued every human Ktuvit release for the
-        # background harvest; the service drainer downloads + uploads them
-        # gently over time. Nothing to do here.)
-        # Try the ready Hebrew candidates in priority order until one actually
-        # downloads. If a source fails (e.g. Ktuvit rate-limited / "refused"),
-        # skip the rest from that SAME source (they fail identically) and move
-        # straight on to the next source -- OpenSubtitles / pool / Wizdom.
-        he_list = [c for c in cands if c.get('language') == 'he']
-        applied = False
-        chosen_link = None
-        chosen_name = ''
-        chosen_from_cache = False
-        failed_sources = set()
-        for c in he_list[:12]:
-            link2 = c.get('link') or ''
-            try:
-                pl = translate._decode_link(link2) or {}
-            except Exception:
-                pl = {}
-            src = pl.get('source')
-            if src and src in failed_sources:
-                continue  # this source already failed -- don't waste time on it
-            is_embedded = (pl.get('type') == 'engine' and pl.get('embedded'))
-            try:
-                path = translate.resolve(link2, info)
-            except Exception:
-                path = None
-            if is_embedded:
-                # resolve() switched the embedded stream and returns None -- that
-                # IS success for an embedded pick.
-                applied = True
-                chosen_link = link2
-                chosen_name = 'תרגום מובנה בעברית'
-                break
-            if path:
-                try:
-                    p = xbmc.Player()
-                    if p.isPlayingVideo():
-                        p.setSubtitles(path)
-                        p.showSubtitles(True)
-                    applied = True
-                    chosen_link = link2
-                    # Full subtitle name + cache note for the overlay status,
-                    # exactly like DarkSubs's "כתובית מוכנה\n{name}".
-                    chosen_name = (pl.get('filename')
-                                   or c.get('filename') or '').strip()
+                if trakt_umbrella_mirror is not None:
                     try:
-                        if pl.get('type') == 'engine':
-                            chosen_from_cache = bool(
-                                subs_engine_bridge.LAST_DOWNLOAD_FROM_CACHE)
+                        trakt_umbrella_mirror.mirror()
                     except Exception:
-                        chosen_from_cache = False
-                    break
-                except Exception:
-                    pass
-            if src:
-                failed_sources.add(src)
-
-        # No Hebrew anywhere -- not embedded, not human, not the community pool,
-        # not machine-translated. ONLY in that case, auto-translate the best
-        # foreign sub (the highest-match English, which list_candidates already
-        # orders first) to Hebrew on play, exactly like DarkSubs's auto_translate.
-        # Gated so we NEVER spend quota when a ready Hebrew sub exists:
-        #   * a Gemini API key must be connected (nothing to translate with
-        #     otherwise), and
-        #   * the user hasn't opted out of AI (translation_mode != 'none').
-        # (The legacy engine_force_translate toggle still forces it if set.)
-        _have_key = bool((kodi_utils.get_setting('api_key', '') or '').strip())
-        _ai_ok = (kodi_utils.get_setting('translation_mode', 'ai')
-                  or 'ai') != 'none'
-        _auto_ai = (_have_key and _ai_ok) or kodi_utils.get_bool(
-            'engine_force_translate', False)
-        if not applied and _auto_ai:
-            for c in cands:
-                try:
-                    p2 = translate._decode_link(c.get('link') or '')
-                except Exception:
-                    p2 = None
-                if p2 and p2.get('type') == 'engine_ai':
-                    if _eng_general is not None:
-                        try:
-                            _eng_general.show_msg = (
-                                '[COLOR lightblue]אין עברית — מתרגם ב-AI[/COLOR]')
-                        except Exception:
-                            pass
+                        pass
+                # Same tick, and here because this is the only periodic hook
+                # we have: Kodi changes skin without a restart, and POV's
+                # seasons view id means a different layout in each skin.
+                #
+                # _skip_pov_patchers() is checked HERE, not only on the
+                # startup pass. This is the one job in this loop that writes
+                # inside POV's own profile, and the switch exists so somebody
+                # can rule this build out in one step -- a thread that carries
+                # on writing to POV ninety seconds later would make the switch
+                # a lie.
+                # Deliberately in the keeper and not in the startup steps:
+                # it can put a dialog on screen, and boot is already crowded
+                # with them. By the first tick the splash is long gone.
+                if umbrella_watch_prompt is not None:
                     try:
-                        path = translate.resolve(c.get('link'), info)
+                        umbrella_watch_prompt.maybe_ask_async()
                     except Exception:
-                        path = None
-                    if path:
-                        try:
-                            pp = xbmc.Player()
-                            if pp.isPlayingVideo():
-                                pp.setSubtitles(path)
-                                pp.showSubtitles(True)
-                            applied = True
-                            chosen_link = c.get('link')
-                        except Exception:
-                            pass
+                        pass
+                if pov_seasons_view_seed is not None:
+                    try:
+                        # Inside the try, not in the `if`: this is the only
+                        # call in the loop body that sat outside one, and an
+                        # exception here would take the whole keeper thread
+                        # down -- both mirrors with it -- for the rest of the
+                        # session, through an outer catch that logs nothing.
+                        if not _skip_pov_patchers():
+                            pov_seasons_view_seed.ensure_seeded()
+                    except Exception:
+                        pass
+                if monitor.waitForAbort(60):
                     break
-
-        if not applied:
-            _final_overlay('[COLOR red]לא נמצאה כתובית עברית[/COLOR]', hold=4.0)
-            return
-        # Remember it as the current sub so the picker marks it '» נוכחית'.
-        try:
-            kodi_utils.set_current_subtitle(chosen_link or '')
         except Exception:
             pass
-        # DarkSubs-style final status in the top overlay (full subtitle name,
-        # + cache note when it came straight from the Cached_subs folder),
-        # instead of a success toast.
-        _status_msg = '[COLOR lightblue]כתובית מוכנה'
-        if chosen_name:
-            _status_msg += '\n' + chosen_name
-        if chosen_from_cache:
-            _status_msg += '\n(נטענה מהקאש)'
-        _status_msg += '[/COLOR]'
-        _final_overlay(_status_msg)
-    except Exception as e:
-        try:
-            kodi_utils.log('autosub_on_play failed: {0}'.format(e),
-                           level='WARNING')
-        except Exception:
-            pass
-    finally:
-        _AUTOSUB_STATE['busy'] = False
-        try:
-            translate.set_quiet(False)
-        except Exception:
-            pass
-        # Close the overlay (show_results exits on 'END').
-        if _eng_general is not None:
-            try:
-                _eng_general.show_msg = 'END'
-            except Exception:
-                pass
 
-
-if xbmc is not None:
-    class _AutoSubPlayer(xbmc.Player):
-        def onAVStarted(self):
-            try:
-                threading.Thread(target=_autosub_on_play, daemon=True).start()
-            except Exception:
-                pass
+    try:
+        threading.Thread(target=_loop, daemon=True).start()
+    except Exception:
+        pass
 
 
 def _start_pool_queue_drainer(monitor):
@@ -867,56 +2582,258 @@ def _start_pool_queue_drainer(monitor):
         pass
 
 
-def _maybe_start_autosub_player():
-    """Register a Player listener so we can auto-search + auto-apply Hebrew on
-    play, but ONLY when the engine is on and autosub is enabled. The service's
-    existing prune loop keeps the process alive, so the Player callbacks fire;
-    we just hold a reference. When off, does nothing (behavior unchanged)."""
-    if xbmc is None:
-        return
+def _start_he_warm_drainer(monitor):
+    """Drain the Hebrew-availability warm queue from this long-lived service.
+
+    POV's source window (a SEPARATE, short-lived interpreter) can't run the warm
+    itself -- OpenSubtitles/Ktuvit need MoranSubs's own addon context + API keys.
+    It used to kick a fresh interpreter via RunScript, but booting one (~3s) was
+    slower than POV's ~2s scrape, so the "HEB NN%" badge only showed on the 2nd/
+    3rd entry. Instead, prewarm() now drops a tiny JSON job on disk; we pick it up
+    here within a fraction of a second and run the (parallelized) warm in the
+    already-imported service process, so the cache is ready by the time the source
+    dialog opens -> % on the FIRST entry. Best-effort; never blocks."""
     try:
-        from resources.lib import kodi_utils
-        if not kodi_utils.get_bool('use_builtin_engine', False):
-            return
-        if not kodi_utils.get_bool('engine_autosub', True):
-            return
+        import json
+        from resources.lib import he_sub_match as _hsm
     except Exception:
         return
-    try:
-        _AUTOSUB_STATE['player'] = _AutoSubPlayer()  # keep a ref alive
-        # If a video is already playing when the service starts, kick once.
+
+    def _loop():
         try:
-            if xbmc.Player().isPlayingVideo():
-                threading.Thread(target=_autosub_on_play, daemon=True).start()
+            if monitor.waitForAbort(0.5):   # tiny settle, then poll fast
+                return
+            # Pre-import the engine ONCE now, on this thread, so the FIRST real
+            # warm doesn't pay the ~2-3s cold-import (that made the first title of
+            # a session lose the race even though later ones were quick). Harmless
+            # if it fails -- run_warm re-imports lazily and guards everything.
+            try:
+                import time as _t
+                _pt0 = _t.time()
+                from resources.lib import subs_engine_bridge as _b
+                _b.ensure_engine_settings()
+                from resources.lib.subs_engine.sources import opensubtitles as _o  # noqa: F401
+                from resources.lib.subs_engine.sources import ktuvit as _k  # noqa: F401
+                _hsm._dbg('drainer engine pre-imported in {0:.1f}s'.format(_t.time() - _pt0))
+            except Exception as e:
+                _hsm._dbg('drainer engine pre-import failed: ' + repr(e))
+            while not monitor.abortRequested():
+                try:
+                    d = _hsm._warm_queue_dir()
+                    if d and os.path.isdir(d):
+                        for fn in sorted(os.listdir(d)):
+                            if monitor.abortRequested():
+                                return
+                            if not fn.endswith('.json'):
+                                continue
+                            path = os.path.join(d, fn)
+                            info = None
+                            age = -1.0
+                            try:
+                                import time as _t
+                                age = _t.time() - os.path.getmtime(path)
+                            except OSError:
+                                pass
+                            try:
+                                with open(path, 'r', encoding='utf-8') as f:
+                                    info = json.load(f)
+                            except Exception:
+                                info = None
+                            # Claim the job (delete first) so a slow/failed warm
+                            # can't make us reprocess it in a tight loop.
+                            try:
+                                os.remove(path)
+                            except OSError:
+                                pass
+                            if info:
+                                _hsm._dbg('drainer picked up {0} (queued {1:.1f}s ago)'.format(
+                                    (info.get('mk') or fn), age))
+                                try:
+                                    _hsm.run_warm(info)
+                                except Exception:
+                                    pass
+                except Exception:
+                    pass
+                # Sub-second poll so prewarm -> warm start is nearly immediate.
+                if monitor.waitForAbort(0.2):
+                    break
         except Exception:
             pass
+
+    try:
+        threading.Thread(target=_loop, daemon=True).start()
+    except Exception:
+        pass
+
+
+def _start_subsync_drainer(monitor):
+    """Drain the SubSync deep-verify queue (see subsync._enqueue_deep) in this
+    long-lived service. Jobs are rare (once per new subtitle+release pair) and
+    each can take 10-30s (oracle download / container probe / Gemini audio),
+    which is exactly why they must not run inline in resolve(). Best-effort."""
+    def _loop():
+        try:
+            if monitor.waitForAbort(1.0):
+                return
+            from resources.lib import subsync as _ss
+            while not monitor.abortRequested():
+                try:
+                    _ss.drain_queue_once()
+                except Exception:
+                    pass
+                if monitor.waitForAbort(1.0):
+                    break
+        except Exception:
+            pass
+
+    try:
+        threading.Thread(target=_loop, daemon=True).start()
+    except Exception:
+        pass
+
+
+def _start_subsync_delay_watch(monitor):
+    """The HUMAN sync anchor (SubSync S3): while a MoranSubs-delivered
+    subtitle plays, sample the user's manual subtitle delay (JSON-RPC); when
+    playback ends, a settled non-zero delay becomes a community FIXABLE
+    report, and a long zero-delay watch becomes a CONFIRMED vote -- both via
+    pool.report_sync (share-gated, fire-and-forget). One report per
+    (subtitle, release) pair per Kodi session. This is what resolves files no
+    algorithm can anchor (dubbed re-encodes with no subs anywhere)."""
+    def _delay_now():
+        try:
+            raw = xbmc.executeJSONRPC(json.dumps({
+                'jsonrpc': '2.0', 'id': 1,
+                'method': 'Player.GetProperties',
+                'params': {'playerid': 1,
+                           'properties': ['subtitledelay']}}))
+            return float((json.loads(raw).get('result') or {})
+                         .get('subtitledelay') or 0.0)
+        except Exception:
+            return 0.0
+
+    def _loop():
+        try:
+            if monitor.waitForAbort(2.0):
+                return
+            from resources.lib import subsync as _ss
+            from resources.lib import pool as _pool
+            from resources.lib import kodi_utils
+            import xbmcgui
+            active, watched, last_delay = None, 0, 0.0
+            reported = set()
+            while not monitor.abortRequested():
+                try:
+                    playing = False
+                    try:
+                        playing = xbmc.Player().isPlayingVideo()
+                    except Exception:
+                        playing = False
+                    if playing:
+                        raw = xbmcgui.Window(10000).getProperty(
+                            _ss._DELIVERED_PROP) or ''
+                        rec = None
+                        if raw:
+                            try:
+                                rec = json.loads(raw)
+                            except Exception:
+                                rec = None
+                        if rec and (active is None
+                                    or rec.get('key') != active.get('key')
+                                    or float(rec.get('ts') or 0)
+                                    != float(active.get('ts') or 0)):
+                            active, watched, last_delay = rec, 0, 0.0
+                        if active is not None:
+                            watched += 10
+                            last_delay = _delay_now()
+                    elif active is not None:
+                        akey = active.get('key') or ''
+                        if akey and akey not in reported:
+                            rep = _ss.finalize_delay_session(
+                                active, last_delay, watched)
+                            if rep:
+                                _pool.report_sync(
+                                    rep.get('info') or {}, rep['sub_hash'],
+                                    rep['release'], rep['scale'],
+                                    rep['offset_ms'], rep['status'],
+                                    origin='human')
+                                reported.add(akey)
+                                kodi_utils.log(
+                                    'subsync delay-watch: human report '
+                                    '({0}, {1:+.0f}ms, watched {2}s)'.format(
+                                        rep['status'], rep['offset_ms'],
+                                        watched), level='INFO')
+                        try:
+                            xbmcgui.Window(10000).clearProperty(
+                                _ss._DELIVERED_PROP)
+                        except Exception:
+                            pass
+                        active, watched, last_delay = None, 0, 0.0
+                except Exception:
+                    pass
+                if monitor.waitForAbort(10.0):
+                    break
+        except Exception:
+            pass
+
+    try:
+        threading.Thread(target=_loop, daemon=True).start()
+    except Exception:
+        pass
+
+
+def _maybe_start_autosub_player():
+    """Register the play-start listener (autosub_service holds the Player
+    reference in its module STATE, which outlives this call).
+
+    It always snapshots the file's embedded subtitle streams -- the picker's
+    "[מובנה] XX" and "תרגום מובנה → עברית (AI)" rows are built from that
+    snapshot -- and auto-searches Hebrew only when engine_autosub is on."""
+    try:
+        from resources.lib import autosub_service
+        autosub_service.start_if_enabled()
     except Exception:
         pass
 
 
 def _maybe_prewarm_engine():
-    """If the built-in sources engine is enabled, import it (and ensure its
-    settings) in a background thread so the first subtitle search is warm.
-    Fully guarded; a failure here never affects anything."""
     try:
-        from resources.lib import kodi_utils
-        if not kodi_utils.get_bool('use_builtin_engine', False):
-            return
-    except Exception:
-        return
-
-    def _work():
-        try:
-            from resources.lib import subs_engine_bridge
-            subs_engine_bridge.ensure_engine_settings()
-            from resources.lib.subs_engine import engine  # noqa: F401
-        except Exception:
-            pass
-
-    try:
-        threading.Thread(target=_work, daemon=True).start()
+        from resources.lib import autosub_service
+        autosub_service.prewarm_engine()
     except Exception:
         pass
+
+
+def _maybe_patch_pov_prewarm():
+    """Fire the Hebrew-availability warm at the START of POV's source scrape (in
+    source_select, before get_sources) instead of when the dialog builds -- so
+    the OS/Wizdom/Ktuvit warm runs concurrently with the scrape and the % is
+    ready on the FIRST entry. Idempotent, compile-checked."""
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_prewarm_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        status = pov_prewarm_patcher.ensure_patched()
+        if status == 'patched':
+            kodi_utils.log('pov_prewarm_patcher: prewarm hooked into source scrape',
+                           level='INFO')
+            try:
+                from resources.lib import pov_reload
+                pov_reload.note_patched()
+            except Exception:
+                pass
+        elif status in ('unmatched', 'compile_failed', 'write_failed',
+                        'read_failed'):
+            kodi_utils.log('pov_prewarm_patcher: ' + status, level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log('pov_prewarm_patcher failed: {0}'.format(e),
+                           level='WARNING')
+        except Exception:
+            pass
 
 
 def _maybe_patch_pov_subtitle_match():
@@ -926,6 +2843,8 @@ def _maybe_patch_pov_subtitle_match():
     size_label -- a property rendered first in the info line of every layout, so
     it shows on every skin with no skin-XML changes. The patcher compile-checks
     before writing, so it can never break the source window / playback."""
+    if _skip_pov_patchers():
+        return
     try:
         from resources.lib import pov_subtitle_match_patcher, kodi_utils
     except Exception:
@@ -953,6 +2872,43 @@ def _maybe_patch_pov_subtitle_match():
             pass
 
 
+def _maybe_patch_pov_source_quality():
+    """Fix a source whose NAME reads 1080p/2160p/720p being shown with an SD
+    badge, and keep the list ordered by quality then size. POV classifies quality
+    from a scraper `name_info` field (or the URL), not from the visible name, and
+    then SORTS by that value -- so a well-named release lands on SD and is also
+    mis-sorted among the SD rows. The patcher re-derives quality from the visible
+    name via POV's own get_release_quality (upgrade-only, to real resolutions)
+    and re-orders the results by quality high->low then size high->low.
+    Compile-checked and revertible."""
+    if _skip_pov_patchers():
+        return
+    try:
+        from resources.lib import pov_source_quality_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        status = pov_source_quality_patcher.ensure_patched()
+        if status in ('patched', 'unmatched', 'compile_failed',
+                      'write_failed', 'read_failed'):
+            kodi_utils.log('pov_source_quality_patcher: ' + status,
+                           level=('INFO' if status == 'patched' else 'WARNING'))
+        # Cycle POV so its reuse-language-invoker interpreter re-imports the
+        # patched window this session.
+        if status == 'patched':
+            try:
+                from resources.lib import pov_reload
+                pov_reload.note_patched()
+            except Exception:
+                pass
+    except Exception as e:
+        try:
+            kodi_utils.log('pov_source_quality_patcher failed: {0}'.format(e),
+                           level='WARNING')
+        except Exception:
+            pass
+
+
 def _maybe_patch_pov_source_name():
     """Self-healing patch of POV's sources.py so that when POV picks
     a source from the source-select dialog (the one with cached/
@@ -967,6 +2923,8 @@ def _maybe_patch_pov_source_name():
     can't even visually compare it to subtitle release names to pick
     one manually. With this, the dialog title shows the real release
     name and the percentages reflect actual sync quality."""
+    if _skip_pov_patchers():
+        return
     try:
         from resources.lib import pov_source_name_patcher, kodi_utils
     except Exception:
@@ -1094,6 +3052,32 @@ def _maybe_patch_nox_osd_collision():
             pass
 
 
+def _maybe_patch_nox_next_episode():
+    """Repoint NOX's fullscreen-OSD "next episode" button from POV's dropped
+    play_media&next=1 call to POV's working next-episode list. No-op when NOX
+    isn't installed or the button was already repointed / changed upstream."""
+    try:
+        from resources.lib import nox_next_episode_patcher, kodi_utils
+    except Exception:
+        return
+    try:
+        status = nox_next_episode_patcher.ensure_patched()
+        if status == 'patched':
+            kodi_utils.log(
+                'nox_next_episode_patcher: OSD next-episode button repointed',
+                level='INFO')
+            _maybe_reload_nox_skin()
+        elif status in ('write_failed', 'read_failed', 'unmatched'):
+            kodi_utils.log('nox_next_episode_patcher: ' + status,
+                           level='WARNING')
+    except Exception as e:
+        try:
+            kodi_utils.log('nox_next_episode_patcher failed: {0}'.format(e),
+                           level='WARNING')
+        except Exception:
+            pass
+
+
 def _maybe_reload_nox_skin():
     """Skin XML is read at skin load, so a freshly-applied NOX OSD patch only
     shows after a reload. Reload once when NOX is the active skin. Otherwise the
@@ -1142,7 +3126,7 @@ def _maybe_patch_choose_subs_buttons():
                     key, status), level='WARNING')
         if active_patched:
             try:
-                xbmc.executebuiltin('ReloadSkin()')
+                _reload_skin_if_safe()
             except Exception:
                 pass
     except Exception as e:
@@ -1203,7 +3187,7 @@ def _maybe_patch_change_source_pause():
                     key, status), level='WARNING')
         if active_patched:
             try:
-                xbmc.executebuiltin('ReloadSkin()')
+                _reload_skin_if_safe()
             except Exception:
                 pass
     except Exception as e:
@@ -1212,6 +3196,37 @@ def _maybe_patch_change_source_pause():
                            level='WARNING')
         except Exception:
             pass
+
+
+def _reload_skin_if_safe():
+    """ReloadSkin() -- but NEVER while the home window is showing. All our
+    reloads here refresh player-OSD XML (VideoOSD.xml on Estuary/FENtastic/NOX)
+    after a fresh patch. ReloadSkin() rebuilds every window, and on Estuary/
+    FENtastic the home menu is a fixedlist (defaultcontrol 9000, focusposition=0)
+    that then snaps focus to the FIRST tile -- the "home jumps to tile 1 after an
+    update" bug. Kodi loads VideoOSD.xml fresh on the next OSD open regardless, so
+    skipping the reload while on home costs nothing and removes the focus jump.
+    (If we're not on home when a patch lands, reload normally.)"""
+    try:
+        import xbmc
+        if xbmc.getCondVisibility('Window.IsVisible(home)'):
+            return
+        # Not while POV is being cycled: ReloadSkin() rebuilds every window,
+        # and any POV-backed one raises "Unknown addon id" until the cycle
+        # finishes. Skipping outright is fine here -- unlike the widget
+        # patcher's reload, this one only refreshes player-OSD XML, which Kodi
+        # re-reads on the next OSD open anyway.
+        cycling = False
+        try:
+            from resources.lib import pov_reload
+            cycling = pov_reload.is_cycling()
+        except Exception:
+            cycling = False
+        if cycling:
+            return
+        xbmc.executebuiltin("ReloadSkin()")
+    except Exception:
+        pass
 
 
 def _maybe_patch_skin_dialog_subtitles_rows():
@@ -1385,6 +3400,22 @@ def _maybe_default_fast_first_chunk():
             pass
 
 
+def _maybe_migrate_embedded_translation_mode():
+    """One-shot bridge from the two hidden booleans to the explained mode list."""
+    try:
+        from resources.lib import kodi_utils
+        mode = kodi_utils.embedded_translation_mode()
+        kodi_utils.log(
+            'embedded translation mode ready: {0}'.format(mode), level='INFO')
+    except Exception as e:
+        try:
+            kodi_utils.log(
+                'embedded mode migration failed: {0}'.format(e),
+                level='WARNING')
+        except Exception:
+            pass
+
+
 def _maybe_default_pool_on():
     """One-shot: turn the community pool ON (both pull and share) for existing
     users who are still on the old default-off. Gated by a marker so it fires
@@ -1481,6 +3512,96 @@ def _maybe_tune_gemini3_defaults():
             pass
 
 
+def _maybe_bump_gemini_model():
+    """One-shot: move existing users off the superseded default Gemini models to
+    their newer, same-quota successors -- gemini-3.1-flash-lite -> 3.5-flash-lite
+    (the free 500/day default) and 3.5-flash / 3.6-flash -> 3.8-flash (the paid
+    regular-Flash pick; it was 3.7 until Google superseded that too, and this
+    map points at the CURRENT pick rather than at a model the picker no longer
+    offers -- landing a device on a dropped id and relying on the next
+    migration to move it again is a correctness argument that depends on the
+    order two functions happen to be called in). Both are drop-in upgrades (identical free-tier quota,
+    better quality), so we rewrite the STORED model once. Only those two exact
+    old ids are bumped; any other deliberate choice (3.1-flash, 2.5-*) is left
+    alone, and an empty setting is left empty (translate falls back to the new
+    default). Marker-gated -> fires once; a later manual pick sticks."""
+    try:
+        from resources.lib import kodi_utils
+    except Exception:
+        return
+    try:
+        # v2, NOT v1. The v1 marker is already '1' on every device that took
+        # the 3.5 -> 3.6 bump, so reusing it would make this migration a no-op
+        # for exactly the users who need it -- the ones already on 3.6. A new
+        # id per bump is the only thing that makes a once-only migration
+        # repeatable across releases.
+        if kodi_utils.get_setting('_gemini_model_bump_v2', '') == '1':
+            return
+        cur = (kodi_utils.get_setting('model', '') or '').strip()
+        new = {'gemini-3.1-flash-lite': 'gemini-3.5-flash-lite',
+               'gemini-3.5-flash': 'gemini-3.8-flash',
+               'gemini-3.6-flash': 'gemini-3.8-flash'}.get(cur)
+        if new:
+            kodi_utils.set_setting('model', new)
+            kodi_utils.log('Gemini model bumped {0} -> {1} (migration v2)'.format(
+                cur, new), level='INFO')
+        kodi_utils.set_setting('_gemini_model_bump_v2', '1')
+    except Exception as e:
+        try:
+            kodi_utils.log('gemini model bump migration failed: {0}'.format(e),
+                           level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_bump_gemini_model_38():
+    """One-shot: move existing users off gemini-3.7-flash to gemini-3.8-flash.
+
+    Google shipped 3.8 Flash as the current regular-Flash model and reclassified
+    3.7 as "previous-generation"; the two sit on identical rate limits in every
+    table on Google's own page (same TPM, same TPD, same free RPD), so this is a
+    drop-in upgrade exactly like the 3.5/3.6 -> 3.7 bump before it. 3.7 keeps
+    working, so nothing here is urgent -- but the picker no longer offers it,
+    and leaving a stored id the list cannot show is how a settings screen ends
+    up displaying a blank model.
+
+    A NEW marker id, never a reused one: `_gemini_model_bump_v2` is already '1'
+    on every device that took the previous bump, so reusing it would no-op this
+    migration for precisely the users who need it. That mistake is written up in
+    _maybe_bump_gemini_model() above; this is the same rule applied again.
+
+    RETIRED, not "everything newer". The set below is every regular-Flash id
+    the picker no longer offers. 3.6 and 3.5 Flash are in it because they were
+    v2's job and v2 only fires once: a device that already ran v2 has left them,
+    but listing them here means this migration is correct on its own rather than
+    correct only because it happens to run after v2 in the same boot. Ordering
+    is a fact about one file; a complete set is a fact about the migration.
+
+    Every choice the picker still shows -- 3.5-flash-lite, 3.1-flash, either
+    2.5 -- is a deliberate pick and is left alone, and an empty setting stays
+    empty so translate.py's own default applies."""
+    try:
+        from resources.lib import kodi_utils
+    except Exception:
+        return
+    try:
+        if kodi_utils.get_setting('_gemini_model_bump_v3', '') == '1':
+            return
+        retired = ('gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash')
+        cur = (kodi_utils.get_setting('model', '') or '').strip()
+        if cur in retired:
+            kodi_utils.set_setting('model', 'gemini-3.8-flash')
+            kodi_utils.log('Gemini model bumped {0} -> gemini-3.8-flash '
+                           '(migration v3)'.format(cur), level='INFO')
+        kodi_utils.set_setting('_gemini_model_bump_v3', '1')
+    except Exception as e:
+        try:
+            kodi_utils.log('gemini 3.8 model bump migration failed: {0}'
+                           .format(e), level='WARNING')
+        except Exception:
+            pass
+
+
 def _maybe_lower_chunk_lines():
     """One-shot: move existing users to the smaller 50-line translation chunk.
     Live testing showed big chunks (100+) of graphically-explicit dialogue trip
@@ -1513,34 +3634,150 @@ def _maybe_lower_chunk_lines():
             pass
 
 
-def _maybe_enable_fentastic_osd_autoclose():
-    """One-shot: turn on FENtastic's built-in OSD auto-close (4s) so the player's
-    top/bottom OSD bars hide after a few seconds of no interaction instead of
-    staying until Back. FENtastic ships the feature (Timers.xml) but off by
-    default. Applies to ALL FENtastic player styles (the timer keys on the shared
-    `videoosd` window). Only when skin.fentastic is the ACTIVE skin; marker-gated
-    once it's applied, so a later manual change in the skin settings sticks. If
-    FENtastic isn't active yet we DON'T set the marker, so it applies the first
-    time the user is on FENtastic."""
+def _maybe_enable_osd_autoclose():
+    """Turn on the skin's built-in OSD auto-close (4s) so the player bars hide
+    after a few seconds instead of staying until Back.
+
+    THIS USED TO NAME ONE SKIN. It gated on `getSkinDir() != 'skin.fentastic'`
+    and returned otherwise, so it only ever reached FENtastic users -- while
+    skin.povil.nox ships the identical feature (same `OSDAutoClose` /
+    `OSDAutoCloseTime` settings, same Timers.xml `autoclosevideoosd` timer),
+    also off by default. Every Nox user has had the bar stay up since the
+    feature shipped, and that is what the report was.
+
+    So it detects the CAPABILITY instead of matching a name: if the active
+    skin's own XML declares OSDAutoClose, it supports it. AF3 and Estuary do
+    not and are skipped without a list saying so.
+
+    Seeding is recorded IN THE SKIN's settings, not ours. That matters both
+    ways: the mark is per-skin for free, so switching to a skin that has never
+    been seeded seeds it; and if a skin is reinstalled or its settings are
+    reset, our mark disappears with them and the default is re-seeded. A
+    deliberate opt-out AFTER seeding is left alone, because the mark is still
+    there. An add-on-side marker could do neither -- which is how one lost
+    write became permanent.
+
+    The one population the skin-side mark cannot describe is the users the OLD
+    migration already reached: FENtastic users carrying `_fen_osd_autoclose_v1`
+    have been seeded, but on the add-on side, where the new code cannot see it.
+    Treating them as unseeded would re-enable the setting for anyone who turned
+    it back off on purpose, so that marker is read once and converted into the
+    skin-side mark WITHOUT rewriting the values. It is the same promise the old
+    marker made, kept in the new place.
+
+    The mark is a skin BOOL, and that is not a stylistic choice. Kodi keeps
+    skin bools and skin strings in two separate maps (CSkinInfo::m_bools and
+    m_strings, each with its own name->id table), and `Skin.HasSetting` is
+    wired to the bool one. A mark written with Skin.SetString is invisible to
+    it -- the guard would read false forever and this migration would re-force
+    the values on EVERY boot, which is the opposite of leaving an opt-out
+    alone. _maybe_default_nox_poster_rating pairs them correctly; so does this.
+    """
     try:
         from resources.lib import kodi_utils
         import xbmc
+        import xbmcvfs
     except Exception:
         return
     try:
-        if kodi_utils.get_setting('_fen_osd_autoclose_v1', '') == '1':
+        skin = xbmc.getSkinDir() or ''
+        if not skin:
             return
-        if (xbmc.getSkinDir() or '') != 'skin.fentastic':
-            return  # retry on a later boot when FENtastic is the active skin
+        if xbmc.getCondVisibility('Skin.HasSetting(AISubsOsdSeeded)'):
+            return  # already seeded for this skin; respect what it is now
+        if (skin == 'skin.fentastic'
+                and kodi_utils.get_setting('_fen_osd_autoclose_v1', '') == '1'):
+            # Already seeded by the old add-on-side migration. Carry the mark
+            # over and touch nothing: whatever the value is now is the user's.
+            xbmc.executebuiltin('Skin.SetBool(AISubsOsdSeeded)')
+            return
+        # A skin that does NOT have the feature never gets a skin-side mark --
+        # there is nothing to mark -- so without this it is re-scanned on every
+        # single boot, forever. Remember the answer per skin VERSION, so a skin
+        # update that adds the feature is still picked up (one scan per skin
+        # release, not one per boot).
+        stamp = '%s=%s' % (skin, _other_addon_version(skin))
+        no_feature = (kodi_utils.get_setting('_osd_autoclose_nofeature', '')
+                      or '').split(',')
+        if stamp in no_feature:
+            return
+        # Both roots, the same pair pov_reload and the wizard already walk: a
+        # skin shipped INSIDE Kodi lives under special://xbmc, not
+        # special://home, and looking in one place only means such a skin can
+        # never be detected on any boot. Estuary happens not to have the
+        # feature, so today this costs nothing -- but "we never looked" and
+        # "it isn't there" were the same answer, which is how the whole bug
+        # started.
+        roots = [xbmcvfs.translatePath(r + skin + '/')
+                 for r in ('special://home/addons/', 'special://xbmc/addons/')]
+        supports = False
+        scanned = 0
+        for base, dirs, files in _walk_all(roots):
+            # A skin's art outweighs its XML by orders of magnitude and holds
+            # none of it. Pruning these keeps the walk to the markup, which
+            # matters because a skin WITHOUT the feature never gets a mark and
+            # is therefore re-scanned on every single start.
+            dirs[:] = [d for d in dirs if d.lower() not in
+                       ('media', 'themes', 'fonts', 'backgrounds', 'extras',
+                        'colors', 'sounds', '.git')]
+            for fn in files:
+                if not fn.endswith('.xml'):
+                    continue
+                try:
+                    with open(os.path.join(base, fn), encoding='utf-8',
+                              errors='replace') as fh:
+                        scanned += 1
+                        if 'OSDAutoClose' in fh.read():
+                            supports = True
+                            break
+                except OSError:
+                    continue
+            if supports:
+                break
+        others = _without(no_feature, skin)
+        if not supports:
+            # Only cache a negative we actually MEASURED. Zero files read means
+            # the walk found nothing to read -- a skin installed somewhere
+            # neither root covers, or one we could not open -- not that the
+            # skin lacks the feature. A cached "no" from an empty walk would
+            # be permanent for that skin version; leaving it uncached only
+            # costs another look on the next start.
+            if scanned:
+                # Capped, and a stale stamp for this same skin is dropped, so
+                # a skin that is updated often does not fill the list with its
+                # own past versions.
+                kodi_utils.set_setting('_osd_autoclose_nofeature',
+                                       ','.join(others[-9:] + [stamp]))
+            return  # this skin has no such feature -- nothing to turn on
+        if others != [s for s in no_feature if s]:
+            # This skin was recorded as featureless and now HAS the feature --
+            # a skin update added it. Drop the obsolete entry instead of
+            # letting it age out: the cache holds ten, and stale entries push
+            # live ones out, which costs the rescans the cache exists to
+            # prevent.
+            kodi_utils.set_setting('_osd_autoclose_nofeature',
+                                   ','.join(others))
         xbmc.executebuiltin('Skin.SetBool(OSDAutoClose)')
         xbmc.executebuiltin('Skin.SetString(OSDAutoCloseTime,4)')
-        kodi_utils.set_setting('_fen_osd_autoclose_v1', '1')
-        kodi_utils.log('FENtastic OSD auto-close enabled (4s, migration v1)',
+        # executebuiltin queues; the read below can otherwise race the write
+        # and report a failure that did not happen. Same 150ms the NOX rating
+        # rollout settled on next door.
+        xbmc.sleep(150)
+        # Only claim it once the skin actually reports the setting: a write
+        # issued while the skin is still loading can be lost, and marking
+        # regardless is what made a single lost write permanent.
+        if not xbmc.getCondVisibility('Skin.HasSetting(OSDAutoClose)'):
+            kodi_utils.log(
+                'OSD auto-close: %s did not take the setting, will retry on '
+                'the next start' % skin, level='WARNING')
+            return
+        xbmc.executebuiltin('Skin.SetBool(AISubsOsdSeeded)')
+        kodi_utils.log('OSD auto-close enabled (4s) for %s' % skin,
                        level='INFO')
     except Exception as e:
         try:
-            kodi_utils.log('FENtastic OSD auto-close migration failed: '
-                           '{0}'.format(e), level='WARNING')
+            kodi_utils.log('OSD auto-close seeding failed: {0}'.format(e),
+                           level='WARNING')
         except Exception:
             pass
 
@@ -1773,39 +4010,89 @@ def _maybe_set_default_subtitle_service():
 
 
 def _ensure_pov_enabled():
-    """Recover plugin.video.pov if it was left disabled -- e.g. our pov_reload
-    cycle (disable+enable to re-import the patched sources.py after enabling
-    remember_source) lost the re-enable race on a slow box, or any other reason.
-    POV is THE content addon: if it's installed but disabled, every home row and
-    every "My Movies/My Shows" tile is empty and nothing plays -- on ALL skins.
-    pov_reload retries within its own cycle, but if that ultimately failed there
-    was previously nothing to bring POV back on a later boot. This is that net:
-    cheap, idempotent, runs early every startup, only acts when POV is installed
-    AND currently disabled."""
+    """Switch POV back on if OUR OWN CYCLE left it off. Not otherwise.
+
+    POV is THE content add-on: installed but disabled means every home row and
+    every "My Movies/My Shows" tile is empty and nothing plays, on all skins.
+    pov_reload retries inside its own cycle, but a cycle that is interrupted --
+    the box is switched off mid-update, the process is killed -- leaves POV off
+    with nothing to bring it back. This is that net.
+
+    IT USED TO HEAL UNCONDITIONALLY, AND THAT WAS A SILENT SETTINGS CHANGE.
+    "POV is off" has two causes and this could not tell them apart, so it
+    treated the user's own choice as damage and undid it. Worse, it undid it
+    invisibly and early: hot_reload's first act is to cycle this service, so a
+    fresh main() -- and this function with it -- runs to completion before the
+    wizard's own POV checks are ever reached. A user who switched POV off found
+    it back on after any update, with nothing on screen and nothing in the log
+    to say why. The wizard's _cycle_addon refuses to do exactly this, in as many
+    words: "re-enabling something somebody turned off by hand is not ours to
+    do". This now honours the same rule.
+
+    So it acts only on evidence. pov_reload writes a record before it disables
+    POV and clears it only once POV can be constructed again; that record, and
+    the wizard's pending_enable list for the add-ons IT cycles, are the only
+    things that make a disabled POV ours to fix.
+    """
     if xbmc is None:
         return
     try:
+        from resources.lib import pov_reload
+        ours = pov_reload.cycle_left_pov_off()
+    except Exception:
+        ours = False
+    if not ours:
+        return
+    try:
         import json as _json
+        # WAIT FOR JSON-RPC. This runs early in startup, and a single
+        # unanswered call used to be indistinguishable from "POV is fine" --
+        # no exception, no log, no retry until the next full restart. The
+        # wizard's own heal polls for readiness for the same reason.
         get = _json.dumps({
             'jsonrpc': '2.0', 'id': 1,
             'method': 'Addons.GetAddonDetails',
             'params': {'addonid': 'plugin.video.pov',
                        'properties': ['enabled']},
         })
-        data = _json.loads(xbmc.executeJSONRPC(get) or '{}')
-        addon = (data.get('result') or {}).get('addon') or {}
+        addon = {}
+        monitor = xbmc.Monitor()
+        for attempt in range(20):
+            data = _json.loads(xbmc.executeJSONRPC(get) or '{}')
+            addon = (data.get('result') or {}).get('addon') or {}
+            if 'enabled' in addon:
+                break
+            if monitor.waitForAbort(0.5):
+                return
         if 'enabled' not in addon:
-            return  # not installed / unknown -> leave alone
+            # Still no answer. The record stays, so the next start tries again.
+            xbmc.log('[' + ADDON_ID + '] POV is recorded as left off by our '
+                     'cycle, but Kodi is not answering yet; keeping the record',
+                     level=xbmc.LOGWARNING)
+            return
         if addon.get('enabled'):
-            return  # already enabled -> nothing to do
+            # Somebody already switched it back on. Nothing to do, and the
+            # record has served its purpose.
+            pov_reload.clear_cycle_record()
+            return
         en = _json.dumps({
             'jsonrpc': '2.0', 'id': 1,
             'method': 'Addons.SetAddonEnabled',
             'params': {'addonid': 'plugin.video.pov', 'enabled': True},
         })
         xbmc.executeJSONRPC(en)
-        xbmc.log('[' + ADDON_ID + '] re-enabled POV (it was disabled)',
-                 level=xbmc.LOGINFO)
+        data = _json.loads(xbmc.executeJSONRPC(get) or '{}')
+        back = ((data.get('result') or {}).get('addon') or {}).get('enabled')
+        if back:
+            pov_reload.clear_cycle_record()
+            xbmc.log('[' + ADDON_ID + '] re-enabled POV after an interrupted '
+                     'cycle of ours', level=xbmc.LOGINFO)
+        else:
+            # KEEP THE RECORD ON A FAILED ENABLE. Clearing it here is how a
+            # temporary problem becomes a permanent one: the evidence goes and
+            # nothing ever tries again.
+            xbmc.log('[' + ADDON_ID + '] POV would not switch back on; the '
+                     'record stays for the next start', level=xbmc.LOGWARNING)
     except Exception:
         pass
 
@@ -1968,6 +4255,32 @@ def main():
     if _check_first_run_marker():
         return
 
+    # Start the Hebrew-availability warm drainer FIRST -- before the seconds of
+    # build startup repairs below. Otherwise the drainer thread isn't spawned yet
+    # when the user plays something right after boot, so the first title's warm
+    # sits queued for several seconds and misses the source window's first-entry
+    # wait. It's a cheap idle poll until a job appears.
+    try:
+        _start_he_warm_drainer(xbmc.Monitor())
+    except Exception:
+        pass
+
+    # SubSync deep-verify worker: resolve() delivers the subtitle IMMEDIATELY
+    # and queues the slow verification (oracle download / file probe / audio)
+    # here, so the autosub overlay / picker never waits on it; on a proven fix
+    # the worker swaps the playing subtitle in place (subsync.run_deep_job).
+    try:
+        _start_subsync_drainer(xbmc.Monitor())
+    except Exception:
+        pass
+
+    # SubSync S3 human anchor: watch the viewer's manual subtitle delay and
+    # turn a settled fix / a long clean watch into a community sync report.
+    try:
+        _start_subsync_delay_watch(xbmc.Monitor())
+    except Exception:
+        pass
+
     # Initial prune.
     _prune_once()
     _prune_source_memory_once()
@@ -1996,6 +4309,21 @@ def main():
     # When the engine is on, make MoranSubs the default subtitle service so it
     # opens/searches first in the dialog.
     _maybe_set_default_subtitle_service()
+
+    # BEFORE ANYTHING THAT CAN RE-ENABLE POV, which is what the line below is.
+    # This teaches POV to survive the seconds after a re-enable in which Kodi
+    # still calls it unknown -- so it has to be applied before those seconds
+    # can start, not merely before the patchers that arm a cycle later on.
+    #
+    # It sat with the POV patchers, sixty lines down, behind a comment of mine
+    # claiming it ran "FIRST OF THE POV PATCHERS, and it has to be". It did run
+    # first among those -- and _ensure_pov_enabled is not one of them: it issues
+    # SetAddonEnabled directly. So on the exact boot this feature exists for --
+    # a cycle interrupted last time, POV left off, and the patch not currently
+    # on disk because POV auto-updated over it -- the window opened sixty lines
+    # before anything taught POV to wait it out. A review caught the claim; the
+    # ordering it described is now real.
+    _maybe_patch_pov_addon_window()
 
     # Same safety net for POV: our pov_reload cycle (for remember_source) could
     # have left POV disabled on a slow box, which empties every home row + tile
@@ -2048,6 +4376,15 @@ def main():
     # show_subtitle_match (default on); compile-checked so it can't break POV.
     _maybe_patch_pov_subtitle_match()
 
+    # Fix source rows whose NAME says 1080p/2160p/720p but POV labelled SD
+    # (POV classifies from name_info/URL, not the visible name). Upgrade-only,
+    # same source-results window, compile-checked so it can't break POV.
+    _maybe_patch_pov_source_quality()
+
+    # Fire the Hebrew-availability warm at the START of the source scrape (in
+    # source_select), so the % is ready on the FIRST entry for OS/Ktuvit titles.
+    _maybe_patch_pov_prewarm()
+
     # Pre-warm the built-in sources engine (only when the user enabled it) so
     # the first subtitle search doesn't pay the heavy import cost inline.
     _maybe_prewarm_engine()
@@ -2089,6 +4426,11 @@ def main():
     # the change-source patcher so the button exists. Skin-gated, XML-checked.
     _maybe_patch_nox_osd_collision()
 
+    # Repoint NOX's OSD "next episode" button: it used POV's old
+    # play_media&next=1 (dropped in POV 6.07, so it errored). Point it at POV's
+    # working next-episode list instead. Skin-gated, idempotent.
+    _maybe_patch_nox_next_episode()
+
     # Turn NOX's rating/score circle ON for posters by default (one-shot, only
     # while NOX is the active skin; a later manual change sticks).
     _maybe_default_nox_poster_rating()
@@ -2118,7 +4460,55 @@ def main():
     _maybe_patch_pov_services()
 
     if build_mode:
-        _run_build_startup_repairs()
+        # CONTAINED HERE, NOT IN THE LOOP. The pass re-raises a BaseException
+        # from a step on purpose, so that _publish_repairs_state is not
+        # reached and the pass never looks finished. That is right. What was
+        # wrong is where it landed: nothing on this path catches it, so a
+        # single misbehaving repair step took main() down with it -- and
+        # everything BELOW this line is what actually puts Hebrew subtitles on
+        # screen. SubsFilenamePublisher, the autoplay listener, the pool
+        # drainer and the maintenance loop are not related to any repair, and
+        # none of them ran for the rest of that session.
+        #
+        # HANDOFF records a patcher raising SystemExit as something that has
+        # actually happened here, so this is not hypothetical. Both properties
+        # are kept: the pass still does not publish, and the service still
+        # starts.
+        try:
+            _run_build_startup_repairs()
+        except BaseException as e:
+            try:
+                from resources.lib import kodi_utils
+                kodi_utils.log(
+                    'the startup repair pass ended early ({0}: {1}); the '
+                    'subtitle service is starting anyway and the repairs are '
+                    'not recorded as done'.format(type(e).__name__, e),
+                    level='WARNING')
+            except Exception:
+                pass
+
+    # Same idea for POV: if we patched its sources.py and the user opted into
+    # remember-source, cycle POV (deferred, idle-only) so it re-imports the
+    # patched code this session. No-op unless a patcher armed it.
+    #
+    # ARMED HERE, AFTER THE BUILD REPAIRS, AND THAT POSITION IS THE POINT.
+    # Arming raises a flag that pov_reload.wait_until_settled() blocks on, and
+    # three of its four callers are steps INSIDE _run_build_startup_repairs --
+    # run inline on this thread, each with a 30s budget that is not shared. So
+    # arming first meant every one of them could spend its budget waiting for a
+    # cycle that had not started, come back False, leave its work undone, and
+    # cost the subtitle service half a minute apiece for the privilege. That was
+    # survivable while the cycle waited only for the home window to appear; it
+    # is not now that it waits for the home screen to SETTLE.
+    #
+    # Arming last also closes a gap that was always there: note_patched() calls
+    # made by anything running after this line were simply never seen, because
+    # nothing asks again.
+    try:
+        from resources.lib import pov_reload
+        pov_reload.reload_if_patched()
+    except Exception:
+        pass
 
     # One-shot RTL punctuation repair of any cached translations
     # that were written before the post-processor caught their
@@ -2128,6 +4518,10 @@ def main():
     # One-shot: flip `fast_first_chunk` default from off -> on for
     # existing users on the old default. Marker-gated.
     _maybe_default_fast_first_chunk()
+
+    # Preserve the legacy embedded toggles, then make the explained mode selector
+    # canonical. Runs for both build and standalone installations.
+    _maybe_migrate_embedded_translation_mode()
 
     # One-shot: turn the community pool ON (pull + share) for existing users
     # still on the old default-off. New installs get it via settings.xml
@@ -2143,12 +4537,22 @@ def main():
     # settings (temperature 1.0 + thinking medium). Marker-gated; respects a
     # deliberate manual choice.
     _maybe_tune_gemini3_defaults()
+    # One-shot: bump the superseded default models to their same-quota
+    # successors (3.1-flash-lite -> 3.5-flash-lite, 3.5/3.6-flash -> 3.8-flash).
+    _maybe_bump_gemini_model()
+    # And again for 3.8, which replaced 3.7 in the picker. Runs after the line
+    # above so a device still on 3.5-flash lands on 3.8 in ONE boot rather than
+    # two; it does not DEPEND on that order, because its retired set covers the
+    # older ids as well.
+    _maybe_bump_gemini_model_38()
     # Lower chunk size to 50 (block-avoidance), one-shot for existing installs.
     _maybe_lower_chunk_lines()
 
-    # One-shot: enable FENtastic's OSD auto-close (4s) so the player bars hide
-    # after a few idle seconds. Only when FENtastic is the active skin.
-    _maybe_enable_fentastic_osd_autoclose()
+    # One-shot per skin: enable the active skin's own OSD auto-close (4s) so the
+    # player bars hide after a few idle seconds. Detected from the skin's XML,
+    # not from a list of skin names -- Nox ships the same feature FENtastic does
+    # and was missed by the old name check.
+    _maybe_enable_osd_autoclose()
 
     # One-shot: enable POV Auto Play + Always-Resume so "Continue Watching" is
     # one click (no source dialog, resumes where you stopped). Marker-gated.
@@ -2201,7 +4605,10 @@ def main():
     # (so they survive the user leaving the video or restarting Kodi) and
     # uploaded from this thread one at a time with a throttle -- never bursting
     # past Telegram's bot rate limit. Best-effort; never blocks.
+    _start_service_mirror_keeper(monitor)
     _start_pool_queue_drainer(monitor)
+    # (the Hebrew warm drainer was already started at the top of main(), before
+    # the build startup repairs, so it's alive for the first play of the session)
 
     # 24h between passes. waitForAbort returns True when Kodi is
     # shutting down, so we just need to loop until that fires.

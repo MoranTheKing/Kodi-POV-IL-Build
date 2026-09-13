@@ -16,12 +16,27 @@ from resources.lib import kodi_utils
 try:
     import urllib.request as _urlreq
     import urllib.parse as _urlparse
+    import urllib.error as _urlerr
 except ImportError:        # pragma: no cover
     _urlreq = None
     _urlparse = None
+    _urlerr = None
+
+# HTTP status codes the Worker returns BEFORE it reads the request body (auth /
+# version / precondition rejects) or on an internal error. In these cases any
+# telemetry piggybacked on the request was NOT recorded, so it must be re-queued
+# rather than dropped -- 426 in particular is what an out-of-date install gets on
+# EVERY request until it updates. Every other HTTP response (2xx, or an app-level
+# 400/422/429/502 from AFTER the body was parsed) means the events WERE recorded.
+_EV_REQUEUE_CODES = (401, 403, 426, 500, 503)
 
 POOL_URL = 'https://povil-subs-pool.moran200333.workers.dev'
 POOL_API_KEY = 'povil_x8FayxrUOAS9Qew1sFWzO6UgAnEAgJAG'
+# Non-secret client format tag. Old Ktuvit rows were stored after the vendored
+# engine physically reversed punctuation; new rows store logical source bytes.
+# The picker carries this returned source_lang into its local display repair so
+# it never has to refetch/re-upload the old pool.
+KTUVIT_LOGICAL_SOURCE_TAG = 'he-logical-v1'
 
 import hmac as _hmac
 import hashlib as _hashlib
@@ -121,11 +136,23 @@ def _release_from(info):
         rel = (info.get(key) or '').strip()
         if rel and not _is_token_like(rel):
             return rel
-    fp = info.get('filepath') or ''
-    base = os.path.basename(fp)
-    if '.' in base:
-        base = base.rsplit('.', 1)[0]
-    return '' if _is_token_like(base) else base
+    # li_filename (ListItem.FileNameAndPath) and filepath are PATHS whose
+    # basename is often the real release even when the player's filepath is a
+    # tokenized debrid URL. _release_ready() treats li_filename as a valid
+    # release (so autosub proceeds and embedded detection runs on it), so
+    # _release_from MUST consult it too -- otherwise report_embedded and the
+    # local merge_embedded get an empty release and silently no-op, and the
+    # source screen never gets the BUILT-IN flag locally OR from the pool.
+    for pathkey in ('li_filename', 'filepath'):
+        fp = (info.get(pathkey) or '').strip()
+        if not fp:
+            continue
+        base = os.path.basename(fp)
+        if '.' in base:
+            base = base.rsplit('.', 1)[0]
+        if base and not _is_token_like(base):
+            return base
+    return ''
 
 
 def _params(info):
@@ -152,6 +179,60 @@ def _get(path, params):
         return r.read()
 
 
+# --- Client-side /lookup response cache -------------------------------------
+# A single browse/play flow calls /lookup several times for the SAME media (the
+# picker, sync_map, and the contribute pre-check). Caching the full response for
+# a short window collapses those into ONE Worker request -- the main lever for
+# staying under the free plan's 100k-requests/day cap. Negative results are
+# cached too (briefly) so repeated misses don't re-hit the Worker. In-memory
+# (per session), fail-open.
+_LOOKUP_CACHE = {}
+_LOOKUP_TTL = 90.0
+_LOOKUP_CACHE_MAX = 40
+
+
+def _lookup_cache_key(p):
+    return '|'.join((p.get('tmdb') or p.get('imdb') or '', p.get('type') or '',
+                     str(p.get('season') or '0'), str(p.get('episode') or '0'),
+                     (p.get('lang') or 'he')))
+
+
+def _lookup_raw(p):
+    """Fetch (and briefly cache) the full /lookup response dict for these media
+    params. Returns {} on error/miss. Shared by lookup(), sync_map() and the
+    contribute pre-check so they cost ONE request per media per ~TTL."""
+    import time as _t
+    ck = _lookup_cache_key(p)
+    now = _t.time()
+    ent = _LOOKUP_CACHE.get(ck)
+    if ent and (now - ent[0]) < _LOOKUP_TTL:
+        return ent[1]
+    cacheable = True
+    try:
+        data = json.loads(_get('/lookup', p).decode('utf-8'))
+        if not isinstance(data, dict) or not data.get('ok'):
+            data = {}
+    except Exception as e:
+        kodi_utils.log('pool lookup failed: {0}'.format(e), level='DEBUG')
+        data = {}
+        cacheable = False   # transient/network/parse error -- a reachable "no
+        #                     results" answer is cached (below) as a genuine
+        #                     negative, but a transport failure must NOT poison
+        #                     this now-shared cache: autosub reuses the same
+        #                     _LOOKUP_CACHE, so a warm-side blip could otherwise
+        #                     hide a pool subtitle from autosub for up to the TTL.
+    if cacheable:
+        try:
+            _LOOKUP_CACHE[ck] = (now, data)
+            if len(_LOOKUP_CACHE) > _LOOKUP_CACHE_MAX:
+                for k, _v in sorted(_LOOKUP_CACHE.items(),
+                                    key=lambda kv: kv[1][0])[:len(_LOOKUP_CACHE) - _LOOKUP_CACHE_MAX]:
+                    _LOOKUP_CACHE.pop(k, None)
+        except Exception:
+            pass          # cache mgmt must never raise (concurrent-mutation safe)
+    return data
+
+
 def lookup(info):
     """Return a list of available Hebrew variants for this media, or []."""
     if _urlreq is None:
@@ -159,12 +240,169 @@ def lookup(info):
     p = _params(info)
     if not _has_id(p):
         return []
-    try:
-        data = json.loads(_get('/lookup', p).decode('utf-8'))
-        return (data.get('variants') or []) if data.get('ok') else []
-    except Exception as e:
-        kodi_utils.log('pool lookup failed: {0}'.format(e), level='DEBUG')
+    data = _lookup_raw(p)
+    if not data:
         return []
+    _sync_cache_put(p, data.get('sync') or {})
+    return data.get('variants') or []
+
+
+def lookup_cached(info):
+    """Variants for this media ONLY if the in-memory /lookup cache is already warm
+    for it -- NEVER networks. Returns the variants list on a fresh cache hit
+    (possibly []), or None when not cached / the cached response was a failure, so
+    a caller can gate on the variant list WITHOUT triggering a /lookup request of
+    its own (keeps the reuse pre-check from ever ADDING a Worker request)."""
+    import time as _t
+    try:
+        if _urlreq is None:
+            return None
+        p = _params(info)
+        if not _has_id(p):
+            return None
+        ent = _LOOKUP_CACHE.get(_lookup_cache_key(p))
+        if ent and (_t.time() - ent[0]) < _LOOKUP_TTL and ent[1]:
+            return ent[1].get('variants') or []
+    except Exception:
+        return None
+    return None
+
+
+# --- SubSync S3: community sync registry (client side) ----------------------
+# The Worker serves per-media sync verdicts inside the /lookup response
+# (`sync`: {"<sub_hash>|<normalized release>": {s, o, st, n, h, ts}}). lookup()
+# stashes them here so subsync can consume the registry with ZERO extra
+# requests in the common flow; sync_map() falls back to one /lookup when the
+# picker's lookup didn't run (e.g. engine-only picks), throttled by TTL.
+
+_SYNC_CACHE = {}
+_SYNC_TTL = 600.0
+_SYNC_CACHE_MAX = 30
+
+
+def _sync_cache_key(p):
+    return '|'.join((p.get('tmdb') or p.get('imdb') or '', p.get('type') or '',
+                     str(p.get('season') or '0'), str(p.get('episode') or '0')))
+
+
+def _sync_cache_put(p, sync):
+    try:
+        import time as _t
+        _SYNC_CACHE[_sync_cache_key(p)] = (_t.time(), sync or {})
+        if len(_SYNC_CACHE) > _SYNC_CACHE_MAX:
+            oldest = sorted(_SYNC_CACHE.items(), key=lambda kv: kv[1][0])
+            for k, _v in oldest[:len(_SYNC_CACHE) - _SYNC_CACHE_MAX]:
+                _SYNC_CACHE.pop(k, None)
+    except Exception:
+        pass
+
+
+def worker_norm_release(s):
+    """EXACT mirror of the Worker's normRelease() -- the registry key must be
+    computed identically on both sides or lookups silently miss."""
+    import re as _re
+    s = str(s or '').lower()
+    s = _re.sub(r'\.(mkv|mp4|avi|srt)$', '', s)
+    s = _re.sub(r'[\s_+/\-]+', '.', s)
+    s = _re.sub(r'\.+', '.', s).strip('.')
+    return s
+
+
+def sync_map(info):
+    """The community sync map for this media ({} when unavailable). Prefers
+    the copy stashed by the picker's lookup(); otherwise ONE /lookup per TTL.
+    Read side -- gated by pool_use like every other pool read."""
+    try:
+        if _urlreq is None or not use_enabled():
+            return {}
+        p = _params(info)
+        if not _has_id(p):
+            return {}
+        import time as _t
+        ent = _SYNC_CACHE.get(_sync_cache_key(p))
+        if ent and (_t.time() - ent[0]) < _SYNC_TTL:
+            return ent[1]
+        data = _lookup_raw(p)          # request-cached; ONE /lookup per media/TTL
+        sm = (data.get('sync') or {}) if data else {}
+        _sync_cache_put(p, sm)
+        return sm
+    except Exception as e:
+        kodi_utils.log('pool sync_map failed: {0}'.format(e), level='DEBUG')
+        return {}
+
+
+# Client-side de-dupe for AUTO sync reports: don't re-send the same
+# (media, subtitle, release) verdict for a while -- the Worker already has it
+# (and now skips the write on agreement). Human delay-fixes are NEVER throttled.
+_SYNCREP_SENT = {}
+_SYNCREP_TTL = 6 * 3600.0
+_SYNCREP_SENT_MAX = 200
+
+
+def _syncrep_key(p, sub_hash, rel):
+    return '|'.join((p.get('tmdb') or p.get('imdb') or '', p.get('type') or '',
+                     str(p.get('season') or '0'), str(p.get('episode') or '0'),
+                     (sub_hash or '').lower(), (rel or '').lower()))
+
+
+def report_sync(info, sub_hash, release, scale, offset_ms, status,
+                origin='auto'):
+    """Fire-and-forget POST /syncrep: share a sync verdict (auto-computed
+    retime/confirm, or a HUMAN manual-delay fix) so every other viewer of this
+    (subtitle, release) pair gets it instantly. Gated by pool_share; the
+    Worker enforces plausibility and merges votes server-side. Never raises,
+    never blocks the caller."""
+    try:
+        if _urlreq is None or not share_enabled():
+            return
+        p = _params(info)
+        if not _has_id(p) or not (sub_hash or '').strip():
+            return
+        rel = (release or '').strip()
+        if not rel or _is_token_like(rel):
+            return
+        # De-dupe AUTO reports (human fixes always go through): if we already
+        # shared this exact verdict recently, skip -- the Worker has it.
+        if origin != 'human':
+            import time as _t
+            sk = _syncrep_key(p, sub_hash, rel)
+            ent = _SYNCREP_SENT.get(sk)
+            if ent and (_t.time() - ent) < _SYNCREP_TTL:
+                return
+            _SYNCREP_SENT[sk] = _t.time()
+            if len(_SYNCREP_SENT) > _SYNCREP_SENT_MAX:
+                for _k, _v in sorted(_SYNCREP_SENT.items(),
+                                     key=lambda kv: kv[1])[:len(_SYNCREP_SENT) - _SYNCREP_SENT_MAX]:
+                    _SYNCREP_SENT.pop(_k, None)
+        body = {
+            'tmdb_id': p['tmdb'], 'imdb_id': p['imdb'], 'type': p['type'],
+            'season': p['season'], 'episode': p['episode'],
+            'sub_hash': (sub_hash or '').strip().lower(),
+            'release': rel,
+            'scale': float(scale or 1.0),
+            'offset_ms': int(round(float(offset_ms or 0.0))),
+            'status': 'CONFIRMED' if status == 'CONFIRMED' else 'FIXABLE',
+            'origin': 'human' if origin == 'human' else 'auto',
+        }
+
+        def _send():
+            try:
+                data = json.dumps(body).encode('utf-8')
+                req = _urlreq.Request(POOL_URL + '/syncrep', data=data,
+                                      headers=_post_headers('/syncrep'))
+                _urlreq.urlopen(req, timeout=_POST_TIMEOUT).read()
+                kodi_utils.log(
+                    'pool syncrep sent ({0}, {1}, {2:+d}ms, {3})'.format(
+                        body['status'], body['origin'], body['offset_ms'],
+                        rel), level='INFO')
+            except Exception as e:
+                kodi_utils.log('pool syncrep failed: {0}'.format(e),
+                               level='DEBUG')
+
+        import threading as _th
+        _th.Thread(target=_send, daemon=True).start()
+    except Exception:
+        pass
 
 
 def fetch(info, source_hash=None):
@@ -203,26 +441,138 @@ def _pool_has_hash(body, source_hash):
     if not source_hash:
         return False
     try:
-        data = json.loads(
-            _get('/lookup', _lookup_params_from_body(body)).decode('utf-8'))
-        variants = (data.get('variants') or []) if data.get('ok') else []
+        data = _lookup_raw(_lookup_params_from_body(body))   # request-cached
+        variants = data.get('variants') or []
         return any(v.get('hash') == source_hash for v in variants)
     except Exception:
         return False
 
 
+def _pool_has_ktuvit_release(body):
+    """True when this exact Ktuvit release name is already represented.
+
+    The RTL repair deliberately changes only local delivery bytes, but future
+    pristine source text can still hash differently from an old physically
+    reordered row. Release-level de-dup uses the SAME request-cached /lookup as
+    the hash/capacity checks, so it adds no Worker request and prevents a second
+    /contribute for subtitles the pool already owns.
+    """
+    try:
+        if body.get('kind') != 'ktuvit':
+            return False
+        wanted = worker_norm_release(body.get('release') or '')
+        if not wanted:
+            return False
+        data = _lookup_raw(_lookup_params_from_body(body))
+        for v in data.get('variants') or []:
+            if ((v.get('kind') or 'ai') == 'ktuvit'
+                    and worker_norm_release(v.get('release') or '') == wanted):
+                return True
+    except Exception:
+        return False
+    return False
+
+
+# Mirror the Worker's contribute-side gates so the client never spends a
+# /contribute request the server will only reject -- the dominant source of
+# wasted Worker invocations. Thresholds MUST match worker.js srtQualityOk /
+# MAX_VARIANTS exactly: a stricter client would withhold a sub the server would
+# have accepted; a looser one just fails to save the request it was meant to.
+_MIN_SRT_ENTRIES = 15
+_MIN_HE_RATIO = 0.5
+_MAX_VARIANTS = 25
+
+
+def _srt_quality_ok(srt):
+    """True if `srt` would pass the Worker's srtQualityOk(): >= 15 cues, >= 200
+    Latin/Hebrew/Arabic letters, and a majority-Hebrew letter ratio. Fail-OPEN
+    on any error (returns True) so a genuine translation is never withheld by a
+    bug here -- the server stays the real gate."""
+    try:
+        t = srt or ''
+        if t.count('-->') < _MIN_SRT_ENTRIES:
+            return False
+        heb = 0
+        letters = 0
+        for ch in t:
+            o = ord(ch)
+            if 0x590 <= o <= 0x5FF:                       # Hebrew block [֐-׿]
+                heb += 1
+                letters += 1
+            elif ('a' <= ch <= 'z') or ('A' <= ch <= 'Z') or (0x600 <= o <= 0x6FF):
+                letters += 1                              # Latin, or Arabic [؀-ۿ]
+        if letters < 200:
+            return False
+        return (heb / float(letters)) >= _MIN_HE_RATIO
+    except Exception:
+        return True
+
+
+def _pool_at_capacity(body):
+    """True if this episode already holds the Worker's MAX_VARIANTS cap, so a new
+    contribution would only be 429'd (toomany). Uses the request-cached /lookup
+    (no extra network). Best-effort: any error returns False so we just upload."""
+    try:
+        data = _lookup_raw(_lookup_params_from_body(body))
+        return len(data.get('variants') or []) >= _MAX_VARIANTS
+    except Exception:
+        return False
+
+
 def _post(body, marker_path=None):
+    # Client-side QUALITY gate: mirror the Worker's srtQualityOk() so we never
+    # spend a /contribute request on a translation the server will only 422 (a
+    # partial/failed translation that stayed mostly English). This is the single
+    # biggest source of wasted Worker invocations. Returns before the dedup/
+    # telemetry/upload, exactly like the dedup short-circuit below, so a skipped
+    # upload never eats the piggybacked events (they wait for the next contribute
+    # or telemetry's own /ev flush).
+    if not _srt_quality_ok(body.get('srt')):
+        return
     # Pre-check: if this exact source is already in the pool, skip the upload
     # entirely and just mark locally so we stop retrying. The server dedups by
     # source hash too, so this is purely to avoid sending an SRT that would be
     # discarded (and to suppress retries when another device already shared it).
     try:
-        if _pool_has_hash(body, (body.get('source_hash') or '').strip()):
+        # ai_emb (embedded-sourced) contributions must ALWAYS reach the Worker,
+        # even when this exact source is already in the pool: the Worker PROMOTES
+        # a dedup-matched 'ai' entry to 'ai_emb' (so it surfaces as "תרגום מובנה"),
+        # and that can only happen if it actually receives the ai_emb signal.
+        # Taking the normal dedup short-circuit here would swallow the promote and
+        # the embedded label would never appear. The per-file '.emb.shared' marker
+        # still makes this one-shot, and the Worker dedups by hash -- so no
+        # duplicate row is created, only the kind is upgraded.
+        if (body.get('kind') != 'ai_emb'
+                and (_pool_has_hash(
+                        body, (body.get('source_hash') or '').strip())
+                     or _pool_has_ktuvit_release(body))):
             if marker_path:
                 mark_contributed(marker_path)
             return
+        # CAPACITY gate: the episode already holds the Worker's MAX_VARIANTS cap,
+        # so a new variant would only be 429'd (toomany). Skip the wasted upload
+        # (non-ai_emb, mirroring the dedup skip). No marker: a freed slot or a
+        # less-covered re-watch can still contribute later.
+        if body.get('kind') != 'ai_emb' and _pool_at_capacity(body):
+            return
     except Exception:
         pass
+    # Piggyback pending usage telemetry onto this /contribute we're already
+    # sending, so a shared translation costs ONE Worker request instead of two
+    # (the main lever for staying under the free plan's 100k-requests/day cap).
+    # Drained ONLY here -- past the dedup short-circuit above -- so a skipped
+    # upload never eats the events; they wait for the next contribute or
+    # telemetry's own batched /ev flush. The signature covers method+path+anon,
+    # not the body, so adding this field can't break auth.
+    evs = []
+    try:
+        from resources.lib import telemetry
+        evs = telemetry.drain_batch(telemetry.PIGGYBACK_MAX)
+    except Exception:
+        evs = []
+    if evs:
+        body = dict(body)
+        body['ev'] = evs
     try:
         req = _urlreq.Request(
             POOL_URL + '/contribute',
@@ -231,8 +581,29 @@ def _post(body, marker_path=None):
             method='POST')
         _urlreq.urlopen(req, timeout=_POST_TIMEOUT).read()
     except Exception as e:
+        # Decide the fate of the piggybacked events. The Worker records them ONLY
+        # after it has read the body (i.e. after auth + JSON parse). So an HTTP
+        # response whose code is NOT an auth/version/precondition/server-error
+        # reject means the body WAS read and the events ARE recorded -- even a
+        # quality-422 / dedup / telegram-502: delivered, do NOT requeue (that
+        # would duplicate them). An auth/version reject (401/403/426/503), a 500,
+        # or a transport failure (no HTTPError at all) means they were NOT
+        # recorded: requeue so an out-of-date or briefly-unreachable install
+        # never silently loses them. Either way leave no marker, so the
+        # contribute itself still retries on the next watch.
+        code = getattr(e, 'code', None)
+        delivered = (_urlerr is not None
+                     and isinstance(e, _urlerr.HTTPError)
+                     and code not in _EV_REQUEUE_CODES)
+        if evs and not delivered:
+            try:
+                from resources.lib import telemetry
+                telemetry.restore(evs)
+            except Exception:
+                pass
         try:
-            kodi_utils.log('pool contribute failed: {0}'.format(e), level='DEBUG')
+            kodi_utils.log('pool contribute failed (http {0}): {1}'.format(code, e),
+                           level='DEBUG')
         except Exception:
             pass
         return
@@ -507,9 +878,19 @@ def share_cache(progress_cb=None, should_cancel=None):
     except Exception:
         _tmdb = None
     if _CACHE_NAME_RE is None:
+        # The TIER SUFFIX. cache.translated_path() writes '<key>.ar.he.srt'
+        # whenever a gender reference aligned, and that is the normal case --
+        # the setting defaults on and is force-enabled by migration. Without
+        # the optional '.<tier>' group this pattern matched almost nothing, so
+        # "share my cached translations" counted every file as `skipped` and
+        # uploaded NOTHING. The group is captured because the tier decides the
+        # `kind` below: an Arabic-boosted file has to go up as 'ai_ar', not as
+        # plain 'ai'. Taking that from the filename rather than from the
+        # setting's value today is deliberate -- the setting says nothing about
+        # whether a reference actually aligned for THIS title back then.
         _CACHE_NAME_RE = re.compile(
             r'^(?P<imdb>.+?)_S(?P<s>\d+)E(?P<e>\d+)_(?P<lang>[a-z]+)_'
-            r'[0-9a-f]+\.he\.srt$')
+            r'[0-9a-f]+(?:\.(?P<tier>[a-z0-9]+))?\.he\.srt$')
 
     base = os.path.join(kodi_utils.cache_dir(), 'translated')
     try:
@@ -583,7 +964,16 @@ def share_cache(progress_cb=None, should_cancel=None):
                 rel_override = (_rf.read().strip() or None)
         except OSError:
             rel_override = None
-        body = _build_body(info, '', lang, text, release_override=rel_override)
+        # Kind from the TIER we just parsed, never from a default. Uploading a
+        # gender-boosted translation as plain 'ai' understates it (a client
+        # with the feature on would re-translate to upgrade, wasting quota);
+        # the reverse would be worse, serving a non-boosted file to everyone as
+        # the boosted variant. Only 'ar' is a known tier today; anything else
+        # stays plain rather than being guessed at.
+        _tier = (m.group('tier') or '')
+        body = _build_body(info, '', lang, text,
+                           kind=('ai_ar' if _tier == 'ar' else 'ai'),
+                           release_override=rel_override)
         if body is None:
             skipped += 1
             continue
@@ -623,7 +1013,8 @@ def contribute_once(info, source_hash, source_lang, srt_text, marker_path=None,
                release_override=release_override)
 
 
-def contribute_ktuvit(info, srt_text, release='', marker_path=None):
+def contribute_ktuvit(info, srt_text, release='', marker_path=None,
+                      logical_source=False):
     """Mirror a human Ktuvit Hebrew subtitle into the pool (kind='ktuvit').
 
     This is the Ktuvit backup channel: every Ktuvit sub a user downloads is
@@ -631,6 +1022,11 @@ def contribute_ktuvit(info, srt_text, release='', marker_path=None):
     offline and loads instantly from the channel afterwards. The content hash
     of the Hebrew SRT is the source hash, so the same release is never stored
     twice (server dedups by hash AND by result).
+
+    ``logical_source`` tags only newly downloaded pristine provider bytes.
+    Existing unmarked v2 cache entries keep the old ``he`` tag, so pool readers
+    still apply the compatibility inverse; no old file is rewritten/re-uploaded
+    merely to migrate its format.
 
     Unlike the AI share (a fire-and-forget thread), this ENQUEUES the upload to
     a small on-disk queue and lets the long-lived service drain it (see
@@ -650,7 +1046,9 @@ def contribute_ktuvit(info, srt_text, release='', marker_path=None):
             srt_text.encode('utf-8', 'replace')).hexdigest()[:16]
     except Exception:
         sh = ''
-    body = _build_body(info, sh, 'he', srt_text, kind='ktuvit',
+    source_tag = KTUVIT_LOGICAL_SOURCE_TAG if logical_source else 'he'
+    body = _build_body(info, sh, source_tag, srt_text,
+                       kind='ktuvit',
                        release_override=(release or None))
     if body is None:
         return
@@ -773,10 +1171,28 @@ def _post_sync(body):
       'drop'  -> permanent client error (bad/invalid/unauthorized): remove it.
       'retry' -> transient failure (network / 429 / 5xx): keep for next pass.
     Never raises."""
+    # QUALITY gate (mirrors the Worker's srtQualityOk): a sub the server would
+    # 422 is a permanent client error -> drop it, don't waste a request or keep
+    # retrying. Fail-open (helper True on error) so a good sub is never dropped.
+    if not _srt_quality_ok(body.get('srt')):
+        return 'drop'
     # Cheap pre-check: already in the pool -> done, no upload (= no TG message).
+    # MIRRORS the bypass in _post(): ai_emb (embedded) contributions must reach
+    # the Worker so it can PROMOTE a dedup-matched entry to 'ai_emb', so they skip
+    # this short-circuit. Today only ktuvit reaches the durable queue -> this
+    # branch is defensive, but kept consistent with _post so a future author who
+    # routes ai_emb through the queue doesn't silently re-break the promote.
     try:
-        if _pool_has_hash(body, (body.get('source_hash') or '').strip()):
-            return 'ok'
+        if body.get('kind') != 'ai_emb':
+            if (_pool_has_hash(
+                    body, (body.get('source_hash') or '').strip())
+                    or _pool_has_ktuvit_release(body)):
+                return 'ok'
+            # CAPACITY: episode already at MAX_VARIANTS -> a new variant is 429'd
+            # (toomany). Drop the queued job -- a well-covered episode doesn't
+            # need another variant, and retrying only wastes requests.
+            if _pool_at_capacity(body):
+                return 'drop'
     except Exception:
         pass
     try:

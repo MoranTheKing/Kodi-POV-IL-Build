@@ -49,6 +49,12 @@ HE = {
     '32499': 'קולקציה',
     '32857': 'חדש',
     '32486': 'היסטוריה',
+    # Season lists. POV builds "<32537> <number>", so this one string is
+    # every season row in every show. TMDb serves proper Hebrew season names
+    # too, but only when POV's own "Use Season Titles" setting is on, and
+    # that setting is the user's -- translating the label gives the same
+    # "עונה 1" without reaching into a third-party preference.
+    '32537': 'עונה',
     '32698': 'הסרה מההיסטוריה',
     '32699': 'ניקוי כל ההיסטוריה',
 }
@@ -84,7 +90,7 @@ def ensure_patched():
     try:
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
-    except OSError as e:
+    except Exception as e:
         _log('read failed: {0}'.format(e), level='WARNING')
         return 'read_failed'
 

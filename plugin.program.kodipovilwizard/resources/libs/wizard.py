@@ -250,7 +250,7 @@ class Wizard:
                                    '[COLOR {0}]Theme Install: None Found![/COLOR]'.format(CONFIG.COLOR2))
         else:
             installtheme = self.dialog.yesno(CONFIG.ADDONTITLE, '[COLOR {0}]Would you like to install the theme:'.format(CONFIG.COLOR2) +' \n' + '[COLOR {0}]{1}[/COLOR]'.format(CONFIG.COLOR1, theme) + '\n' + 'for [COLOR {0}]{1} v{2}[/COLOR]?[/COLOR]'.format(CONFIG.COLOR1, name, check.check_build(name,'version')),yeslabel="[B][COLOR springgreen]Install Theme[/COLOR][/B]", nolabel="[B][COLOR red]Cancel Themes[/COLOR][/B]")
-                                        
+
         if installtheme:
             themezip = check.check_theme(name, theme, 'url')
             zipname = name.replace('\\', '').replace('/', '').replace(':', '').replace('*', '').replace('?', '').replace('"', '').replace('<', '').replace('>', '').replace('|', '')
@@ -264,7 +264,7 @@ class Wizard:
             self.dialogProgress.create(CONFIG.ADDONTITLE, '[COLOR {0}][B]Downloading:[/B][/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR2, CONFIG.COLOR1, zipname) +' \n' + 'Please Wait')
 
             lib = os.path.join(CONFIG.PACKAGES, '{0}.zip'.format(zipname))
-            
+
             try:
                 os.remove(lib)
             except:
@@ -272,20 +272,20 @@ class Wizard:
 
             Downloader().download(themezip, lib)
             xbmc.sleep(500)
-            
+
             if os.path.getsize(lib) == 0:
                 try:
                     os.remove(lib)
                 except:
                     pass
-                    
+
                 return
-            
+
             self.dialogProgress.update(0, '\n' + "Installing {0}".format(name))
 
             test1 = False
             test2 = False
-            
+
             from resources.libs import skin
             from resources.libs import test
             test1 = test.test_theme(lib) if CONFIG.SKIN not in skin.DEFAULT_SKINS else False
@@ -436,19 +436,352 @@ NOX_PACKS = [
 ]
 
 
+# KODI-POV-IL - UMBRELLA PILOT (opt-in, on-demand). Umbrella + CocoScrapers
+# plus BOTH of their official repository addons, so once installed they keep
+# updating straight from their developers -- the same trust model POV has via
+# repository.kodifitzwell. Nothing here runs unless the user explicitly picks
+# the wizard menu entry; no tile, no search wiring, no change for anyone else.
+# Reuses NOX_PACK_BASE_URL: it is the same dist/ release folder, just a
+# different zip in it -- there is only one pack host for this build.
+UMBRELLA_PACK_VERSION = '6.7.85'
+UMBRELLA_PACKS = [
+    {
+        'name': 'Umbrella + CocoScrapers',
+        'url': '{0}/Kodi-POV-IL-Umbrella-pack.zip'.format(NOX_PACK_BASE_URL),
+        'filename': 'umbrella_pack.zip',
+        'sentinel': 'special://home/addons/plugin.video.umbrella/addon.xml',
+        'expected_version': UMBRELLA_PACK_VERSION,
+        'addon_ids': [
+            'plugin.video.umbrella',
+            'script.module.cocoscrapers',
+            'repository.umbrella',
+            'repository.cocoscrapers',
+        ],
+    },
+]
+
+
+# KODI-POV-IL - ACCOUNT MANAGER LITE PILOT (opt-in, on-demand). One place to
+# authorise Real-Debrid / Premiumize / AllDebrid / TorBox / OffCloud /
+# EasyDebrid / Easynews / Trakt / MDBList, which it then pushes into every
+# supported add-on it finds installed -- POV and Umbrella both among them, and
+# re-pushed at every Kodi startup, so an add-on installed LATER picks the
+# accounts up on the next boot. Ships with script.module.acctvwr (a hard
+# dependency of acctmgr, in no repo the build already carries) and with the
+# developer's own repository, so from here on he is its update channel, not us.
+ACCTMGR_PACK_VERSION = '1.1.6'
+ACCTMGR_PACKS = [
+    {
+        'name': 'Account Manager Lite',
+        'url': '{0}/Kodi-POV-IL-AcctMgr-pack.zip'.format(NOX_PACK_BASE_URL),
+        'filename': 'acctmgr_pack.zip',
+        'sentinel': 'special://home/addons/script.module.acctmgr/addon.xml',
+        'expected_version': ACCTMGR_PACK_VERSION,
+        'addon_ids': [
+            'script.module.acctmgr',
+            'script.module.acctvwr',
+            'repository.709',
+        ],
+    },
+]
+
+
+def ensure_acctmgr_installed():
+    """Download + extract the Account Manager pack on demand (same
+    battle-tested path as the NOX/Umbrella packs, including the Addons-DB
+    registration that makes Kodi actually see the new addons)."""
+    return _ensure_packs_installed(
+        ACCTMGR_PACKS,
+        '[COLOR {0}][B]מוריד את Account Manager[/B][/COLOR]'.format(
+            CONFIG.COLOR2),
+        '[COLOR {0}][B]Account Manager מוכן לשימוש[/B][/COLOR]'.format(
+            CONFIG.COLOR1))
+
+
+ACCTMGR_AUTO_SETTING = 'acctmgr_auto'
+# What the marker records: "this device has had Account Manager put on it by
+# us, once". Deliberately NOT the pack version. Keying it on the version looks
+# tidier and is wrong: the next time ACCTMGR_PACK_VERSION is bumped, every
+# device whose marker holds the old version stops matching and gets a forced
+# reinstall -- INCLUDING somebody who removed Account Manager on purpose in
+# the meantime, which is the one thing this promises not to do. Keeping it
+# current is not this function's job anyway: Account Manager updates itself
+# from its developer's own repository, and the wizard menu still has a manual
+# reinstall for anyone who wants one.
+ACCTMGR_AUTO_DONE = 'installed'
+
+
+def ensure_acctmgr_for_everyone():
+    """Put Account Manager on every device -- existing installs included --
+    exactly once.
+
+    Why it stopped being opt-in: the build's "חיבור שירותים" screen now routes
+    its debrid and Trakt rows through Account Manager, so one authorisation
+    reaches every add-on instead of POV alone. On a device without it those
+    same rows quietly fall back to authorising POV only. The screen looks
+    identical either way, which is precisely why the difference must not be
+    left to chance.
+
+    ONCE per device, recorded in a wizard setting. A user who then uninstalls
+    Account Manager on purpose is not fought with at every boot -- that is
+    their call, and the screen still works without it.
+
+    Silent when there is nothing to do: the pack's own sentinel + version gate
+    inside _ensure_packs_installed means an already-current install costs a
+    file check, not an 8 MB download. Never raises; the caller runs at
+    startup and a failure here must not stop the rest of it."""
+    try:
+        if CONFIG.get_setting(ACCTMGR_AUTO_SETTING) == ACCTMGR_AUTO_DONE:
+            return False
+        if not CONFIG.get_setting('buildname'):
+            return False            # build not installed yet -- too early
+        ok = ensure_acctmgr_installed()
+        if not ok:
+            # No marker: a device that was offline (or where the pack host was
+            # down) tries again on the next boot instead of never again.
+            logging.log(
+                '[Account Manager] auto-install did not complete; will retry '
+                'on the next startup', level=xbmc.LOGINFO)
+            return False
+        CONFIG.set_setting(ACCTMGR_AUTO_SETTING, ACCTMGR_AUTO_DONE)
+        xbmc.sleep(500)
+        try:
+            xbmc.executebuiltin('UpdateLocalAddons')
+        except Exception:
+            pass
+        logging.log('[Account Manager] auto-installed {0}'.format(
+            ACCTMGR_PACK_VERSION), level=xbmc.LOGINFO)
+        return True
+    except Exception as e:
+        logging.log('[Account Manager] auto-install failed: {0}'.format(e),
+                    level=xbmc.LOGERROR)
+        return False
+
+
+def install_acctmgr_pilot():
+    """Manual (re)install behind the wizard menu entry. Account Manager now
+    arrives by itself on every device (ensure_acctmgr_for_everyone), so this
+    is the repair path for somebody who removed it or whose auto-install never
+    completed. It changes nothing by itself: installing it does not touch a
+    single existing setting, because it only writes an account into an add-on
+    once the user has actually authorised that account inside it."""
+    dialog = xbmcgui.Dialog()
+    yes_pressed = dialog.yesno(
+        CONFIG.ADDONTITLE,
+        '[B]להתקין מחדש את [COLOR gold]Account Manager[/COLOR]?[/B]\n'
+        'מחברים את חשבונות הדבריד פעם אחת במקום אחד, והוא מעביר אותם '
+        'לכל התוספים המותקנים - גם POV וגם Umbrella. עד שתחברו חשבון, '
+        'שום הגדרה קיימת לא משתנה.',
+        nolabel='[B][COLOR red]ביטול[/COLOR][/B]',
+        yeslabel='[B][COLOR springgreen]התקן[/COLOR][/B]')
+    if not yes_pressed:
+        return
+    if ensure_acctmgr_installed():
+        xbmc.sleep(500)
+        try:
+            xbmc.executebuiltin('UpdateLocalAddons')
+        except Exception:
+            pass
+        logging.log_notify(
+            CONFIG.ADDONTITLE,
+            '[COLOR {0}]הותקן! זמין תחת תוספים -> תוכניות -> '
+            'Account Manager[/COLOR]'.format(CONFIG.COLOR1))
+
+
+def ensure_umbrella_installed():
+    """Download + extract the Umbrella pilot pack on demand (same
+    battle-tested path as the NOX/AcctMgr packs, including the Addons-DB
+    registration that makes Kodi actually see the new addons)."""
+    return _ensure_packs_installed(
+        UMBRELLA_PACKS,
+        '[COLOR {0}][B]מוריד את Umbrella ותלויות[/B][/COLOR]'.format(
+            CONFIG.COLOR2),
+        '[COLOR {0}][B]Umbrella מוכן לשימוש[/B][/COLOR]'.format(
+            CONFIG.COLOR1))
+
+
+# KODI-POV-IL - UMBRELLA FOR EVERYONE. Same marker-once pattern as Account
+# Manager above; see ensure_acctmgr_for_everyone for the reasoning behind each
+# guard, which is identical here.
+UMBRELLA_AUTO_SETTING = 'umbrella_auto'
+UMBRELLA_AUTO_DONE = 'installed'
+
+
+def _umbrella_was_removed():
+    """True when Umbrella's settings are on disk but the add-on is not.
+
+    Kodi's uninstall removes addons/<id>/ and leaves
+    userdata/addon_data/<id>/ alone, so this is "it was here and somebody
+    took it away" as distinct from "it was never here". Deliberately narrow:
+    an EMPTY addon_data directory does not count, because Kodi creates one
+    the first time almost anything asks for a setting.
+    """
+    try:
+        import xbmcvfs
+        if _addon_on_disk('plugin.video.umbrella'):
+            return False
+        data = xbmcvfs.translatePath(
+            'special://profile/addon_data/plugin.video.umbrella')
+        if not xbmcvfs.exists(data):
+            return False
+        dirs, files = xbmcvfs.listdir(data)
+        return bool(dirs or files)
+    except Exception:
+        return False
+
+
+def ensure_umbrella_for_everyone():
+    """Put Umbrella and CocoScrapers on every device, existing installs
+    included, exactly once.
+
+    Why it stopped being a pilot: half the build already assumes it. The home
+    screen has Umbrella tiles, the search wiring has an Umbrella branch, the
+    account manager pushes debrid accounts into it, and a dozen patchers in
+    the AI add-on exist only to make it behave in Hebrew. On a device without
+    it, every one of those quietly does nothing -- and the screen looks the
+    same either way, which is exactly why the difference must not be left to
+    whether somebody found a menu entry.
+
+    ONCE per device, recorded in a wizard setting. Somebody who then removes
+    Umbrella on purpose is not fought with at every boot.
+
+    THE PACK CARRIES ITS OWN REPOSITORIES (repository.umbrella and
+    repository.cocoscrapers), so from the moment this runs the developers are
+    the update channel, not us -- which is the point. We are not taking on
+    shipping Umbrella releases; we are making sure the first one is there.
+
+    Silent when there is nothing to do: the sentinel + version gate inside
+    _ensure_packs_installed turns an already-current install into a file
+    check rather than an 11 MB download. Never raises."""
+    try:
+        if CONFIG.get_setting(UMBRELLA_AUTO_SETTING) == UMBRELLA_AUTO_DONE:
+            return False
+        if not CONFIG.get_setting('buildname'):
+            return False            # build not installed yet -- too early
+        # SOMEBODY WHO ALREADY SAID NO. Umbrella has been available behind a
+        # menu entry (install_umbrella_pilot) for several releases, and that
+        # entry never wrote this setting -- so a user who installed it there
+        # and then deliberately removed it looks exactly like a user who never
+        # had it, and this function would put it back. That is the one thing
+        # the docstring above promises it will not do.
+        #
+        # What tells them apart is what an uninstall leaves behind: the add-on
+        # directory goes, its addon_data does not. Files gone plus settings
+        # present is somebody who had it and got rid of it, and the answer is
+        # to record that and never ask again -- not to reinstall.
+        if _umbrella_was_removed():
+            logging.log(
+                '[Umbrella] settings from a previous install are here but the '
+                'add-on is not; treating that as a deliberate removal and not '
+                'installing it again', level=xbmc.LOGINFO)
+            CONFIG.set_setting(UMBRELLA_AUTO_SETTING, UMBRELLA_AUTO_DONE)
+            return False
+        ok = ensure_umbrella_installed()
+        if not ok:
+            # No marker: a device that was offline (or where the pack host was
+            # down) tries again on the next boot instead of never again.
+            logging.log(
+                '[Umbrella] auto-install did not complete; will retry on the '
+                'next startup', level=xbmc.LOGINFO)
+            return False
+        CONFIG.set_setting(UMBRELLA_AUTO_SETTING, UMBRELLA_AUTO_DONE)
+        xbmc.sleep(500)
+        try:
+            xbmc.executebuiltin('UpdateLocalAddons')
+        except Exception:
+            pass
+        logging.log('[Umbrella] auto-installed {0}'.format(
+            UMBRELLA_PACK_VERSION), level=xbmc.LOGINFO)
+        return True
+    except Exception as e:
+        logging.log('[Umbrella] auto-install failed: {0}'.format(e),
+                    level=xbmc.LOGERROR)
+        return False
+
+
+def install_umbrella_pilot():
+    """Manual (re)install behind the wizard menu entry.
+
+    Umbrella now arrives by itself on every device
+    (ensure_umbrella_for_everyone), so this is the repair path for somebody
+    who removed it, or whose auto-install never completed because the device
+    was offline at the wrong moment. It still touches nothing else: no home
+    screen change, no default, no existing setting."""
+    dialog = xbmcgui.Dialog()
+    yes_pressed = dialog.yesno(
+        CONFIG.ADDONTITLE,
+        '[B]להתקין את [COLOR gold]Umbrella[/COLOR] (ניסיוני)?[/B]\n'
+        'תוסף תוכן נוסף שפועל לצד POV, עם חיפוש ומקורות משלו, '
+        'ומתעדכן ישירות מהמפתחים שלו. לא משנה שום דבר קיים בבילד.',
+        nolabel='[B][COLOR red]ביטול[/COLOR][/B]',
+        yeslabel='[B][COLOR springgreen]התקן[/COLOR][/B]')
+    if not yes_pressed:
+        return
+    if ensure_umbrella_installed():
+        xbmc.sleep(500)
+        try:
+            xbmc.executebuiltin('UpdateLocalAddons')
+        except Exception:
+            pass
+        # RECORDED HERE TOO, so that from now on the automatic install and
+        # the manual one leave the same mark. Without it, anybody using this
+        # entry stays in the population _umbrella_was_removed has to guess
+        # about.
+        try:
+            CONFIG.set_setting(UMBRELLA_AUTO_SETTING, UMBRELLA_AUTO_DONE)
+        except Exception:
+            pass
+        logging.log_notify(
+            CONFIG.ADDONTITLE,
+            '[COLOR {0}]Umbrella הותקן! זמין תחת תוספים -> הרחבות וידאו'
+            '[/COLOR]'.format(CONFIG.COLOR1))
+
+
+def _addon_on_disk(addon_id):
+    """True when addons/<id>/addon.xml is really there. Never raises."""
+    try:
+        import xbmcvfs
+        return xbmcvfs.exists(xbmcvfs.translatePath(
+            'special://home/addons/{0}/addon.xml'.format(addon_id)))
+    except Exception:
+        return False
+
+
 def _af3_register_pack_in_db(pack):
     """Register + enable a pack's addons in Kodi's Addons DB. Safe to
-    call repeatedly (INSERT OR IGNORE + UPDATE enabled). This is the
-    retroactive-fix entry point: it works off the static addon_ids
-    list, so it does NOT need the pack zip on disk -- which means we
-    can heal users whose files were already extracted by the old
-    code path."""
-    try:
-        db.addon_database(pack['addon_ids'], 1, True)
+    call repeatedly (INSERT OR IGNORE + UPDATE enabled). It needs no pack
+    zip on disk, which is what lets it heal users whose files were already
+    extracted by an older code path.
+
+    IT DOES NEED THE FILES. This used to register the whole static
+    addon_ids list unconditionally, trusting that the "already current"
+    fast path above (_af3_pack_current) only skips the download after
+    checking every file was really there. It didn't -- it checked ONE
+    sentinel file. A device with only the sentinel present and the rest of
+    the pack's addons entirely absent got every one of them written into
+    Kodi's DB as installed and enabled, this function reported success, the
+    caller wrote the "done" marker, and the device was never corrected
+    again. Telling Kodi an add-on exists when it does not is worse than
+    telling it nothing -- Kodi then resolves dependencies against a lie.
+
+    So: register what is actually on disk, and REPORT FAILURE for anything
+    that is not, so the caller does not mark the job done."""
+    wanted = list(pack.get('addon_ids') or ())
+    present = [addon_id for addon_id in wanted if _addon_on_disk(addon_id)]
+    absent = [addon_id for addon_id in wanted if addon_id not in present]
+    if absent:
         logging.log(
             'DEBUG | _ensure_packs_installed | '
-            'DB enabled (static list): {0}'.format(pack['addon_ids']))
-        return True
+            'NOT registering {0} -- not on disk: {1}'.format(
+                pack['name'], absent))
+    if not present:
+        return False
+    try:
+        db.addon_database(present, 1, True)
+        logging.log(
+            'DEBUG | _ensure_packs_installed | '
+            'DB enabled: {0}'.format(present))
+        return not absent
     except Exception as e:
         logging.log(
             'DEBUG | _ensure_packs_installed | '
@@ -498,6 +831,23 @@ def _version_tuple(ver):
 
 def _af3_pack_current(pack):
     if not _af3_pack_installed(pack['sentinel']):
+        return False
+    # THE SENTINEL VOUCHES FOR ITSELF, NOT FOR THE WHOLE PACK. Checking only
+    # the sentinel file and skipping the download for everything else is how
+    # a device ends up with the sentinel present, the rest of the pack's
+    # addons absent, and nothing that will ever repair it: registration
+    # (_af3_register_pack_in_db) correctly refuses to vouch for files that
+    # aren't there, but this fast path would then keep skipping the
+    # re-download on every subsequent boot for the exact same reason.
+    # Correctly-reported failure that never self-corrects is still never
+    # self-correcting -- so every addon_id in the pack has to actually be on
+    # disk before we call it current.
+    missing = [addon_id for addon_id in (pack.get('addon_ids') or ())
+               if not _addon_on_disk(addon_id)]
+    if missing:
+        logging.log(
+            'skin/content pack is incomplete, forcing reinstall: {0} '
+            'missing={1}'.format(pack['name'], missing))
         return False
     expected = pack.get('expected_version')
     if not expected:
@@ -872,7 +1222,7 @@ def switch_skin_in_gui_settings(gotoskin):
                            '[COLOR {0}]שגיאה בהחלפת סקין![/COLOR]'.format(CONFIG.COLOR2))
         logging.log(f"DEBUG | switch_skin_in_gui_settings | Exception: {str(e)}")
         return False
-        
+
 def build_switch_skin():
 
     if not CONFIG.get_setting('buildname'):
@@ -891,7 +1241,7 @@ def build_switch_skin():
         'סקין Arctic Fuse 3 - מודרני (ניסיוני)': 'skin.arctic.fuse.3',
         'סקין NOX - עברית מלאה (ניסיוני)': 'skin.povil.nox'
     }
-        
+
     # Get the name of the current active skin. If the user manually
     # switched to a skin not in our mapping (e.g. via Kodi's own
     # Settings -> Interface -> Skin), `next()` without a default
@@ -909,14 +1259,14 @@ def build_switch_skin():
 
     # Create a dialog window
     dialog = xbmcgui.Dialog()
-    gotoskin_index_number = dialog.select(f"[B]סקין נוכחי: [COLOR gold]{current_skin_name}[/COLOR][/B]", skins_list)    
-    
+    gotoskin_index_number = dialog.select(f"[B]סקין נוכחי: [COLOR gold]{current_skin_name}[/COLOR][/B]", skins_list)
+
     if gotoskin_index_number == -1:  # User cancelled the menu
         return
-        
+
     selected_skin = skins_list[gotoskin_index_number]
     gotoskin = skin_mapping[selected_skin]
-        
+
     yes_pressed = dialog.yesno(CONFIG.ADDONTITLE,
                        '[B][COLOR {0}]האם ברצונך להחליף סקין ל:'.format(CONFIG.COLOR2) + '\n' + '[COLOR {0}]{1}[/COLOR]?[/COLOR][/B]'.format(CONFIG.COLOR1, selected_skin),
                        nolabel='[B][COLOR red]ביטול[/COLOR][/B]',
@@ -952,17 +1302,17 @@ def build_switch_skin():
 
         # guisettings.xml | Configure lookandfeel.skin setting
         if not switch_skin_in_gui_settings(gotoskin): return
-        
+
         xbmc.sleep(500)
-        
-        # favourites.xml | Switch to selected build's skin favourites.xml 
+
+        # favourites.xml | Switch to selected build's skin favourites.xml
         if not update_favourites_xml_file(gotoskin): return
-        
+
         dialogProgress.close()
         Wizard().force_close_kodi_in_5_seconds(dialog_header="סקין הוחלף בהצלחה!")
     else:
         return
-            
+
 ##########################################
 # KODI-RD-IL - WINDOWS + ANDROID
 def check_if_running_custom_kodi(kodi_custom_path):
@@ -971,13 +1321,13 @@ def check_if_running_custom_kodi(kodi_custom_path):
     if kodi_custom_path in kodi_root_path:
         return True
     return False
-    
+
 # KODI-RD-IL - ANDROID
 def check_if_app_installed(app_package_id):
     import xbmcvfs
     apps = xbmcvfs.listdir('androidapp://sources/apps/')[1]
     return app_package_id in apps
-    
+
 def open_google_play_store_on_specific_app(app_package_id):
     app      = 'com.android.vending'
     intent   = 'android.intent.action.VIEW'
@@ -992,23 +1342,23 @@ def kodi_apk_update_check(kodi_version_update_check_manual, os_type_label):
 
         LATEST_APK_VERSION_TEXT_FILE = float(tools.open_url(CONFIG.LATEST_APK_VERSION_TEXT_FILE).text)
         is_new_version_available = LATEST_APK_VERSION_TEXT_FILE > CONFIG.KODIV
-        
+
         if is_new_version_available:
 
             yes_pressed = dialog.yesno(f"{CONFIG.ADDONTITLE} ({os_type_label})",
                                f'[COLOR yellow][B]קיים עדכון גרסה לאפליקציה שלנו![/B][/COLOR]\nגרסת קודי נוכחית: [B][COLOR red]{CONFIG.KODIV}[/COLOR][/B]\nגרסת קודי מעודכנת: [B][COLOR limegreen]{LATEST_APK_VERSION_TEXT_FILE}[/COLOR][/B]\nהאם ברצונך לעדכן את האפליקציה?',
                                nolabel='[B][COLOR red]מאוחר יותר[/COLOR][/B]',
                                yeslabel='[B][COLOR springgreen]עדכן[/COLOR][/B]')
-                               
+
             if yes_pressed:
                 yes_pressed = dialog.yesno(f"{CONFIG.ADDONTITLE} ({os_type_label})",
                                    f'[B]משתמש בסטרימר Android TV? בחר [COLOR orange]Downloader[/COLOR].\n\nמשתמש בסטרימר/מכשיר אנדרואיד רגיל? בחר [COLOR yellow]Google Chrome[/COLOR].[/B]',
                                    nolabel='[B][COLOR orange]Downloader[/COLOR][/B]',
-                                   yeslabel='[B][COLOR yellow]Google Chrome[/COLOR][/B]') 
-                                   
+                                   yeslabel='[B][COLOR yellow]Google Chrome[/COLOR][/B]')
+
                 if yes_pressed:
                     google_chrome_app_packge_id = 'com.android.chrome'
-                            
+
                     if check_if_app_installed(google_chrome_app_packge_id):
                         # Open Google Chrome on APK_DOWNLOAD_URL.
                         app      = google_chrome_app_packge_id
@@ -1017,7 +1367,7 @@ def kodi_apk_update_check(kodi_version_update_check_manual, os_type_label):
                         dataURI  = CONFIG.APK_DOWNLOAD_URL
                         xbmc.executebuiltin(f'StartAndroidActivity("{app}", "{intent}", "{dataType}", "{dataURI}")')
                         return
-                        
+
                     else:
                         yes_pressed = dialog.yesno(f"{CONFIG.ADDONTITLE} ({os_type_label})",
                                            '[B]אפליקציית [COLOR yellow]Google Chrome[/COLOR] אינה מותקנת.[/B]',
@@ -1029,19 +1379,19 @@ def kodi_apk_update_check(kodi_version_update_check_manual, os_type_label):
                             return
                         else:
                             return
-                    
+
                 else:
                     downloader_app_packge_id = 'com.esaba.downloader'
-                    
+
                     msg = f"כעת תיפתח אפליקציית Downloader. יש להזין את המספר:\n[COLOR orange]{CONFIG.APK_DOWNLOADER_CODE}[/COLOR]\nולבחור את גרסת ה-APK (32/64 ביט) המתאימה למכשיר שלכם.\n[COLOR limegreen]עכשיו זה הזמן לרשום/לצלם את המספר![/COLOR]"
                     from resources.libs.gui import window
                     window.show_notification_with_extra_image(msg, 999, CONFIG.APK_DOWNLOADER_CODE_IMAGE_URL)
-                    
+
                     # Check if Downloader app installed.
                     if check_if_app_installed(downloader_app_packge_id):
                         xbmc.executebuiltin(f'StartAndroidActivity({downloader_app_packge_id})')
                         return
-                        
+
                     else:
                         yes_pressed = dialog.yesno(f"{CONFIG.ADDONTITLE} ({os_type_label})",
                                            '[B]אפליקציית [COLOR orange]Downloader[/COLOR] אינה מותקנת.[/B]',
@@ -1053,13 +1403,13 @@ def kodi_apk_update_check(kodi_version_update_check_manual, os_type_label):
                             return
                         else:
                             return
-                
+
             else:
                 return
-                    
+
         elif kodi_version_update_check_manual:
             dialog.ok(f"{CONFIG.ADDONTITLE} ({os_type_label})", f'[COLOR yellow][B]לא קיים עדכון לאפליקציה![/B][/COLOR]\nגרסת קודי נוכחית: [B][COLOR limegreen]{CONFIG.KODIV}[/COLOR][/B]\nגרסת קודי מעודכנת: [B][COLOR limegreen]{LATEST_APK_VERSION_TEXT_FILE}[/COLOR][/B]')
-                         
+
     except Exception as e:
         logging.log(f'[kodi_version_update_check] Exception: {str(e)}')
         if kodi_version_update_check_manual:
@@ -1068,15 +1418,15 @@ def kodi_apk_update_check(kodi_version_update_check_manual, os_type_label):
 
 # KODI-RD-IL - WINDOWS
 def kill_kodi_and_install_exe(exe_full_path):
-    
+
     import xbmcvfs
     if not xbmcvfs.exists(exe_full_path):
         logging.log_notify(CONFIG.ADDONTITLE,
                             '[COLOR {0}]הקובץ לא נמצא![/COLOR]'.format(CONFIG.COLOR2))
-    
+
     def kill_kodi():
         subprocess.call('taskkill /f /im kodi.exe', shell=True)
-    
+
     import threading,subprocess
     kodi_killer = threading.Timer(1.0, kill_kodi)
     kodi_killer.start()
@@ -1086,42 +1436,42 @@ def kill_kodi_and_install_exe(exe_full_path):
 # KODI-RD-IL - WINDOWS
 def kodi_windows_update_check(kodi_version_update_check_manual, os_type_label):
     dialog = xbmcgui.Dialog()
-    
+
     try:
         LATEST_WINDOWS_VERSION_NUMBER = float(tools.open_url(CONFIG.LATEST_WINDOWS_VERSION_TEXT_FILE).text)
         is_new_version_available = LATEST_WINDOWS_VERSION_NUMBER > CONFIG.KODIV
-            
+
         if is_new_version_available:
-            
+
             yes = dialog.yesno(f"{CONFIG.ADDONTITLE} ({os_type_label})",
                                f'[COLOR yellow][B]קיים עדכון גרסה לאפליקציה שלנו![/B][/COLOR]\nגרסת קודי נוכחית: [B][COLOR red]{CONFIG.KODIV}[/COLOR][/B]\nגרסת קודי מעודכנת: [B][COLOR limegreen]{LATEST_WINDOWS_VERSION_NUMBER}[/COLOR][/B]\nהאם ברצונך לעדכן את האפליקציה?',
                                nolabel='[B][COLOR red]מאוחר יותר[/COLOR][/B]',
                                yeslabel='[B][COLOR springgreen]עדכן[/COLOR][/B]')
-                                       
+
             if not yes:
                 return
-            
+
             if yes:
                 ######## BUILD DIRECT EXE WINDOWS INSTALER URL ########
                 DIRECT_WINDOWS_DOWNLOAD_URL = f"{CONFIG.WINDOWS_DOWNLOAD_URL}/Kodi + Real Debrid Israel {LATEST_WINDOWS_VERSION_NUMBER} Setup.exe"
                 #######################################################
-                
+
                 response = tools.open_url(DIRECT_WINDOWS_DOWNLOAD_URL, check=True)
                 if not response:
                     logging.log_notify(f"{CONFIG.ADDONTITLE} ({os_type_label})",
                                         '[COLOR {0}]קישור ההורדה אינו תקין![/COLOR]'.format(CONFIG.COLOR2))
                     return
-                    
+
                 destination_path = CONFIG.PACKAGES
                 exe_file_name = os.path.basename(DIRECT_WINDOWS_DOWNLOAD_URL)
                 exe_full_path = os.path.join(destination_path, exe_file_name)
-                   
-                progress_dialog = xbmcgui.DialogProgress() 
+
+                progress_dialog = xbmcgui.DialogProgress()
                 progress_dialog.create(f"{CONFIG.ADDONTITLE} ({os_type_label})",
                               '[COLOR {0}][B]מוריד:[/B][/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR2, CONFIG.COLOR1, exe_file_name)
                               +'\n'+''
                               +'\n'+'נא המתן')
-                
+
                 try:
                     os.remove(exe_full_path)
                 except:
@@ -1129,13 +1479,13 @@ def kodi_windows_update_check(kodi_version_update_check_manual, os_type_label):
                 Downloader().download(DIRECT_WINDOWS_DOWNLOAD_URL, exe_full_path)
                 xbmc.sleep(100)
                 progress_dialog.close()
-                    
+
                 dialog.ok(f"{CONFIG.ADDONTITLE} ({os_type_label})", f"[B]ההורדה הסתיימה בהצלחה.\nלחץ אישור כדי לסגור את קודי ולהתחיל את ההתקנה.[/B]")
                 kill_kodi_and_install_exe(exe_full_path)
-                        
+
         elif kodi_version_update_check_manual:
             dialog.ok(f"{CONFIG.ADDONTITLE} ({os_type_label})", f'[COLOR yellow][B]לא קיים עדכון לאפליקציה![/B][/COLOR]\nגרסת קודי נוכחית: [B][COLOR limegreen]{CONFIG.KODIV}[/COLOR][/B]\nגרסת קודי מעודכנת: [B][COLOR limegreen]{LATEST_WINDOWS_VERSION_NUMBER}[/COLOR][/B]')
-                         
+
     except Exception as e:
         logging.log(f'[kodi_version_update_check] Exception: {str(e)}')
         if kodi_version_update_check_manual:
@@ -1148,7 +1498,7 @@ def kodi_version_update_check(kodi_version_update_check_manual="false"):
     kodi_version_update_check_manual = True if kodi_version_update_check_manual=="true" else False
     os_type_label = tools.platform().capitalize()
     dialog = xbmcgui.Dialog()
-        
+
     # Android APK
     if tools.platform() == 'android':
         ###### KODI ANDROID APK INSTALLED CHECK ###########
@@ -1157,7 +1507,7 @@ def kodi_version_update_check(kodi_version_update_check_manual="false"):
                 dialog.ok(f"{CONFIG.ADDONTITLE} ({os_type_label})",'[B]אינך עם האפליקצייה הייעודית שלנו![/B]')
             return
         kodi_apk_update_check(kodi_version_update_check_manual, os_type_label)
-    
+
     # Windows Software
     elif tools.platform() == 'windows':
         ###### KODI WINDOWS SOFTWARE INSTALLED CHECK ###########
@@ -1166,7 +1516,7 @@ def kodi_version_update_check(kodi_version_update_check_manual="false"):
                 dialog.ok(f"{CONFIG.ADDONTITLE} ({os_type_label})",'[B]אינך עם תוכנת הקודי הייעודית שלנו![/B]')
             return
         kodi_windows_update_check(kodi_version_update_check_manual, os_type_label)
-        
+
     else:
         dialog.ok(CONFIG.ADDONTITLE, f"[B]הפיצ'ר אינו נתמך עבור: {os_type_label}[/B]")
 ##########################################

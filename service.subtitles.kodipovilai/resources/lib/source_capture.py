@@ -108,13 +108,15 @@ def _norm(x):
 # the start (left) and the "..." truncation of a long title eats the END, never
 # the badge. The trailing dot keeps the gold badge visually separate from the
 # white title.
-_MARK = '[B][COLOR FFD700]«« נצפה לאחרונה »»[/COLOR][/B]  ·  '
+_MARK = '[B][COLOR FFFFD700]«« נצפה לאחרונה »»[/COLOR][/B]  ·  '
 
 # Earlier marker(s) we may still find on a freshly-scraped name (results are
 # rebuilt every scrape, so this is just belt-and-braces for an in-memory list
 # that was already reordered once this session).
 _OLD_MARKS = ('⭐ ', '« נצפה לאחרונה » ',
-              '[B][COLOR FFFFD700]« נצפה לאחרונה »[/COLOR][/B] · ')
+              '[B][COLOR FFFFD700]« נצפה לאחרונה »[/COLOR][/B] · ',
+              # 6-hex colour (invalid -> rendered invisible); strip on re-pick.
+              '[B][COLOR FFD700]«« נצפה לאחרונה »»[/COLOR][/B]  ·  ')
 
 
 def _match_index(results, rec):
@@ -157,21 +159,38 @@ def reorder(sources_self, results):
             _log('reorder: no confident match in current results')
             return False
         item = results.pop(idx)
-        # Mark the displayed name (POV shows item['URLName'] as tikiskins.name).
-        # The stored record reads item['name'], not URLName, so the marker never
-        # pollutes the remembered record on a re-pick.
+        # Mark the displayed name. POV 6 renders item['display_name'] in the
+        # sources window (windows/sources.py: name = get('display_name'));
+        # POV 5 rendered item['URLName']. Writing only URLName on a v6 install
+        # put the badge in a field nothing reads -- captured fine, marked
+        # nothing (the "remember-source stopped working" regression). Badge
+        # whichever field this install actually displays, URLName as the v5
+        # fallback. The stored record reads item['name'], so the marker never
+        # pollutes the remembered record on a re-pick. upper() is applied by
+        # the v6 window AFTER this -- the markup survives it (tag letters and
+        # the colour hex are already uppercase, Hebrew has no case).
         try:
-            nm = item.get('URLName') or ''
+            fld = 'display_name' if item.get('display_name') else 'URLName'
+            nm = item.get(fld) or ''
             # Strip any prior marker (old emoji or this one) so we never stack.
             for _m in (_MARK,) + _OLD_MARKS:
                 if nm.startswith(_m):
                     nm = nm[len(_m):]
             if nm:
-                item['URLName'] = _MARK + nm
+                item[fld] = _MARK + nm
+        except Exception:
+            pass
+        # Pin it: make_items' quality/size re-sort (pov_source_quality_patcher)
+        # runs AFTER this reorder and re-orders the whole list -- rows flagged
+        # '_pin_top' are exempt and stay at the top. Without the flag the
+        # remembered source got its badge but was re-sorted back down the list
+        # (seen in the field at position 80/212).
+        try:
+            item['_pin_top'] = True
         except Exception:
             pass
         results.insert(0, item)
-        _log('reorder: remembered source moved to top + marked')
+        _log('reorder: remembered source moved to top + marked + pinned')
         return True
     except Exception as e:
         _log('reorder error: ' + str(e), 3)

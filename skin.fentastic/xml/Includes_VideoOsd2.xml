@@ -439,7 +439,7 @@
 		<visible>!VideoPlayer.Content(LiveTv)</visible>
 		<onclick>SkipPrevious</onclick>
 	</item>	
-	<item>
+	<item id="500">
 		<label>העבר אחורה</label>
 		<property name="id">rewind</property>
 		<icon>osd/fullscreen/buttons/rewind.png</icon>
@@ -501,7 +501,7 @@
 		<onclick>SubtitleDelay</onclick>
 		<visible>VideoPlayer.HasSubtitles + VideoPlayer.SubtitlesEnabled</visible>
 	</item>
-	<item>
+	<item id="501">
 		<label>העבר קדימה</label>
 		<property name="id">forward</property>
 		<icon>osd/fullscreen/buttons/forward.png</icon>
@@ -675,34 +675,44 @@
 	<animation type="Hidden">
 		<effect type="fade" start="100" end="0" time="250" tween="sine" easing="inout"/>
 	</animation>
-	<visible>String.IsEqual(Container(201).ListItem.Property(id),forward) | !Control.HasFocus(202)</visible>
+	<visible>Container(201).HasFocus(501)</visible>
 	<itemlayout width="145">
 	<control type="group">
-	<width>175</width>
-		<control type="label">
-			<font>font20_title</font>
-			<align>left</align>
-			<label>$INFO[ListItem.Label]</label>
-			<textcolor>95FFFFFF</textcolor>
-		</control>
+	<width>125</width>
+	<height>40</height>
+	<control type="label">
+		<align>center</align>
+		<aligny>center</aligny>
+		<font>font20_title</font>
+		<label>$INFO[ListItem.Label]</label>
+		<textcolor>95FFFFFF</textcolor>
+	</control>
 	</control>
 	</itemlayout>
 	<focusedlayout width="145">
 	<control type="group">
-	<width>175</width>
-		<control type="label">
-			<label>$INFO[ListItem.Label]</label>
-			<font>font20_title</font>
-			<align>left</align>
-			<visible>Control.HasFocus(40021)</visible>
+	<width>125</width>
+	<height>40</height>
+	<control type="image">
+		<texture>masks/menu.png</texture>
+		<visible>Control.HasFocus(40021)</visible>
 		</control>
-		<control type="label">
-			<label>$INFO[ListItem.Label]</label>
-			<align>left</align>
-			<font>font20_title</font>
-			<textcolor>95FFFFFF</textcolor>
-			<visible>!Control.HasFocus(40021)</visible>
-		</control>
+	<control type="label">
+		<label>$INFO[ListItem.Label]</label>
+		<font>font20_title</font>
+		<align>center</align>
+		<aligny>center</aligny>
+		<textcolor>black</textcolor>
+		<visible>Control.HasFocus(40021)</visible>
+	</control>
+	<control type="label">
+		<align>center</align>
+		<aligny>center</aligny>
+		<label>$INFO[ListItem.Label]</label>
+		<font>font20_title</font>
+		<textcolor>95FFFFFF</textcolor>
+		<visible>!Control.HasFocus(40021)</visible>
+	</control>
 	</control>
 	</focusedlayout>
 	<include>seek_forward_osd_item</include>
@@ -726,31 +736,44 @@
 	<animation type="Hidden">
 		<effect type="fade" start="100" end="0" time="250" tween="sine" easing="inout"/>
 	</animation>
-	<visible>String.IsEqual(Container(201).ListItem.Property(id),rewind)</visible>
+	<visible>Container(201).HasFocus(500)</visible>
 	<itemlayout width="145">
 	<control type="group">
 	<width>125</width>
-		<control type="label">
-			<font>font20_title</font>
-			<label>$INFO[ListItem.Label]</label>
-			<textcolor>95FFFFFF</textcolor>
-		</control>
+	<height>40</height>
+	<control type="label">
+		<align>center</align>
+		<aligny>center</aligny>
+		<font>font20_title</font>
+		<label>$INFO[ListItem.Label]</label>
+		<textcolor>95FFFFFF</textcolor>
+	</control>
 	</control>
 	</itemlayout>
 	<focusedlayout width="145">
 	<control type="group">
 	<width>125</width>
-		<control type="label">
-			<label>$INFO[ListItem.Label]</label>
-			<font>font20_title</font>
-			<visible>Control.HasFocus(40022)</visible>
-		</control>
-		<control type="label">
-			<label>$INFO[ListItem.Label]</label>
-			<font>font20_title</font>
-			<textcolor>95FFFFFF</textcolor>
-			<visible>!Control.HasFocus(40022)</visible>
-		</control>
+	<height>40</height>
+	<control type="image">
+	<texture>masks/menu.png</texture>
+	<visible>Control.HasFocus(40022)</visible>
+	</control>
+	<control type="label">
+		<label>$INFO[ListItem.Label]</label>
+		<font>font20_title</font>
+		<align>center</align>
+		<aligny>center</aligny>
+		<textcolor>black</textcolor>
+		<visible>Control.HasFocus(40022)</visible>
+	</control>
+	<control type="label">
+		<align>center</align>
+		<aligny>center</aligny>
+		<label>$INFO[ListItem.Label]</label>
+		<font>font20_title</font>
+		<textcolor>95FFFFFF</textcolor>
+		<visible>!Control.HasFocus(40022)</visible>
+	</control>
 	</control>
 	</focusedlayout>
 	<include>seek_rewind_osd_item</include>
@@ -799,21 +822,6 @@
 	<texturesliderbar colordiffuse="white">colors/white.png</texturesliderbar>
 	<animation effect="fade" start="0" end="100" time="500" delay="500">Visible</animation>
 	<animation effect="fade" start="0" end="100" time="0">Hidden</animation>
-</control>
-
-<control type="group">
-	<visible>$EXP[sliderdialogfalseortrue]</visible>
-	<control type="image">
-		<top>-100</top>
-		<left>-40</left>
-		<width>120%</width>
-		<height>350</height>
-		<top>0</top>
-		<texture>frame/osdfade.png</texture>
-	</control>
-	<visible>$EXP[__NetflixPlayerVisiblity] + !Player.Paused</visible>
-	<include>RightOsdTopBar</include>
-	<include>LeftOsdTopBar</include>
 </control>
 
 <include>__OsdInfo__</include> <!-- current played info -->

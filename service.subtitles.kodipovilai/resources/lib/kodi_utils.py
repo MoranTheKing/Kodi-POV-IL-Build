@@ -4,6 +4,7 @@
 
 import os
 import sys
+import threading
 
 try:
     import xbmc
@@ -22,6 +23,21 @@ except ImportError:
 
 ADDON_ID = 'service.subtitles.kodipovilai'
 _ADDON = None
+
+# notify() fires each GUI toast on a short-lived daemon thread so a wedged GUI
+# can never stall the caller (see notify()). This bounds how many such threads
+# may be parked at once: under a *sustained* GUI wedge (and with
+# reuselanguageinvoker keeping this module warm across invocations) toast
+# threads that block inside Kodi's notification() don't get reaped until the
+# wedge clears, so without a cap they could accumulate over a session. Past the
+# cap we simply drop the toast -- notifications are decorative and nothing
+# depends on one landing.
+_NOTIFY_MAX_PENDING = 8
+_notify_lock = threading.Lock()
+_notify_pending = [0]
+_EMBEDDED_MODE_VALUES = (
+    'auto', 'align_only', 'direct', 'local_only', 'off')
+_embedded_mode_lock = threading.Lock()
 
 
 def addon():
@@ -119,23 +135,36 @@ def hebrew_subtitle_wanted():
     that other settings (DarkSubs auto_translate / force_ai_when_auto_translate_off)
     have already turned off."""
     try:
-        # 1. "Preferred subtitle language" (locale.subtitlelanguage) -- a
-        #    single value. When it names a concrete language it is the
-        #    clearest statement of intent, so it wins outright.
+        # 1. "Languages to download subtitles for" (subtitles.languages).
+        #    Hebrew HERE is the strongest positive signal there is -- it is
+        #    exactly the list Kodi's subtitle search uses -- so it wins even
+        #    when the PLAYBACK preference (locale.subtitlelanguage) names
+        #    another language. Field case: a standalone user on a foreign
+        #    build had locale.subtitlelanguage=English, and the old
+        #    precedence silently disabled the entire addon ("offers no AI
+        #    entries") even though Hebrew was in their download list.
+        dl = _read_kodi_setting_value('subtitles.languages')
+        if isinstance(dl, str):
+            dl = [p for p in dl.replace(';', ',').split(',') if p.strip()]
+        dl_has_hebrew = (isinstance(dl, (list, tuple)) and dl
+                         and any(_is_hebrew_lang(x) for x in dl))
+        if dl_has_hebrew:
+            return True
+
+        # 2. "Preferred subtitle language" (locale.subtitlelanguage) -- a
+        #    single value naming a concrete language.
         pref = (_read_kodi_setting_value('locale.subtitlelanguage') or '')
         pref_norm = str(pref).strip().lower()
         if pref_norm and pref_norm not in _SUBTITLE_LANG_SPECIAL:
             return _is_hebrew_lang(pref_norm)
 
-        # 2. Otherwise defer to "Languages to download subtitles for"
-        #    (subtitles.languages) -- a list (or, on some builds, a CSV).
-        dl = _read_kodi_setting_value('subtitles.languages')
-        if isinstance(dl, str):
-            dl = [p for p in dl.replace(';', ',').split(',') if p.strip()]
+        # 3. Download list readable, non-empty and Hebrew-less (and no
+        #    concrete playback preference) -> the user asked for other
+        #    languages only.
         if isinstance(dl, (list, tuple)) and dl:
-            return any(_is_hebrew_lang(x) for x in dl)
+            return False
 
-        # 3. Nothing conclusive -> keep the AI-Hebrew default.
+        # 4. Nothing conclusive -> keep the AI-Hebrew default.
         return True
     except Exception:
         return True
@@ -157,6 +186,70 @@ def set_setting(key, value):
         return addon().getSetting(key) == str_value
     except Exception:
         return False
+
+
+def embedded_translation_mode():
+    """Return and maintain the canonical embedded-subtitle strategy.
+
+    Version 0.2.441 replaces two hidden booleans with one explained mode list.
+    On the first run, preserve the exact legacy on/off + HTTP boundary:
+    disabled -> ``off``; enabled but HTTP-disabled -> ``local_only``; otherwise
+    ``auto``.  Once migrated, the new selector is canonical and its closest
+    legacy representation is mirrored back for downgrade compatibility.
+    """
+    with _embedded_mode_lock:
+        marker = get_setting('_embedded_mode_v1', '') == '1'
+        raw = (get_setting('embedded_translation_mode', '') or '').strip().lower()
+
+        if not marker:
+            # A non-default mode can only have been explicitly selected in the
+            # new UI before the service migration ran, so honour it.
+            if raw in _EMBEDDED_MODE_VALUES and raw != 'auto':
+                mode = raw
+            elif not get_bool('embedded_translate', True):
+                mode = 'off'
+            elif not get_bool('embedded_http_extract', True):
+                mode = 'local_only'
+            else:
+                mode = 'auto'
+        else:
+            if raw in _EMBEDDED_MODE_VALUES:
+                mode = raw
+            elif not get_bool('embedded_translate', True):
+                mode = 'off'
+            elif not get_bool('embedded_http_extract', True):
+                mode = 'local_only'
+            else:
+                mode = 'auto'
+
+        enabled = mode != 'off'
+        allow_http = mode not in ('off', 'local_only')
+        writes_ok = True
+        if raw != mode:
+            writes_ok = set_setting('embedded_translation_mode', mode) and writes_ok
+        if get_bool('embedded_translate', True) != enabled:
+            writes_ok = set_setting(
+                'embedded_translate', 'true' if enabled else 'false') and writes_ok
+        if get_bool('embedded_http_extract', True) != allow_http:
+            writes_ok = set_setting(
+                'embedded_http_extract',
+                'true' if allow_http else 'false') and writes_ok
+        if not marker and writes_ok:
+            set_setting('_embedded_mode_v1', '1')
+        return mode
+
+
+def embedded_translation_policy(mode=None):
+    """Map one mode to the exact runtime paths it permits."""
+    if mode not in _EMBEDDED_MODE_VALUES:
+        mode = embedded_translation_mode()
+    return {
+        'mode': mode,
+        'enabled': mode != 'off',
+        'try_align': mode in ('auto', 'align_only', 'local_only'),
+        'try_extract': mode in ('auto', 'direct', 'local_only'),
+        'allow_http': mode not in ('off', 'local_only'),
+    }
 
 
 def localised(strid, *args):
@@ -275,7 +368,42 @@ def notify(msg, title=None, icon=None, time_ms=4000):
             stripped = msg.lstrip('‏‪‫‬‭‮')
             stripped = stripped.rstrip('‬')
             msg = '‫' + stripped + '‬'
-        xbmcgui.Dialog().notification(title, msg, icon, time_ms)
+        # Fire the actual GUI toast on a short-lived daemon thread so a wedged
+        # GUI/render subsystem can NEVER stall the calling thread. Field case:
+        # during heavy debrid embedded-subtitle extraction the video decoder
+        # starves and the GUI message pump backs up; a translation-kickoff
+        # toast issued from the translate() worker blocked there and froze the
+        # whole translation before it could dispatch a single chunk (the user
+        # saw "AI is translating" but nothing ever happened). Dialog().
+        # notification() is meant to be async, but under that duress it did not
+        # return -- so we never issue it on a thread that has real work to do.
+        def _show(_title=title, _msg=msg, _icon=icon, _ms=time_ms):
+            try:
+                xbmcgui.Dialog().notification(_title, _msg, _icon, _ms)
+            except Exception:
+                pass
+            finally:
+                with _notify_lock:
+                    _notify_pending[0] -= 1
+        # Cap the number of toast threads that may be parked at once. Normally a
+        # toast returns in milliseconds so the count sits at 0-1; it only climbs
+        # when the GUI is wedged and notification() isn't returning -- exactly
+        # when we must NOT pile on more blocked threads.
+        with _notify_lock:
+            if _notify_pending[0] >= _NOTIFY_MAX_PENDING:
+                return
+            _notify_pending[0] += 1
+        try:
+            threading.Thread(target=_show, name='pov-notify',
+                             daemon=True).start()
+        except Exception:
+            # Couldn't spawn a thread (thread/memory exhaustion -- itself a sign
+            # of a wedged, resource-starved device). Do NOT fall back to an
+            # inline notification() call: on the caller's thread that would
+            # re-block it, the very stall this whole change exists to prevent.
+            # Drop the toast and release the slot we just reserved.
+            with _notify_lock:
+                _notify_pending[0] -= 1
     except Exception:
         pass
 

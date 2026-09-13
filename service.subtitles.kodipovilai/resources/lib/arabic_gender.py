@@ -1,4 +1,4 @@
-# Arabic-as-gender-reference for AI translation (opt-in, default OFF).
+# Gendered-language reference for AI translation (opt-in).
 #
 # Hebrew is heavily gendered and the #1 quality issue is per-line gender (who is
 # speaking / who is addressed). English doesn't mark it; Arabic does, almost 1:1
@@ -7,8 +7,14 @@
 # Arabic sub for the same media, time-align it to the source SRT, and hand each
 # entry its aligned Arabic line as a GENDER ORACLE in the prompt (see prompt.py).
 #
+# When no Arabic subtitle exists (or none aligns), we fall through a PRIORITY
+# CHAIN of other gender-marking languages (see _REF_CHAIN): an out-of-sync human
+# HEBREW sub is the best oracle of all, then Arabic, then Romance/Slavic/Indic
+# languages whose adjectives/verbs mark speaker+addressee gender. Same
+# fetch-align-hint pipeline, one engine search for all of them.
+#
 # This module is self-contained + fully guarded: ANY failure returns None and the
-# caller falls back to the normal (no-Arabic) translation. It NEVER raises.
+# caller falls back to the normal (no-reference) translation. It NEVER raises.
 #
 # Validated on real OpenSubtitles pairs (From S03E09, Super Mario Bros Movie):
 # global alignment is reliable across different releases + SDH once SFX/music is
@@ -17,6 +23,8 @@
 
 import os
 import re
+import threading
+import time
 
 try:
     from resources.lib import kodi_utils
@@ -82,7 +90,14 @@ def _is_dialogue(text):
     if any(mk in t for mk in _MUSIC):
         return False
     t = _NONDIALOG.sub(' ', t)
-    letters = re.sub(r'[^A-Za-z֐-׿؀-ۿ]', '', t)
+    # Letter ranges cover every script in the reference chain: basic+extended
+    # Latin (es/fr/it/pt/pl/cs/ro/hr/sk/nl), Greek, Cyrillic (ru/uk/bg/sr),
+    # Hebrew, Arabic (also Urdu), Devanagari (Hindi). Without the extra ranges
+    # a Cyrillic/Greek/Hindi reference sub would parse as "no dialogue" and be
+    # rejected before alignment even ran.
+    letters = re.sub(
+        r'[^A-Za-zÀ-ÖØ-öø-ɏͰ-ϿЀ-ӿ'
+        r'֐-׿؀-ۿऀ-ॿ]', '', t)
     return len(letters) >= 2
 
 
@@ -209,40 +224,157 @@ def align_one(src_text, src_blocks, ar_text):
     ov = _overlap_rate(en, ar, a, b)
     diag = 'scale=%.4f offset=%+dms vote=%.0f%% overlap=%.0f%%' % (
         a, int(b), vote * 100, ov * 100)
-    # Confidence gate (chunk-level architecture): correct map + good coverage.
-    if not (0.90 <= a <= 1.11) or vote < 0.65 or ov < 0.80:
+    # Confidence gate. The MAP must be trustworthy (right framerate band + a
+    # strong offset vote), but COVERAGE may be partial: as a gender ORACLE, a
+    # reference that overlaps 65-79% of the source still hints gender for most
+    # entries -- strictly better than no reference (the un-hinted entries simply
+    # translate without a hint, exactly as if there were none). Field data (the
+    # D1 no_align overlap distribution) showed ~65% of rejections sat in this
+    # 65-79% band WITH a correct map, so the old 0.80 coverage floor was throwing
+    # away usable oracles. vote>=0.65 + the framerate band stay the real guards
+    # against a spurious alignment. MEASURED, not assumed: a true pair votes
+    # 0.742; twenty references with randomised starts vote 0.417-0.441, and
+    # nine time-REVERSED real references (same cue density, no correspondence)
+    # vote 0.439-0.441. So the floor is ~0.43, not the ~0.30 this comment
+    # used to claim -- the gate still clears it, by less than we said.
+    if not (0.90 <= a <= 1.11) or vote < 0.65 or ov < 0.65:
         return None, 'gate FAILED (' + diag + ')'
     return _arabic_for_blocks(src_blocks, ar, a, b), 'gate OK (' + diag + ')'
 
 
-# ---------------- fetch Arabic candidates from the engine -------------------
+# ---------------- the reference-language priority chain ---------------------
 
-def _arabic_candidates(info, limit=5):
-    """Return up to `limit` Arabic subtitle CANDIDATES (metadata only -- NOT yet
-    downloaded) for this media from the built-in engine (OpenSubtitles /
-    SubSource / YIFY).
+# Priority order for the gender oracle. An out-of-sync HUMAN Hebrew sub is the
+# strongest possible reference (it IS the target language); Arabic is the gold
+# standard among foreign ones (Semitic, near-1:1 gender marking with Hebrew);
+# then languages ranked by gender-signal strength x real-world availability.
+_REF_CHAIN = ('he', 'ar', 'hi', 'es', 'ru', 'pt', 'pl', 'uk', 'fr', 'it',
+              'cs', 'ro', 'el', 'bg', 'sr', 'hr', 'sk', 'ur', 'nl')
 
-    The engine gates languages by setting, so we flip `language_arab` on JUST
-    for this search and restore it to 'false' immediately after. That matters:
-    leaving it on (the old behaviour) made every ordinary subtitle search start
-    surfacing Arabic results too -- the stray Arabic entries the user noticed.
-    Arabic is only ever an internal gender oracle here, never a target language,
-    so 'false' is always the right resting state. Guarded; never raises."""
+# The chain split into quality tiers, which is what begin() actually walks.
+# Tier 1 is the two oracles this feature was built and validated on; tier 2 is
+# everything else, which is a useful hint but not in the same class. The
+# boundary is the thing to move if real data ever says another language earns
+# tier 1 -- not the round-robin, which is only about reaching them.
+_REF_TIERS = (('he', 'ar'), _REF_CHAIN[2:])
+
+# Codes/names a provider might report for each chain language (lowercase).
+# Providers emit a mix of ISO 639-1, 639-2/B, 639-2/T and English names; the
+# bridge normalizes most but not all, so we match generously here.
+_REF_LANG_ALIASES = {
+    'he': ('he', 'iw', 'heb', 'hebrew'),
+    'ar': ('ar', 'ara', 'arabic'),
+    'es': ('es', 'sp', 'spa', 'spanish'),
+    'fr': ('fr', 'fre', 'fra', 'french'),
+    'ru': ('ru', 'rus', 'russian'),
+    'it': ('it', 'ita', 'italian'),
+    'pt': ('pt', 'por', 'pb', 'pob', 'pt-br', 'ptbr', 'portuguese',
+           'brazilian portuguese', 'brazillian portuguese'),
+    'pl': ('pl', 'pol', 'polish'),
+    'uk': ('uk', 'ukr', 'ukrainian'),
+    'hi': ('hi', 'hin', 'hindi'),
+    'cs': ('cs', 'cze', 'ces', 'czech'),
+    'ro': ('ro', 'rum', 'ron', 'romanian'),
+    'el': ('el', 'gr', 'gre', 'ell', 'greek'),
+    'bg': ('bg', 'bul', 'bulgarian'),
+    'sr': ('sr', 'srp', 'scc', 'serbian'),
+    'hr': ('hr', 'hrv', 'scr', 'croatian'),
+    'sk': ('sk', 'slo', 'slk', 'slovak'),
+    'ur': ('ur', 'urd', 'urdu'),
+    'nl': ('nl', 'dut', 'nld', 'dutch'),
+}
+
+_ALIAS_TO_CHAIN = {alias: code
+                   for code, aliases in _REF_LANG_ALIASES.items()
+                   for alias in aliases}
+
+# Try substantially deeper inside each higher-priority language before moving
+# to the next one. Provider metadata search is parallel, but the actual subtitle
+# downloads + alignment below are lazy, serial and chain-ordered: first aligning
+# candidate wins. Ten is deliberately bounded because OpenSubtitles can paginate
+# every result for a popular title; "all" could mean hundreds of downloads and
+# minutes of blocked playback. A language may receive up to ten attempts; the
+# global download budget lets the search fully examine the five strongest
+# saturated languages (he/ar/hi/es/ru), while the active-work deadline remains
+# the primary latency circuit-breaker. This still avoids the unbounded
+# 10-times-every-language worst case and provider request storms.
+_PER_LANG_LIMIT = 10
+_TOTAL_DOWNLOAD_BUDGET = 50
+# The chain is walked round-robin (see begin()), so a usable oracle is
+# reached early. The deadline is what decides how much DEPTH is left
+# afterwards -- how many candidates per language get a turn once every
+# language has had its first. At 30s it was one or two rounds, so the
+# fifth Hebrew subtitle, which may well be a different release that
+# aligns where the first four did not, was rarely reached at all.
+#
+# 60s buys full depth on the languages that are actually present
+# (~30 downloads) and costs nothing in the common case: next() returns
+# the moment something aligns, so a job whose first candidate works
+# still pays for one download. Only a job where NOTHING aligns spends
+# the ceiling, and it spends it inside a translation that already runs
+# for minutes behind a progress bar (a film is ~36 requests paced at 14
+# per minute), not in front of playback.
+_REFERENCE_DEADLINE_S = 60.0
+
+
+def _chain_lang_of(cand):
+    """Map an engine candidate to its chain language code, or None if the
+    candidate's language isn't in the chain (or is unusable as an oracle)."""
+    # A machine/AI-translated sub in ANY language is a POISONED oracle (MT
+    # defaults to masculine) -- only human subs may anchor gender. The bridge
+    # sets '_is_mt' from the provider's flag (e.g. OpenSubtitles ai_translated/
+    # machine_translated); missing key (old cached results) -> not flagged.
+    if cand.get('_is_mt'):
+        return None
+    lang = _ALIAS_TO_CHAIN.get((cand.get('language') or '').strip().lower())
+    if lang == 'he':
+        # Hebrew gets an extra belt-and-braces check via the engine kind: only
+        # candidates the bridge classified as HUMAN Hebrew are accepted.
+        kind = (cand.get('_engine_kind') or '').strip().lower()
+        if kind and kind != 'human_he':
+            return None
+        if 'HebrewMachineTranslated' in (cand.get('filename') or ''):
+            return None
+    return lang
+
+
+# ---------------- fetch reference candidates from the engine ----------------
+
+def _reference_candidates(info):
+    """Return ALL subtitle CANDIDATES (metadata only -- NOT yet downloaded) for
+    this media from the built-in engine (OpenSubtitles / SubSource / YIFY /
+    Hebrew providers). Filtering to chain languages happens in prepare().
+
+    The engine gates languages by setting, so JUST for this search we flip
+    `language_arab` on and force `all_lang` on (so every chain language comes
+    back in one search), then restore. language_arab always settles to 'false'
+    (it must never pollute normal searches -- Arabic is only ever an internal
+    gender oracle, not a target language); all_lang is restored to whatever the
+    user had. Guarded; never raises."""
     try:
         from resources.lib import subs_engine_bridge
     except Exception:
         return []
     cands = []
+    prev_all_lang = None
     try:
         if kodi_utils is not None:
             try:
                 kodi_utils.set_setting('language_arab', 'true')
             except Exception:
                 pass
+            try:
+                prev_all_lang = kodi_utils.get_setting('all_lang', '')
+                if (prev_all_lang or '').strip().lower() != 'true':
+                    kodi_utils.set_setting('all_lang', 'true')
+                else:
+                    prev_all_lang = None  # already true -> nothing to restore
+            except Exception:
+                prev_all_lang = None
         try:
             cands = subs_engine_bridge.search(info, modal_progress=False) or []
         except Exception as e:
-            _log('engine search for Arabic failed: {0}'.format(e),
+            _log('engine search for gender reference failed: {0}'.format(e),
                  level='WARNING')
             cands = []
     finally:
@@ -253,15 +385,16 @@ def _arabic_candidates(info, limit=5):
                 kodi_utils.set_setting('language_arab', 'false')
             except Exception:
                 pass
-    ar_cands = [c for c in cands
-                if (c.get('language') or '').lower() in ('ar', 'ara', 'arabic')]
-    if not ar_cands:
-        _log('no Arabic subtitle found from the engine for this title')
-    return ar_cands[:limit]
+            if prev_all_lang is not None:
+                try:
+                    kodi_utils.set_setting('all_lang', prev_all_lang)
+                except Exception:
+                    pass
+    return cands
 
 
-def _download_arabic(c):
-    """Download ONE Arabic candidate and return its text, or None. Guarded."""
+def _download_candidate(c):
+    """Download ONE reference candidate and return its text, or None. Guarded."""
     try:
         from resources.lib import subs_engine_bridge, translate
         payload = translate._decode_link(c.get('link') or '')
@@ -272,20 +405,355 @@ def _download_arabic(c):
             with open(path, 'r', encoding='utf-8', errors='replace') as f:
                 return f.read()
     except Exception as e:
-        _log('Arabic download failed (continuing): {0}'.format(e),
+        _log('reference download failed (continuing): {0}'.format(e),
              level='DEBUG')
     return None
 
 
-def prepare(info, src_text):
-    """ENTRY POINT. When the feature is on, find Arabic subs for `info` and try
-    them in turn until one aligns confidently. Downloads LAZILY -- one at a time,
-    stopping at the first that aligns -- so the common case (the first release
-    aligns) pulls a SINGLE Arabic file instead of pre-fetching four. Returns a
-    dict {srt_entry_number: arabic_text} (gender hints) or None to fall back to
-    the normal translation. ALSO returns a small diag dict (reason + details) for
-    telemetry: reason is 'ok' / 'no_source' / 'no_arabic' / 'no_align' / 'crash'.
-    Fully guarded."""
+class ReferencePlan(object):
+    """A lazy, resumable gender-reference chain. Holds the ordered candidate list
+    (metadata only, no downloads yet) and yields aligned per-entry maps ONE
+    LANGUAGE AT A TIME in priority order via .next().
+
+    The FIRST .next() gives the primary reference (same single-download cost as
+    the old prepare()); each subsequent .next() downloads+aligns the NEXT chain
+    language that aligns -- used by translate.py as a fallback when a chunk gets
+    prompt-blocked (PROHIBITED_CONTENT), so a blocked chunk can be retried with a
+    DIFFERENT human-subtitle gender oracle (e.g. Spanish after Arabic) before
+    dropping the reference entirely. Downloads are lazy + bounded by
+    _TOTAL_DOWNLOAD_BUDGET, so a job that never blocks pays for exactly one
+    reference. Thread-safe (parallel chunk workers may pull a fallback at once)
+    and fully guarded: any failure yields (None, None), never raises."""
+
+    def __init__(self, src_text, src_blocks, ordered, total):
+        self._src_text = src_text
+        self._src_blocks = src_blocks
+        self._ordered = ordered      # [(lang, candidate), ...] in chain order
+        self.total = total
+        self._pos = 0
+        self._downloads = 0
+        # Count only time spent downloading/alignment. Long idle gaps between
+        # lazy .next() calls (while Gemini translates) must not expire fallbacks.
+        self._active_elapsed = 0.0
+        self._used = set()           # chain langs already returned (one map each)
+        self._lock = threading.Lock()
+        self.last_diag = ''          # diag of the candidate examined last: the
+        #                              WINNER right after a successful next(), or
+        #                              the last rejection once the chain is dry
+
+    def next(self):
+        """Return (lang, map) for the next chain language that aligns, or
+        (None, None) when the chain / download budget is exhausted."""
+        try:
+            with self._lock:
+                while self._pos < len(self._ordered):
+                    if self._downloads >= _TOTAL_DOWNLOAD_BUDGET:
+                        _log('download budget ({0}) exhausted -- stopping the '
+                             'chain'.format(_TOTAL_DOWNLOAD_BUDGET))
+                        return None, None
+                    if self._active_elapsed >= _REFERENCE_DEADLINE_S:
+                        _log('reference work budget ({0:.0f}s active) reached -- '
+                             'stopping the chain'.format(_REFERENCE_DEADLINE_S))
+                        return None, None
+                    lang, cand = self._ordered[self._pos]
+                    self._pos += 1
+                    if lang in self._used:
+                        continue     # already yielded a map for this language
+                    attempt_started = time.monotonic()
+                    try:
+                        ref_text = _download_candidate(cand)  # lazy fetch
+                        self._downloads += 1
+                        if not ref_text:
+                            continue
+                        try:
+                            mapping, diag = align_one(
+                                self._src_text, self._src_blocks, ref_text)
+                        except Exception as e:
+                            _log('align [{0}] crashed: {1}'.format(lang, e),
+                                 level='WARNING')
+                            continue
+                        # winner (on return) or last rejection once chain is dry
+                        self.last_diag = diag
+                        if mapping:
+                            self._used.add(lang)
+                            _log(
+                                'reference [{0}] {1} -> {2} entries hinted'
+                                .format(lang, diag, len(mapping)))
+                            return lang, mapping
+                        _log(
+                            'candidate [{0}] rejected: {1} -- trying next'
+                            .format(lang, diag))
+                    finally:
+                        self._active_elapsed += max(
+                            0.0, time.monotonic() - attempt_started)
+                return None, None
+        except Exception as e:
+            _log('ReferencePlan.next crashed: {0}'.format(e), level='WARNING')
+            return None, None
+
+
+# ---------------- gender VERIFICATION (after the translation) ---------------
+# The reference is a hint in a prompt, and a prompt is an instruction rather
+# than a guarantee. Measured on a full film with a perfectly aligned Arabic
+# oracle: 51 of 52 scorable lines came back with the right addressee gender,
+# and the one that did not had an unambiguous "\u0623\u0646\u062a\u0650" (feminine) sitting in
+# its own prompt. So the last few points are compliance, not knowledge, and
+# the way to close them is to CHECK the output rather than ask more loudly.
+#
+# ONE DIRECTION ONLY, deliberately. "\u05d0\u05ea\u05d4" can only be the masculine
+# second-person pronoun, so finding it where the reference says feminine is
+# proof of an error. The feminine "\u05d0\u05ea" is also Hebrew's definite-object
+# marker -- "\u05e8\u05d0\u05d9\u05ea\u05d9 \u05d0\u05ea \u05d3\u05df" is not addressing a woman -- so the mirror check
+# would flag correct lines, and there is no reliable way to tell the two apart
+# without parsing. That asymmetry costs nothing in practice: every one of the
+# 24 gender errors in the file a viewer reported was masculine-where-feminine,
+# which is exactly what an unhinted translation defaulting to masculine looks
+# like. The direction that can be checked safely is the direction that fails.
+# EVERY pattern above the blank line needs HARAKAT, and real subtitles do not
+# carry it. Measured on a full human Arabic episode: 7,415 Arabic letters, TWO
+# diacritics, zero vocalised \u0623\u0646\u062a\u064e/\u0623\u0646\u062a\u0650 -- so the whole Arabic branch read
+# F=0 M=0 None=370. Arabic anchors the largest share of real jobs, which made
+# it the emptiest reader we had.
+#
+# The 2fs PRESENT suffix is different: \u062a...\u064a\u0646 is consonantal and is always
+# written. Two noun classes wear the same ending and must not be read as an
+# addressee:
+#   * the \u062a\u0641\u0639\u064a\u0644 verbal noun -- \u062a\u0645\u0631\u064a\u0646, \u062a\u0639\u064a\u064a\u0646, \u062a\u062d\u0633\u064a\u0646, \u062a\u062f\u062e\u064a\u0646 -- which is
+#     FIVE letters and structurally identical to a real 5-letter verb like
+#     \u062a\u0628\u062f\u064a\u0646. Nothing short of a lexicon separates them, so the floor is
+#     six letters and \u062a\u0628\u062f\u064a\u0646 / \u062a\u0638\u0646\u064a\u0646 / \u062a\u0642\u0636\u064a\u0646 are given up on purpose.
+#   * the feminine sound dual -- \u062a\u0641\u0635\u064a\u0644\u0629 -> \u062a\u0641\u0635\u064a\u0644\u062a\u064a\u0646 -- so the letter before
+#     the suffix may not be \u062a.
+# Recall loses a little, precision wins, and that is the right way round: this
+# reader feeds a repair pass, and a false F spends a request rewriting a line
+# that was already correct. Measured on the same episode: 19 of 370 cues
+# (5.1%), eleven distinct forms, every one a genuine 2fs verb, and twelve
+# noun controls (\u062a\u0645\u0631\u064a\u0646, \u0633\u0646\u062a\u064a\u0646, \u0645\u0631\u062a\u064a\u0646, ...) all correctly refused.
+# Arabic glues object pronouns straight onto the verb -- \u062a\u062e\u064a\u0641\u064a\u0646\u0646\u064a, \u062a\u0631\u064a\u062f\u064a\u0646\u0647,
+# \u062a\u0639\u0631\u0641\u064a\u0646\u0647\u0627 -- and a suffix-must-end-the-word rule misses all of them. The
+# clitic set is closed, so allowing it costs no precision against the noun
+# classes above: those are blocked by the six-letter floor whatever follows.
+# It DOES open one new class, a 6+ letter broken plural in \u064a\u0646 carrying a
+# possessive (\u062a\u0645\u0627\u0631\u064a\u0646\u0647\u0627, \u062a\u0646\u0627\u0646\u064a\u0646\u0647\u0627); those are pinned as controls in
+# tools/test_gender_verification.py so the trade is made with eyes open.
+_AR_2FS_PRESENT = (u'(?<![\u0621-\u064a])\u062a[\u0621-\u064a]{2,5}[\u0621-\u0629\u062b-\u064a]\u064a\u0646'
+                   u'(?:\u0646\u064a|\u0647\u0645\u0627|\u0647\u0627|\u0647\u0645|\u0647\u0646|\u0643\u0645|\u0647|\u0643)?(?![\u0621-\u064a])')
+
+_AR_FEM = tuple(re.compile(p) for p in (
+    u'\u0623\u0646\u062a\u0650', u'\u0644\u0643\u0650', u'\u0628\u0643\u0650', u'\u0639\u0644\u064a\u0643\u0650', u'\u0645\u0639\u0643\u0650', u'\u0625\u0644\u064a\u0643\u0650', u'\u0645\u0646\u0643\u0650',
+    u'\u0643\u0650\\s', u'\u0643\u0650$', u'\u062a\u0650\\s', u'\u062a\u0650$', u'\u064a\u0627 \u0633\u064a\u062f\u062a\u064a',
+    _AR_2FS_PRESENT,
+))
+_AR_MASC = tuple(re.compile(p) for p in (
+    u'\u0623\u0646\u062a\u064e', u'\u0644\u0643\u064e', u'\u0628\u0643\u064e', u'\u0639\u0644\u064a\u0643\u064e', u'\u0645\u0639\u0643\u064e', u'\u0625\u0644\u064a\u0643\u064e', u'\u0645\u0646\u0643\u064e',
+    u'\u0643\u064e\\s', u'\u0643\u064e$', u'\u062a\u064e\\s', u'\u062a\u064e$',
+))
+# Hebrew reference: read the pronoun straight off it.
+# The SAME proclitic alternation _HE_MASC carries below. Without it we looked
+# for \u05d5\u05d0\u05ea\u05d4/\u05e9\u05d0\u05ea\u05d4 but never for \u05d5\u05d0\u05ea/\u05e9\u05d0\u05ea -- an asymmetry that made the
+# reader better at finding a MALE addressee than a female one, in a check whose
+# whole purpose is catching masculine-where-feminine.
+_HE_PRO = u'(?:\u05d5|\u05e9|\u05db\u05e9|\u05d5\u05e9|\u05d5\u05db\u05e9)?'
+_HE_REF_FEM = re.compile(
+    u'(?<![\u05d0-\u05ea])' + _HE_PRO + u'\u05d0\u05ea(?![\u05d0-\u05ea])(?!\\s*\u05d4)')
+
+# READ THE VERB, NOT JUST THE PRONOUN.
+#
+# WHY THIS MATTERS MORE THAN IT LOOKS. A feminine verdict here does not merely
+# fail to help -- it ACTS. wrong_gender_entries flags the entry, and
+# translate._regender_blocks then hands the model the Hebrew alone with the flat
+# assertion "these address a FEMALE listener, but they were written addressing a
+# male". Its only acceptance test is that the rewrite no longer says \u05d0\u05ea\u05d4. So a
+# false feminine does not degrade gracefully: it rewrites a CORRECT masculine
+# line into a wrong feminine one, and nothing downstream can veto it.
+#
+# \u05d0\u05ea is Hebrew's definite-object marker as well as the feminine pronoun, and
+# the old (?!\s*\u05d4) guard only refuses it before a \u05d4-definite noun. Definiteness
+# is an open class -- \u05d0\u05ea \u05d6\u05d4, \u05d0\u05ea \u05db\u05dc, \u05d0\u05ea \u05e2\u05e6\u05de\u05d9, \u05d0\u05ea \u05de\u05d4 -- so no closed list ever
+# finishes the job. Measured on a full human episode, 13 of 60 feminine verdicts
+# were ordinary object marking ("\u05dc\u05d0 \u05e2\u05e9\u05d9\u05ea\u05d9 \u05d0\u05ea \u05d6\u05d4", "\u05d0\u05e0\u05d9 \u05e9\u05d5\u05e0\u05d0\u05ea \u05d0\u05ea \u05e2\u05e6\u05de\u05d9"), one of
+# them on a line whose speaker is explicitly male.
+#
+# Hebrew MORPHOLOGY has no such ambiguity: the 2fs future/imperative \u05ea...\u05d9 and a
+# short list of bare imperatives can only address a woman. Reading those adds 23
+# cues the pronoun alone missed (\u05d0\u05dc \u05ea\u05d2\u05d9\u05d3\u05d9, \u05dc\u05db\u05d9, \u05ea\u05e1\u05de\u05db\u05d9, \u05ea\u05e9\u05de\u05e8\u05d9). Net on that
+# episode: 60 -> 70 verdicts, with the 13 false ones gone. Precision and recall
+# both improve, which is why this replaces the guard rather than extending it.
+#
+# The (?<!\u05ea) before the final \u05d9 is load-bearing: without it the 1sg past \u05ea\u05d9
+# ending matches (\u05ea\u05d9\u05d0\u05e8\u05ea\u05d9, \u05ea\u05de\u05d5\u05e0\u05ea\u05d9). \u05d4\u05d9\u05d9 is deliberately NOT in the imperative
+# list -- it is the interjection "hey" far more often than "be".
+_HE_FEM_VERB = re.compile(
+    u'(?<![\u05d0-\u05ea])' + _HE_PRO + u'\u05ea[\u05d0-\u05ea]{2,6}(?<!\u05ea)\u05d9(?![\u05d0-\u05ea])')
+_HE_FEM_IMPER = re.compile(
+    u'(?<![\u05d0-\u05ea])' + _HE_PRO +
+    u'(?:\u05d1\u05d5\u05d0\u05d9|\u05dc\u05db\u05d9|\u05d7\u05db\u05d9|\u05e7\u05d7\u05d9|\u05ea\u05e0\u05d9|\u05e9\u05d1\u05d9|\u05e1\u05dc\u05d7\u05d9|\u05e2\u05d6\u05e8\u05d9)(?![\u05d0-\u05ea])')
+# an \u05d0\u05ea followed by something that can only be a definite object
+_HE_AT_OBJ = re.compile(
+    u'(?<![\u05d0-\u05ea])' + _HE_PRO + u'\u05d0\u05ea(?![\u05d0-\u05ea])\\s+'
+    u'(?:\u05d4[\u05d0-\u05ea]|\u05d6\u05d4|\u05d6\u05d0\u05ea|\u05d6\u05d5|\u05d0\u05dc\u05d4|\u05d0\u05dc\u05d5|\u05db\u05dc(?!\\s*\u05db\u05da)|\u05de\u05d4|\u05de\u05d9|\u05e2\u05e6\u05de|\u05d0\u05d5\u05ea|\u05db\u05da|\u05e9\u05dc)')
+# \u05db\u05dc \u05db\u05da is "so/very", not an object -- "\u05d0\u05ea \u05db\u05dc \u05db\u05da \u05d9\u05e4\u05d4" addresses a woman.
+_HE_AT_ANY = re.compile(
+    u'(?<![\u05d0-\u05ea])' + _HE_PRO + u'\u05d0\u05ea(?![\u05d0-\u05ea])')
+
+
+def _he_addresses_female(text):
+    """True when the Hebrew can only be addressing a woman.
+
+    Verb morphology is decisive on its own. The pronoun counts only when at
+    least one of its occurrences is NOT followed by an unmistakable definite
+    object -- otherwise the line is using the object marker, not the pronoun.
+    """
+    try:
+        if _HE_FEM_VERB.search(text) or _HE_FEM_IMPER.search(text):
+            return True
+        occ = [m.start() for m in _HE_AT_ANY.finditer(text)]
+        if not occ:
+            return False
+        obj = set(m.start() for m in _HE_AT_OBJ.finditer(text))
+        return any(o not in obj for o in occ) and bool(_HE_REF_FEM.search(text))
+    except Exception:
+        return False
+# The proclitics Hebrew glues straight onto a pronoun: ו (and), ש (that),
+# כש (when) and their combinations. Without them "ואתה", "שאתה" and
+# "כשאתה" -- ordinary, high-frequency Hebrew -- read as no pronoun at all,
+# which both hides real errors from the check and lets a "repair" that is
+# still masculine pass as fixed. The set is deliberately just these: allowing
+# ANY preceding letter would match the אתה inside ראתה ("she saw").
+_HE_MASC = re.compile(
+    u'(?<![\u05d0-\u05ea])(?:\u05d5|\u05e9|\u05db\u05e9|\u05d5\u05e9|\u05d5\u05db\u05e9)?\u05d0\u05ea\u05d4(?![\u05d0-\u05ea])')
+
+
+# The rest of the chain. Arabic and Hebrew are read above; these are the
+# languages whose ADDRESSEE marking can be read without parsing, because the
+# marker is a VERB ending tied to the second person -- there is no other thing
+# in the language it could be.
+#
+# Deliberately NOT here, and this is the whole design: es, it, pt, fr, ro and
+# el mark gender on ADJECTIVES, and an adjective ending is not distinguishable
+# from a feminine noun's ending without knowing which word is which ("eres una
+# estrella" ends in -a and says nothing about who is being addressed). nl marks
+# only referent gender, never the addressee. ur is written in Arabic script but
+# marks gender through Indic verb morphology, not the Arabic diacritics above,
+# so the patterns there do not transfer. For all of those this returns None and
+# the verification pass simply does not fire -- which is exactly today's
+# behaviour, and far better than rewriting a line that was already right.
+#
+# Every pattern below is validated in tools/test_gender_verification.py against
+# both genders and against a first/third-person sentence that must NOT match.
+def _rx(*pats):
+    return tuple(re.compile(p, re.I | re.U) for p in pats)
+
+
+_ADDRESSEE_MARKERS = {
+    # Slavic past tense: the second-person pronoun plus a gendered participle.
+    'ru': (_rx(r'(?<![\u0430-\u044f\u0451])\u0442\u044b\b[^.!?]{0,40}?\b\w+\u043b\u0430\b'),
+           _rx(r'(?<![\u0430-\u044f\u0451])\u0442\u044b\b[^.!?]{0,40}?\b\w+\u043b\b')),
+    'uk': (_rx(r'(?<![\u0430-\u044f\u0456\u0457])\u0442\u0438\b[^.!?]{0,40}?\b\w+\u043b\u0430\b'),
+           _rx(r'(?<![\u0430-\u044f\u0456\u0457])\u0442\u0438\b[^.!?]{0,40}?\b\w+(\u0432|\u0438\u0439)\b')),
+    'bg': (_rx(r'(?<![\u0430-\u044f])\u0442\u0438\b[^.!?]{0,40}?\b\w+(\u043b\u0430|\u043d\u0430)\b'),
+           _rx(r'(?<![\u0430-\u044f])\u0442\u0438\b[^.!?]{0,40}?\b\w+(\u0435\u043d|\u043b)\b')),
+    # Polish encodes person AND gender in the ending itself.
+    'pl': (_rx(r'\w+\u0142a\u015b\b'), _rx(r'\w+\u0142e\u015b\b')),
+    # Czech / Slovak / Serbian / Croatian: participle + the 2sg auxiliary.
+    # sr/hr take -ao/-io rather than a bare -o: ordinary words end in -o
+    # ('tamo'), so a bare -o matched alongside the feminine -la and every
+    # line came back ambiguous.
+    'cs': (_rx(r'\w+la\s+jsi\b'), _rx(r'\w+l\s+jsi\b')),
+    'sk': (_rx(r'\w+la\s+si\b'), _rx(r'\w+l\s+si\b')),
+    'sr': (_rx(r'\bti\s+si\b[^.!?]{0,30}?\b\w+la\b'),
+           _rx(r'\bti\s+si\b[^.!?]{0,30}?\b\w+(ao|io)\b')),
+    'hr': (_rx(r'\bti\s+si\b[^.!?]{0,30}?\b\w+la\b'),
+           _rx(r'\bti\s+si\b[^.!?]{0,30}?\b\w+(ao|io)\b')),
+    # Hindi: the second-person copula with a feminine/masculine participle.
+    'hi': (_rx(r'(\u0924\u0941\u092e|\u0906\u092a)[^\u0964?!]{0,30}?\u0940\s+(\u0939\u094b|\u0939\u0948\u0902)'),
+           _rx(r'(\u0924\u0941\u092e|\u0906\u092a)[^\u0964?!]{0,30}?\u0947\s+(\u0939\u094b|\u0939\u0948\u0902)')),
+}
+
+
+def reference_addressee_gender(ref_text, lang):
+    """'F', 'M', or None when the reference does not mark it unambiguously.
+
+    'he' and 'ar' are read directly; every language in _ADDRESSEE_MARKERS
+    (ru, uk, bg, pl, cs, sk, sr, hr, hi) is read from its own validated
+    pattern pair. Anything else returns None, so the verification pass does
+    not fire rather than guessing from a marking nobody checked here.
+    (This used to say only he/ar were read, which stopped being true when
+    _ADDRESSEE_MARKERS landed -- tools/test_gender_verification.py exercises
+    all nine against both genders plus a must-not-match control.)
+    """
+    if not ref_text:
+        return None
+    try:
+        if lang == 'he':
+            f = _he_addresses_female(ref_text)
+            m = bool(_HE_MASC.search(ref_text))
+        elif lang == 'ar':
+            f = any(p.search(ref_text) for p in _AR_FEM)
+            m = any(p.search(ref_text) for p in _AR_MASC)
+        elif lang in _ADDRESSEE_MARKERS:
+            fem_pats, masc_pats = _ADDRESSEE_MARKERS[lang]
+            f = any(p.search(ref_text) for p in fem_pats)
+            m = any(p.search(ref_text) for p in masc_pats)
+        else:
+            return None
+        if f and not m:
+            return 'F'
+        if m and not f:
+            return 'M'
+        return None
+    except Exception:
+        return None
+
+
+def addresses_male(text):
+    """True when `text` contains the Hebrew masculine second-person pronoun.
+
+    Public because the repair pass has to PROVE a rewrite actually fixed the
+    error before it accepts it -- a replacement that still says the same thing
+    is not a repair, and swapping one wrong line for another wrong line would
+    spend a request to stand still.
+    """
+    try:
+        return bool(_HE_MASC.search(text or ''))
+    except Exception:
+        return False
+
+
+def wrong_gender_entries(blocks, ref_map, lang):
+    """Entry numbers whose Hebrew addresses a man where the reference says the
+    addressee is a woman. See the note above for why only this direction is
+    reported. Never raises."""
+    out = []
+    if not ref_map:
+        return out
+    try:
+        for block in blocks:
+            lines = block.split('\n')
+            if len(lines) < 3 or not lines[0].strip().isdigit():
+                continue
+            num = int(lines[0].strip())
+            ref = ref_map.get(num)
+            if not ref:
+                continue
+            if reference_addressee_gender(ref, lang) != 'F':
+                continue
+            if _HE_MASC.search('\n'.join(lines[2:])):
+                out.append(num)
+    except Exception as e:
+        _log('gender verification crashed: {0}'.format(e), level='WARNING')
+    return out
+
+
+def begin(info, src_text):
+    """ENTRY POINT (lazy). When the feature is on, find gender-reference
+    candidates for `info` and return a ReferencePlan that yields aligned maps in
+    PRIORITY-CHAIN order (Hebrew, Arabic, then the other gender-marking
+    languages -- see _REF_CHAIN), ONE language per .next() call, downloading
+    lazily. Returns (plan, diag). `plan` is None when there is no candidate at
+    all (diag.reason = 'crash'/'no_source'/'no_arabic'); otherwise call
+    plan.next() to pull the primary (and, later, fallback) references. Fully
+    guarded; never raises."""
     try:
         from resources.lib import srt as _srt
         src_blocks = _srt.parse_blocks(src_text)
@@ -294,33 +762,98 @@ def prepare(info, src_text):
     if not src_blocks:
         return None, {'reason': 'no_source'}
     try:
-        cands = _arabic_candidates(info)
+        all_cands = _reference_candidates(info)
     except Exception as e:
         _log('fetch crashed: {0}'.format(e), level='WARNING')
         return None, {'reason': 'crash'}
-    if not cands:
-        _log('no Arabic candidates -> normal translation (fallback)')
+
+    # Bucket by chain language, preserving the engine's own ranking (it sorts
+    # by release-match %, so earlier candidates align more often).
+    #
+    # GUARDED because the docstring promises it. Everything from here down used
+    # to sit outside every handler, so a candidate the source engine handed back
+    # in an unexpected shape -- a bare string, or one whose 'language' is a list
+    # -- left this function as an AttributeError. The single caller does wrap the
+    # call, so the user outcome was always the correct silent fallback; but a
+    # module documented as never raising has to actually never raise, or the next
+    # caller inherits a promise the code does not keep.
+    by_lang = {}
+    try:
+        for c in all_cands:
+            lang = _chain_lang_of(c)
+            if lang and len(by_lang.setdefault(lang, [])) < _PER_LANG_LIMIT:
+                by_lang[lang].append(c)
+    except Exception as e:
+        _log('bucketing crashed: {0}'.format(e), level='WARNING')
+        return None, {'reason': 'crash'}
+
+    # NOTE on Hebrew-first: the user reached AI translation, so any Hebrew sub
+    # here is out-of-sync / unmatched for their release -- but as a GENDER
+    # ORACLE it only needs to time-align to the SOURCE sub, which the scale+
+    # offset estimator handles. It is the strongest oracle (it IS Hebrew).
+    #
+    # ROUND-ROBIN WITHIN A TIER, tiers in order.
+    #
+    # Two different things have to be true at once, and each one alone gets
+    # the other wrong.
+    #
+    # 1. A STRONG oracle must win even from deep in its own list. Hebrew and
+    #    Arabic are not merely first in the chain, they are a different class:
+    #    Hebrew IS the target language, and Arabic marks addressee gender with
+    #    explicit diacritics that map almost one-to-one onto Hebrew (the block
+    #    built around it lifted gender accuracy from ~27% to ~90%+). The third
+    #    Arabic candidate is worth far more than the first Slovak one. A flat
+    #    round-robin does not know that: it takes whatever aligns first, so a
+    #    weak language's opening candidate beats a strong language's third.
+    #
+    # 2. A strong oracle must be REACHED. The old order walked one language at
+    #    a time, so ten Hebrew candidates came before the first Arabic one --
+    #    and since the deadline is spent on downloads, the chain could stop
+    #    before Arabic was tried at all, leaving the job with no oracle and a
+    #    translation that defaults to masculine.
+    #
+    # Tiers give both. Inside tier 1 the two strong languages alternate, so
+    # Arabic is attempt 2 rather than attempt 11; and tier 1 is exhausted
+    # completely before tier 2 is touched, so no weaker language can take a
+    # job away from an Arabic candidate that would have aligned. Within tier 2
+    # the languages are close enough in value that reaching ANY of them
+    # matters more than which, so they alternate too.
+    ordered = []
+    for tier in _REF_TIERS:
+        depth = max([len(by_lang.get(l, ())) for l in tier] or [0])
+        ordered.extend(
+            (lang, by_lang[lang][i])
+            for i in range(depth)
+            for lang in tier
+            if i < len(by_lang.get(lang, ())))
+    if not ordered:
+        _log('no gender-reference candidates in any chain language -> normal '
+             'translation (fallback)')
         return None, {'reason': 'no_arabic', 'cands': 0}
-    total = len(cands)
-    best_diag = ''
-    for idx, c in enumerate(cands, 1):
-        ar_text = _download_arabic(c)   # lazy: fetch only when we reach it
-        if not ar_text:
-            continue
-        try:
-            mapping, diag = align_one(src_text, src_blocks, ar_text)
-        except Exception as e:
-            _log('align candidate {0} crashed: {1}'.format(idx, e),
-                 level='WARNING')
-            continue
-        if mapping is not None:
-            _log('candidate {0}/{1} {2} -> using Arabic gender reference '
-                 '({3} entries hinted)'.format(idx, total, diag, len(mapping)))
-            return mapping, {'reason': 'ok', 'cands': total,
-                             'hinted': len(mapping), 'diag': diag}
-        best_diag = diag
-        _log('candidate {0}/{1} rejected: {2} -- trying next'.format(
-            idx, total, diag))
-    _log('all {0} Arabic candidate(s) failed alignment -> normal translation '
-         '(fallback)'.format(total))
-    return None, {'reason': 'no_align', 'cands': total, 'diag': best_diag}
+
+    total = len(ordered)
+    langs_present = [l for l in _REF_CHAIN if l in by_lang]
+    _log('reference candidates: {0} across {1}'.format(
+        total, ','.join(langs_present)))
+    return (ReferencePlan(src_text, src_blocks, ordered, total),
+            {'reason': 'pending', 'cands': total})
+
+
+def prepare(info, src_text):
+    """Back-compat single-shot entry point (used where only the primary
+    reference is needed). Returns (map, diag) -- identical semantics to the
+    original: map is the primary aligned reference (or None), diag.reason is
+    'ok'/'no_source'/'no_arabic'/'no_align'/'crash', and diag['lang'] is the
+    chain code used on success. Implemented over begin()+plan.next()."""
+    plan, diag = begin(info, src_text)
+    if plan is None:
+        return None, diag
+    lang, mapping = plan.next()
+    cands = diag.get('cands', 0)
+    if mapping is None:
+        _log('all {0} reference candidate(s) failed alignment -> normal '
+             'translation (fallback)'.format(cands))
+        return None, {'reason': 'no_align', 'cands': cands,
+                      'diag': plan.last_diag}
+    return mapping, {'reason': 'ok', 'cands': cands, 'hinted': len(mapping),
+                     'diag': plan.last_diag, 'lang': lang}

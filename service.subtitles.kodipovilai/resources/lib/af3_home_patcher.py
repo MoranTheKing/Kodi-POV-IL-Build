@@ -133,6 +133,20 @@ def _pov(action='', mode='', name='', icon='', extra=''):
         '{0}={1}'.format(k, v) for k, v in params)
 
 
+def _mdblist_connected():
+    """True only when POV has an MDBList API key stored. The MDBList home
+    widgets route through POV's mdblist_watchlist action, which errors without a
+    key -- so we only surface them when MDBList is actually connected. Mirrors
+    favourites_personal_tiles_patcher._mdblist_connected()."""
+    try:
+        if xbmcaddon is None:
+            return False
+        tok = xbmcaddon.Addon('plugin.video.pov').getSetting('mdblist.token') or ''
+        return bool(tok.strip())
+    except Exception:
+        return False
+
+
 def _shortcut_folder(name, icon='folder.png'):
     return (
         'plugin://plugin.video.pov/?external_list_item=True'
@@ -262,6 +276,19 @@ HOME_WIDGETS = [
         'widget_limit': '7',
     },
     {
+        # MDBList watchlist -- movies. Routes to POV's mdblist_watchlist, which
+        # merges Watchlist + Collection and sorts newest-first (inherited here).
+        # Gated on MDBList being connected (see ensure_patched's loop): the row
+        # is filtered out of the canonical when no key is stored.
+        'label': 'הסרטים שלי (MDBList)',
+        'icon': 'special://home/media/povil_icons/My_Movies_MDBList.png',
+        'path': _pov('mdblist_watchlist', 'build_movie_list', 'MDBList%20Watchlist',
+                     'special%3a%2f%2fhome%2faddons%2fplugin.video.pov%2fresources%2fskins%2fDefault%2fmedia%2fmdblist.png'),
+        'target': 'videos',
+        'widget_style': 'Poster',
+        'widget_limit': '7',
+    },
+    {
         # POV-LOCAL show favorites (watched.db -> favorites).
         'label': 'הסדרות שלי',
         'icon': 'special://home/media/povil_icons/My_Shows_TMDB.png',
@@ -287,6 +314,16 @@ HOME_WIDGETS = [
         'icon': 'special://home/media/povil_icons/My_Shows.png',
         'path': _pov('trakt_my_tvshows', 'build_tvshow_list', 'TV%20Shows',
                      'special%3a%2f%2fhome%2faddons%2fplugin.video.pov%2fresources%2fskins%2fDefault%2fmedia%2ftrakt.png'),
+        'target': 'videos',
+        'widget_style': 'Poster',
+        'widget_limit': '7',
+    },
+    {
+        # MDBList watchlist -- shows. Same routing/sort as the movie row above.
+        'label': 'הסדרות שלי (MDBList)',
+        'icon': 'special://home/media/povil_icons/My_Shows_MDBList.png',
+        'path': _pov('mdblist_watchlist', 'build_tvshow_list', 'MDBList%20Watchlist',
+                     'special%3a%2f%2fhome%2faddons%2fplugin.video.pov%2fresources%2fskins%2fDefault%2fmedia%2fmdblist.png'),
         'target': 'videos',
         'widget_style': 'Poster',
         'widget_limit': '7',
@@ -344,6 +381,25 @@ HOME_SUBMENU = [
         'path': 'RunScript(service.subtitles.kodipovilai,action=debrid_notice_settings)',
         'target': '',
     },
+    # The two Umbrella-era entries. AF3 does not use Kodi's favourites for its
+    # home, so the favourites tiles that carry these on the other three skins
+    # never appear here -- these are AF3's copy of the same two buttons, which
+    # is what keeps all four skins at the same place. Both are dropped from the
+    # canonical unless Umbrella is actually installed (see _UMBRELLA_MENU_PATHS
+    # and the filter in ensure_patched), so nobody gets a dead row.
+    {
+        'label': 'מנוע החיפוש - POV / Umbrella',
+        'icon': ('special://home/addons/plugin.video.pov/resources/skins/'
+                 'Default/media/search.png'),
+        'path': 'RunScript(service.subtitles.kodipovilai,action=search_provider)',
+        'target': '',
+    },
+    {
+        'label': 'Umbrella',
+        'icon': 'special://home/addons/plugin.video.umbrella/icon.png',
+        'path': 'RunAddon("plugin.video.umbrella")',
+        'target': '',
+    },
     {
         'label': 'תרגום AI',
         'icon': 'special://home/addons/service.subtitles.kodipovilai/icon.png',
@@ -352,7 +408,7 @@ HOME_SUBMENU = [
     },
     {
         'label': 'החלף סקין',
-        'icon': 'special://home/media/povil_icons/wizard_pov_il.png',
+        'icon': 'special://home/media/povil_icons/switch_skin_pov_il.png',
         'path': 'RunPlugin("plugin://plugin.program.kodipovilwizard/?mode=install&action=build_switch_skin")',
         'target': '',
     },
@@ -378,6 +434,25 @@ POWER_MENU = [
         'path': 'RunScript(service.subtitles.kodipovilai,action=debrid_notice_settings)',
         'target': '',
     },
+    # The two Umbrella-era entries. AF3 does not use Kodi's favourites for its
+    # home, so the favourites tiles that carry these on the other three skins
+    # never appear here -- these are AF3's copy of the same two buttons, which
+    # is what keeps all four skins at the same place. Both are dropped from the
+    # canonical unless Umbrella is actually installed (see _UMBRELLA_MENU_PATHS
+    # and the filter in ensure_patched), so nobody gets a dead row.
+    {
+        'label': 'מנוע החיפוש - POV / Umbrella',
+        'icon': ('special://home/addons/plugin.video.pov/resources/skins/'
+                 'Default/media/search.png'),
+        'path': 'RunScript(service.subtitles.kodipovilai,action=search_provider)',
+        'target': '',
+    },
+    {
+        'label': 'Umbrella',
+        'icon': 'special://home/addons/plugin.video.umbrella/icon.png',
+        'path': 'RunAddon("plugin.video.umbrella")',
+        'target': '',
+    },
     {
         'label': 'תרגום AI',
         'icon': 'special://home/addons/service.subtitles.kodipovilai/icon.png',
@@ -392,7 +467,7 @@ POWER_MENU = [
     },
     {
         'label': 'החלף סקין',
-        'icon': 'special://home/media/povil_icons/wizard_pov_il.png',
+        'icon': 'special://home/media/povil_icons/switch_skin_pov_il.png',
         'path': 'RunPlugin("plugin://plugin.program.kodipovilwizard/?mode=install&action=build_switch_skin")',
         'target': '',
     },
@@ -462,7 +537,7 @@ SEARCH_WIDGETS = [
     {
         'guid': 'pov-search-people',
         'label': 'שחקן / במאי',
-        'icon': 'special://home/media/build_icons/Twilight/Movies/Movies_Popular.png',
+        'icon': 'special://home/media/povil_icons/Movies_Popular.png',
         'path': 'DefaultSearch-POVPeople',
         'target': 'videos',
         'widget_style': 'Poster',
@@ -470,7 +545,7 @@ SEARCH_WIDGETS = [
     {
         'guid': 'pov-search-collections',
         'label': 'קולקציות',
-        'icon': 'special://home/media/build_icons/Twilight/Movies/Movies_Popular.png',
+        'icon': 'special://home/media/povil_icons/Movies_Popular.png',
         'path': 'DefaultSearch-POVCollections',
         'target': 'videos',
         'widget_style': 'Poster',
@@ -589,6 +664,30 @@ _MERGE_FILES = (
     'skinvariables-shortcut-searchwidgets.json',
     'skinvariables-shortcut-powermenu.json',
 )
+
+# The two Umbrella-era rows, by the same 'path' key the merge uses as identity.
+# Kept next to _MERGE_FILES because the filter that drops them and the merge
+# that delivers them have to agree on what a row IS.
+_UMBRELLA_MENU_PATHS = (
+    'RunScript(service.subtitles.kodipovilai,action=search_provider)',
+    'RunAddon("plugin.video.umbrella")',
+)
+_UMBRELLA_MENU_FILES = (
+    'skinvariables-shortcut-homesubmenu.json',
+    'skinvariables-shortcut-powermenu.json',
+)
+
+
+def _umbrella_installed():
+    # Not xbmcaddon.Addon(): Kodi writes "EXCEPTION: Unknown addon id"
+    # at ERROR level before it raises, so asking that way leaves a red
+    # line in the log of every device that simply does not have it. See
+    # addon_presence.
+    try:
+        from resources.lib import addon_presence
+        return addon_presence.installed('plugin.video.umbrella')
+    except Exception:
+        return False
 
 
 def _item_key(item):
@@ -962,22 +1061,18 @@ def _set_af3_runtime_defaults():
     if xbmc is None:
         return
     commands = [
-        'Skin.SetString(CustomRating.Movies.Item01,TMDb)',
-        'Skin.SetString(CustomRating.Movies.Item02,IMDb)',
-        'Skin.SetString(CustomRating.Movies.Item03,RottenTomatoesUser)',
-        'Skin.SetString(CustomRating.TVShows.Item01,TMDb)',
-        'Skin.SetString(CustomRating.TVShows.Item02,IMDb)',
-        'Skin.SetString(CustomRating.TVShows.Item03,Trakt)',
-        'Skin.Reset(HomeSwitcher.Vertical)',
-        'Skin.SetString(HomeSwitcher.Home.Mode,Standard)',
-        'Skin.SetString(HomeSwitcher.1101.Mode,Standard)',
-        'Skin.SetString(HomeSwitcher.1102.Mode,Standard)',
         'Skin.SetBool(Textboxes.DisableFakeBox)',
         # NOTE: the Spotlight.* strings AND the Home.Shortcut.Path are NOT seeded
         # here every boot anymore -- they're user-customisable (path/target/
         # label/limit), and re-setting them on every startup reverted the user's
         # change (arctic.fuse 3: edited menu-hub path reverted after restart).
         # They're now seeded once via _seed_af3_spotlight_once().
+        # SAME treatment for the HomeSwitcher layout (Vertical/Mode) and the
+        # CustomRating rows: they're user-facing skin choices, and forcing them
+        # on every rebuild reset a customised AF3 home layout after each
+        # quickfix (PATCH_VERSION bump -> rebuild -> layout back to Standard).
+        # They're now seeded once via _seed_af3_layout_once(). Only the infra
+        # settings the build NEEDS to function stay forced here.
         'Skin.Reset(TMDbHelper.DisableRatings)',
         'Skin.SetBool(TMDbHelper.EnableData)',
         'Skin.SetBool(TMDbHelper.Service)',
@@ -1002,6 +1097,95 @@ def _set_af3_runtime_defaults():
             xbmc.executebuiltin(command)
         except Exception:
             pass
+
+
+_LAYOUT_MARKER = AF3_NODES + '.pov_layout_seeded'
+_LAYOUT_COMMANDS = [
+    'Skin.SetString(CustomRating.Movies.Item01,TMDb)',
+    'Skin.SetString(CustomRating.Movies.Item02,IMDb)',
+    'Skin.SetString(CustomRating.Movies.Item03,RottenTomatoesUser)',
+    'Skin.SetString(CustomRating.TVShows.Item01,TMDb)',
+    'Skin.SetString(CustomRating.TVShows.Item02,IMDb)',
+    'Skin.SetString(CustomRating.TVShows.Item03,Trakt)',
+    'Skin.Reset(HomeSwitcher.Vertical)',
+    'Skin.SetString(HomeSwitcher.Home.Mode,Standard)',
+    'Skin.SetString(HomeSwitcher.1101.Mode,Standard)',
+    'Skin.SetString(HomeSwitcher.1102.Mode,Standard)',
+]
+
+
+# Arctic Fuse 3 declares FIVE submenu slots in its generator data --
+# homesubmenu, 1101submenu, 1102submenu, 1103submenu, 1104submenu -- but ships
+# a stock node file for the first one only. Includes_Home.xml builds the
+# include name from the slot at parse time, so reaching a slot whose node was
+# never written leaves <include>skinvariables-1102submenu-staticitems</include>
+# unresolved. Kodi leaves the unresolved element in the tree rather than
+# dropping it, the directory provider then reads the literal string "include"
+# as a path, and a user hit exactly that: the submenu dialog opened for the
+# first time and Kodi was gone eight milliseconds later.
+#
+# NOT OUR BUG -- the slots, the generator data and the missing files are all
+# stock AF3, and nothing here creates or deletes any of them (established by
+# running this module end-to-end against a fake filesystem). But it is our
+# users' crash, and a file we can write costs nothing.
+#
+# THE NODES ARE EMPTY ON PURPOSE. Seeding real entries would put menu items in
+# a submenu the user never populated. An empty list resolves the include and
+# leaves the slot looking exactly as empty as the user left it. Writing one
+# does not make a slot visible either: AF3 gates that on HomeSwitcher.<id>.Toggle,
+# which only its own settings screen sets and which this build never touches.
+AF3_EMPTY_SUBMENUS = ('1101submenu', '1102submenu', '1103submenu',
+                      '1104submenu')
+
+
+def _seed_af3_empty_submenus():
+    """Write an empty node for each AF3 submenu slot that has none.
+
+    Never overwrites: a slot the user has populated through AF3's own Edit Menu
+    has a node already, and that is theirs. Returns the number written.
+    """
+    if xbmcvfs is None:
+        return 0
+    written = 0
+    for slot in AF3_EMPTY_SUBMENUS:
+        target = AF3_NODES + 'skinvariables-shortcut-' + slot + '.json'
+        try:
+            if _exists(target):
+                continue
+            _mkdir(AF3_NODES)
+            _write(target, _json([]))
+            written += 1
+        except Exception:
+            # NO LOGGING HERE. This module has none -- it reports through the
+            # status its caller logs -- and reaching for a _log() that does not
+            # exist would raise NameError inside this except and take the whole
+            # seeding pass down silently. That has happened here before.
+            continue
+    return written
+
+
+def _seed_af3_layout_once():
+    """Seed the home-layout / rating-row defaults ONCE, then never touch them
+    again, so a user who changes the AF3 home layout (switcher mode, vertical
+    menu) or the rating rows keeps that across restarts AND quickfix updates
+    (every PATCH_VERSION bump used to force these back to Standard). Mirrors
+    _seed_af3_spotlight_once: brand-new AF3 installs get the defaults; devices
+    that were already seeded before just claim ownership without overwriting."""
+    if xbmc is None:
+        return
+    try:
+        if _exists(_LAYOUT_MARKER):
+            return  # already decided once -> never re-seed (user owns it now)
+        fresh = not _exists(AF3_NODES + '.pov_home_version')
+        if fresh:
+            for command in _LAYOUT_COMMANDS:
+                try:
+                    xbmc.executebuiltin(command)
+                except Exception:
+                    pass
+        _write(_LAYOUT_MARKER, PATCH_VERSION + '\n')
+    except Exception:
+        pass
 
 
 _SPOTLIGHT_MARKER = AF3_NODES + '.pov_spotlight_seeded'
@@ -1061,10 +1245,33 @@ def _wait_for_quick_update_notice(max_seconds=180):
 
 
 def _rebuild_af3_shortcuts():
+    """True when the rebuild actually ran. THE RETURN VALUE IS LOAD-BEARING:
+    ensure_patched() must only write the version marker when it is True, or a
+    rebuild that did not happen is recorded as done and never retried."""
     if xbmc is None:
-        return
+        return False
+    # Arctic Fuse 3's own route to the same fault FENtastic hit: this rebuilds
+    # the shortcut templates and then reloads the skin, so POV's home tiles are
+    # redrawn. Doing that while pov_reload has POV disabled leaves every one of
+    # them raising "Unknown addon id". Waiting costs a delayed rebuild; not
+    # waiting costs the home screen.
+    #
+    # The wait is computed inside the try and acted on OUTSIDE it. Putting the
+    # `return` inside meant any exception in here -- including one from the
+    # logging call this module does not actually have -- was swallowed by the
+    # except and execution fell straight through to the rebuild. A guard that
+    # fails open silently is worse than no guard, because it reads as covered.
+    settled = True
+    try:
+        from resources.lib import pov_reload
+        settled = pov_reload.wait_until_settled()
+    except Exception:
+        settled = True          # no pov_reload here means nothing to wait for
+    if not settled:
+        return False
     _set_af3_runtime_defaults()
     _seed_af3_spotlight_once()
+    _seed_af3_layout_once()
     stamp = '{0}-{1}'.format(PATCH_VERSION, int(time.time()))
     xbmc.executebuiltin('Skin.SetString(Shortcuts.RebuildDateTime,{0})'.format(stamp))
     xbmc.executebuiltin('RunScript(script.skinvariables,action=buildtemplate,force=True,background=true)')
@@ -1073,6 +1280,7 @@ def _rebuild_af3_shortcuts():
     xbmc.sleep(1800)
     xbmc.executebuiltin('SetFocus(310)')
     xbmc.executebuiltin('AlarmClock(POVAF3FocusSpotlight,SetFocus(310),00:02,silent)')
+    return True
 
 
 def ensure_patched():
@@ -1087,7 +1295,27 @@ def ensure_patched():
 
     _mkdir(AF3_NODES)
     changed = False
+    mdblist_ok = _mdblist_connected()
+    umbrella_ok = _umbrella_installed()
     for filename, data in FILES.items():
+        # The Umbrella + search-engine rows are opt-in the same way: without
+        # Umbrella the search switch has nothing to switch to and the Umbrella
+        # row opens an add-on that is not there, so both are dropped from the
+        # canonical. Installing Umbrella later appends them on the next boot
+        # (brand-new against the baseline); removing Umbrella leaves them,
+        # because the 3-way merge is add-only and a row the user has since
+        # curated is theirs.
+        if not umbrella_ok and filename in _UMBRELLA_MENU_FILES:
+            data = [w for w in data
+                    if (w.get('path') or '') not in _UMBRELLA_MENU_PATHS]
+        # MDBList home widgets are opt-in: drop them from the canonical unless
+        # MDBList is connected, so the merge never seeds/appends an mdblist_
+        # watchlist row that would error without a key. A user who connects
+        # later gets it appended on the next boot (brand-new vs the baseline);
+        # the 3-way merge keeps it if they later disconnect (add-only), matching
+        # the favourites tiles.
+        if filename == 'skinvariables-shortcut-homewidgets.json' and not mdblist_ok:
+            data = [w for w in data if 'mdblist_watchlist' not in (w.get('path') or '')]
         if filename in _MERGE_FILES:
             changed = _merge_widget_nodes(filename, data) or changed
         else:
@@ -1122,6 +1350,13 @@ def ensure_patched():
     if _is_af3_active():
         _set_af3_runtime_defaults()
         _seed_af3_spotlight_once()
+        _seed_af3_layout_once()
+        # Every AF3 boot, not only the ones that rebuild: the crash this
+        # prevents is reached by opening a submenu, which has nothing to do
+        # with whether anything needed patching. It writes only files that are
+        # missing, so on all boots after the first it does four existence
+        # checks and stops.
+        _seed_af3_empty_submenus()
 
     marker = AF3_NODES + '.pov_home_version'
     marker_changed = True
@@ -1144,7 +1379,15 @@ def ensure_patched():
     if want_rebuild and _is_af3_active():
         if _wait_for_quick_update_notice():
             return 'rebuild_deferred_quick_update_notice'
-        _rebuild_af3_shortcuts()
+        # The marker is written ONLY when the rebuild really ran -- the same
+        # rule the comment above states, and the one the pov_reload guard
+        # inside _rebuild_af3_shortcuts broke by returning early with no way
+        # for this caller to tell. Measured before this line: the rebuild was
+        # skipped, the marker was written anyway, and the next boot returned
+        # 'already_patched' -- so a DEFERRED rebuild became a DROPPED one,
+        # permanently, while the log said 'patched_rebuilt'.
+        if not _rebuild_af3_shortcuts():
+            return 'rebuild_deferred_pov_cycling'
         try:
             _write(marker, PATCH_VERSION + '\n')
         except Exception:

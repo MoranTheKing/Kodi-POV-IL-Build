@@ -113,6 +113,12 @@ class Router:
             elif action == 'install_af3_ce':
                 from resources.libs.wizard import ensure_arctic_fuse_3_installed
                 ensure_arctic_fuse_3_installed()
+            elif action == 'install_umbrella':
+                from resources.libs.wizard import install_umbrella_pilot
+                install_umbrella_pilot()
+            elif action == 'install_acctmgr':
+                from resources.libs.wizard import install_acctmgr_pilot
+                install_acctmgr_pilot()
             elif action == 'af3_tools':
                 from resources.libs.wizard import af3_tools_menu
                 af3_tools_menu()
@@ -337,6 +343,9 @@ class Router:
         # LOGGING
         elif mode == 'uploadlog':  # Upload Log File
             logging.upload_log()
+        elif mode == 'recentupdates':  # The last ten update notes
+            from resources.libs.gui import window
+            window.show_recent_updates()
         elif mode == 'viewlog':  # View kodi.log
             logging.view_log_file()
         elif mode == 'viewwizlog':  # View wizard.log

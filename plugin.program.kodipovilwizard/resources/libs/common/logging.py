@@ -54,11 +54,7 @@ def log(msg, level=xbmc.LOGINFO):
     # Always route to Kodi's native log (kodi.log) so the wizard is observable,
     # regardless of its own DEBUGLEVEL setting. The previous version did an
     # early `return False` when DEBUGLEVEL == '0', which swallowed EVERYTHING --
-    # even LOGINFO/LOGWARNING/LOGERROR -- and was the "logging black hole":
-    # nothing the installer/watchdog logged ever reached kodi.log. DEBUGLEVEL
-    # now only gates the optional separate wizard logfile below. Default level
-    # is LOGINFO so plain log("...") calls actually show in kodi.log (LOGINFO+
-    # is written by default; LOGDEBUG only when Kodi debug logging is on).
+    # even LOGINFO/LOGWARNING/LOGERROR -- and was the "logging black hole".
     try:
         title = getattr(CONFIG, 'ADDONTITLE', 'Kodi POV IL Wizard')
         xbmc.log('{0}: {1}'.format(title, msg), level)
@@ -73,19 +69,33 @@ def log(msg, level=xbmc.LOGINFO):
     try:
         if getattr(CONFIG, 'DEBUGLEVEL', '0') == '0' or getattr(CONFIG, 'ENABLEWIZLOG', 'false') != 'true':
             return
+
+        # CRITICAL FIX (from older branch): On a FRESH install, the addon_data folder
+        # might not exist yet. Ensure the directory exists before touching the log file.
+        folder = os.path.dirname(CONFIG.WIZLOG)
+        if folder and not os.path.isdir(folder):
+            os.makedirs(folder)
+
         if not os.path.exists(CONFIG.WIZLOG):
             with open(CONFIG.WIZLOG, 'w+') as f:
-                f.close()
+                pass  # Context manager automatically handles closing
 
-        lastcheck = CONFIG.NEXTCLEANDATE if not CONFIG.NEXTCLEANDATE == 0 else tools.get_date()
-        if CONFIG.CLEANWIZLOG == 'true' and time.mktime(time.strptime(lastcheck, "%Y-%m-%d %H:%M:%S")) <= tools.get_date():
+        lastcheck = getattr(CONFIG, 'NEXTCLEANDATE', 0)
+        if lastcheck == 0:
+            lastcheck = tools.get_date()
+
+        if getattr(CONFIG, 'CLEANWIZLOG', 'false') == 'true' and time.mktime(time.strptime(lastcheck, "%Y-%m-%d %H:%M:%S")) <= tools.get_date():
             check_log()
 
         line = "[{0}] {1}".format(tools.get_date(formatted=True), msg)
         line = line.rstrip('\r\n') + '\n'
         tools.write_to_file(CONFIG.WIZLOG, line, mode='a')
-    except Exception:
-        pass
+
+    except Exception as log_err:
+        try:
+            xbmc.log('Kodi POV IL Wizard: could not write the wizard log: {0}'.format(log_err), xbmc.LOGWARNING)
+        except Exception:
+            pass
 
 
 def check_log():

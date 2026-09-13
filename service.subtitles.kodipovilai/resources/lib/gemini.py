@@ -3,6 +3,7 @@
 # test. Bring your own API key.
 
 import json
+import re
 import urllib.parse
 
 try:
@@ -15,13 +16,84 @@ API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 REQUEST_TIMEOUT = 90
 
 
+# ---------------------------------------------------------------------------
+# The sampling knobs, and which models still take them.
+#
+# Google's own words, from the Gemini API docs:
+#
+#     temperature, top_p, and top_k are deprecated and ignored. In future
+#     model generations, supplying these parameters returns an HTTP 400
+#     error. Remove these parameters from all requests.
+#
+# "Ignored" today, a hard 400 tomorrow -- and a 400 on a translation chunk is
+# not a degraded translation, it is no translation at all. So the rule is
+# applied by MODEL, not globally: everything from 3.5 up gets a request with
+# no sampling fields in it, and 2.5 / 3.1 keep them, where they still do real
+# work (they are what the build's validated 1.0 / 0.95 tuning was measured on).
+#
+# THIS IS THE ONLY PLACE THAT DECIDES. Both request builders below consult it,
+# so a caller may keep passing temperature= and top_p= without knowing the
+# rule, and a caller added later cannot forget it. That is deliberate: the
+# alternative -- an `if` at every call site -- is how one of them ends up
+# missed, and subsync.py's audio call (a hardcoded temperature=0.0, nowhere
+# near translate.py) is exactly the site that would have been.
+#
+# top_k is in Google's list too. We have never sent it and there is no setting
+# for it, so there is nothing to gate -- noted here so the next reader does not
+# go looking for the missing third branch.
+_SAMPLING_RETIRED_FROM = (3, 5)
+
+# The generation out of a model id: 'gemini-3.5-flash-lite' -> (3, 5). Written
+# as a search rather than a full match so the dated preview ids Google hands
+# out ('gemini-2.5-flash-lite-preview-06-17') still resolve -- the trailing
+# 06-17 has no dot, so the first X.Y in the string is the generation.
+_GENERATION_RE = re.compile(r'(?:^|[^0-9.])(\d+)\.(\d+)')
+
+
+def model_generation(model):
+    """(major, minor) for a Gemini model id, or None when it carries no
+    version -- an alias like 'gemini-flash-latest', say."""
+    m = _GENERATION_RE.search((model or '').strip().lower())
+    if not m:
+        return None
+    try:
+        return (int(m.group(1)), int(m.group(2)))
+    except (TypeError, ValueError):
+        return None
+
+
+def sampling_params_supported(model):
+    """True when this model still honours temperature / top_p / top_k.
+
+    An id we cannot read a generation out of answers False. That direction is
+    chosen, not accidental: an unversioned alias resolves to whatever is newest
+    (which is where the parameters are going away), omitting them is a valid
+    request on every model that ever accepted them, and the cost of guessing
+    wrong the other way is an HTTP 400 that kills the whole translation."""
+    generation = model_generation(model)
+    if generation is None:
+        return False
+    return generation < _SAMPLING_RETIRED_FROM
+
+
 class GeminiError(Exception):
     """Raised on any non-recoverable API failure."""
 
 
 class QuotaExceeded(GeminiError):
-    """Daily request limit hit (HTTP 429). Caller may want to
-    suggest waiting until UTC midnight."""
+    """DAILY request limit hit (HTTP 429, RPD). Terminal for today -- caller
+    should fall back (Google Translate) and may suggest waiting until UTC
+    midnight. Distinct from RateLimited (a temporary per-minute 429)."""
+
+
+class RateLimited(GeminiError):
+    """TEMPORARY per-minute rate limit (HTTP 429, RPM/TPM) -- NOT the daily
+    quota. Clears within ~60s, so the caller should back off and RETRY the same
+    request rather than abort. `retry_after` is the API-suggested wait in seconds
+    (0 when the response didn't provide one)."""
+    def __init__(self, message, retry_after=0):
+        super().__init__(message)
+        self.retry_after = retry_after
 
 
 class OverloadError(GeminiError):
@@ -49,7 +121,41 @@ class FilteredResponse(GeminiError):
     entry can be left in the source language rather than aborting everything."""
 
 
-def test_key(api_key, model='gemini-3.1-flash-lite'):
+def _classify_429(r):
+    """A Gemini 429 is EITHER a temporary per-minute rate limit (RPM/TPM) OR the
+    daily quota (RPD) -- identical status code, so inspect the body. A QuotaFailure
+    violation whose quota id/metric mentions 'per day' -> terminal QuotaExceeded;
+    anything else (per-minute, or unparseable) -> RateLimited so the caller retries.
+    Defaulting the ambiguous case to RateLimited is safe: if it truly were daily the
+    retries keep getting 429 and the caller falls back anyway (just later), whereas
+    mislabelling a per-minute burst as 'daily quota' (the old behaviour) needlessly
+    kills AI translation for the rest of the movie."""
+    retry_after = 0
+    is_daily = False
+    try:
+        err = (r.json() or {}).get('error', {}) or {}
+        for d in err.get('details', []) or []:
+            typ = str(d.get('@type', ''))
+            if typ.endswith('RetryInfo'):
+                rd = str(d.get('retryDelay', '') or '').strip().rstrip('s')
+                try:
+                    retry_after = int(float(rd)) if rd else 0
+                except (ValueError, TypeError):
+                    retry_after = 0
+            if typ.endswith('QuotaFailure'):
+                for v in d.get('violations', []) or []:
+                    q = (str(v.get('quotaId', '')) + '|'
+                         + str(v.get('quotaMetric', ''))).lower()
+                    if 'perday' in q or 'per_day' in q:
+                        is_daily = True
+    except (ValueError, KeyError, TypeError, AttributeError):
+        pass
+    if is_daily:
+        return QuotaExceeded('Daily quota exceeded')
+    return RateLimited('Per-minute rate limit (HTTP 429)', retry_after=retry_after)
+
+
+def test_key(api_key, model='gemini-3.5-flash-lite'):
     """Cheap sanity check: list the user's available models and
     confirm the chosen one is in the set. Returns the model id we
     matched (so the caller can show "Connected: <model>")."""
@@ -58,12 +164,23 @@ def test_key(api_key, model='gemini-3.1-flash-lite'):
     if not api_key:
         raise InvalidKey('No API key provided')
 
-    url = '{0}/models?key={1}'.format(API_BASE, urllib.parse.quote(api_key, safe=''))
+    # Auth via the x-goog-api-key HEADER, not ?key= -- Google's newer
+    # 'AQ.'-prefixed keys reject the query-param method with 401 while the
+    # header method works for every key type. Send exactly ONE credential
+    # (key in both places returns 400 "multiple auth").
+    url = '{0}/models'.format(API_BASE)
     try:
-        r = requests.get(url, timeout=REQUEST_TIMEOUT)
+        r = requests.get(url, headers={'x-goog-api-key': api_key},
+                         timeout=REQUEST_TIMEOUT)
     except requests.RequestException as e:
         raise GeminiError('Network error: {0}'.format(e))
 
+    if r.status_code in (401, 407):
+        # 401 is always an auth failure (invalid/expired/revoked key) -- surface
+        # it as a rejected key so the connect dialog says so plainly.
+        raise InvalidKey('Gemini rejected the key (HTTP {0} -- invalid or '
+                         'expired): {1}'.format(r.status_code,
+                                                (r.text or '').strip()[:140]))
     if r.status_code == 400 or r.status_code == 403:
         # Surface Google's actual error reason -- the API returns JSON
         # like {"error":{"code":400,"message":"API key not valid. ..."}}
@@ -100,6 +217,64 @@ def test_key(api_key, model='gemini-3.1-flash-lite'):
     return available[0] if available else 'unknown'
 
 
+def generate_media(api_key, model, prompt, media_bytes, mime,
+                   temperature=0.0, max_output_tokens=8192,
+                   timeout=REQUEST_TIMEOUT):
+    """One-shot generation with an inline media part (e.g. an AAC audio clip
+    for speech-interval extraction -- SubSync S5). Same error contract as
+    generate(). Kept separate so the translation path is untouched."""
+    if not requests:
+        raise GeminiError('python-requests is not installed')
+    if not api_key:
+        raise InvalidKey('No API key provided')
+    if not model:
+        raise GeminiError('No model selected')
+    import base64 as _b64
+    url = '{0}/models/{1}:generateContent'.format(
+        API_BASE, urllib.parse.quote(model, safe=''))
+    media_config = {'maxOutputTokens': max_output_tokens}
+    if sampling_params_supported(model):
+        media_config['temperature'] = temperature
+    payload = {
+        'contents': [{'parts': [
+            {'text': prompt},
+            {'inline_data': {
+                'mime_type': mime,
+                'data': _b64.b64encode(media_bytes).decode('ascii'),
+            }},
+        ]}],
+        'generationConfig': media_config,
+    }
+    try:
+        r = requests.post(url, data=json.dumps(payload),
+                          headers={'Content-Type': 'application/json',
+                                   'x-goog-api-key': api_key},
+                          timeout=timeout)
+    except requests.RequestException as e:
+        raise GeminiError('Network error: {0}'.format(e))
+    if r.status_code == 429:
+        raise _classify_429(r)
+    if r.status_code in (500, 502, 503, 504):
+        raise OverloadError(
+            'Gemini overloaded (HTTP {0})'.format(r.status_code))
+    if r.status_code in (401, 407):
+        raise InvalidKey('Key rejected (HTTP {0} -- invalid/expired key): {1}'
+                         .format(r.status_code, (r.text or '')[:180]))
+    if r.status_code in (400, 403):
+        snippet = r.text[:300] if r.text else ''
+        if 'API key' in snippet or 'API_KEY' in snippet:
+            raise InvalidKey('Key rejected: {0}'.format(snippet))
+        raise GeminiError('Request rejected: {0}'.format(snippet))
+    if r.status_code != 200:
+        raise GeminiError('HTTP {0}: {1}'.format(r.status_code, r.text[:200]))
+    try:
+        data = r.json()
+        parts = data['candidates'][0]['content']['parts']
+        return ''.join(p.get('text', '') for p in parts)
+    except (ValueError, KeyError, IndexError, TypeError) as e:
+        raise GeminiError('Bad response shape: {0}'.format(e))
+
+
 def generate(api_key, model, prompt, temperature=0.2,
              max_output_tokens=16384, top_p=None,
              thinking_budget=None, thinking_level=None,
@@ -115,16 +290,17 @@ def generate(api_key, model, prompt, temperature=0.2,
     if not model:
         raise GeminiError('No model selected')
 
-    url = '{0}/models/{1}:generateContent?key={2}'.format(
-        API_BASE, urllib.parse.quote(model, safe=''),
-        urllib.parse.quote(api_key, safe=''))
+    url = '{0}/models/{1}:generateContent'.format(
+        API_BASE, urllib.parse.quote(model, safe=''))
 
-    generation_config = {
-        'temperature': temperature,
-        'maxOutputTokens': max_output_tokens,
-    }
-    if top_p is not None:
-        generation_config['topP'] = top_p
+    generation_config = {'maxOutputTokens': max_output_tokens}
+    # See sampling_params_supported(): from Gemini 3.5 on these are deprecated
+    # and ignored, and a future generation answers 400 to a request carrying
+    # them. The arguments stay in the signature so callers need not know that.
+    if sampling_params_supported(model):
+        generation_config['temperature'] = temperature
+        if top_p is not None:
+            generation_config['topP'] = top_p
     if thinking_level:
         generation_config['thinkingConfig'] = {
             'thinkingLevel': thinking_level,
@@ -155,16 +331,24 @@ def generate(api_key, model, prompt, temperature=0.2,
     try:
         r = requests.post(url,
                           data=json.dumps(payload),
-                          headers={'Content-Type': 'application/json'},
+                          headers={'Content-Type': 'application/json',
+                                   'x-goog-api-key': api_key},
                           timeout=timeout)
     except requests.RequestException as e:
         raise GeminiError('Network error: {0}'.format(e))
 
     if r.status_code == 429:
-        raise QuotaExceeded('Daily quota exceeded')
+        raise _classify_429(r)
     if r.status_code in (500, 502, 503, 504):
         raise OverloadError(
             'Gemini overloaded (HTTP {0})'.format(r.status_code))
+    if r.status_code in (401, 407):
+        # 401 (and 407 proxy-auth) is ALWAYS an authentication failure -- the key
+        # is invalid / expired / revoked, or the project has no access. It is
+        # never a transient error, so classify it as InvalidKey (terminal, no
+        # retries) rather than a generic GeminiError (which retries pointlessly).
+        raise InvalidKey('Key rejected (HTTP {0} -- invalid/expired key): {1}'
+                         .format(r.status_code, (r.text or '')[:180]))
     if r.status_code in (400, 403):
         # Distinguish key-related vs content-related rejection by
         # looking at the body when we can.

@@ -1,3 +1,145 @@
+v0.1.48
+- A quick update no longer discards the settings you changed that evening.
+  Kodi was being killed rather than closed, which skips the save it does on a
+  normal shutdown. That is correct after a full build install, where the save
+  would overwrite the guisettings.xml just extracted, and wrong after a quick
+  update, where nothing of the kind was written. Audio passthrough switching
+  itself back off is what made it visible; every setting was affected. The
+  quick update now asks Kodi to close properly and falls back to the kill only
+  if that does not take within twenty seconds.
+- Umbrella and its scraper module now install themselves on every device,
+  once, in the background, instead of waiting behind a menu entry. Their own
+  repositories come with them, so their developers publish the updates from
+  then on. Removing Umbrella afterwards is respected -- it is not reinstalled
+  at the next start.
+- Account Manager arrives current on a new install. The pack carried 1.1.5a
+  while its own developer's repository was publishing 1.1.6, so a fresh device
+  spent its first day downloading what should have come with it -- the same
+  thing that had happened to the video add-on. Umbrella, the scraper module
+  and the account viewer were checked against their own repositories in the
+  same pass and were already current.
+- A pack whose files are only half there now repairs itself. The check for
+  "already installed" looked at ONE file and skipped the download for the
+  whole pack, so a device missing the rest stayed missing them for ever. It
+  looks at all of them, and a download that fails to extract no longer tells
+  Kodi the add-ons are there when they are not.
+
+v0.1.47
+- A quick update now writes only the files that actually changed. It used to
+  lay down all 1,969 files of the build every time -- including 1,330 belonging
+  to the skin drawing the progress bar on screen -- to change a handful, and on
+  some devices Kodi force-closed partway through before it could finish. A
+  device several updates behind still receives everything it is missing: the
+  comparison is against that device's own files.
+
+v0.1.46
+- Switching skin now leaves a mark, so the build can tell a home tile the skin
+  switch removed from one you removed yourself, and put back only the first.
+- You are no longer asked, at every start, to reinstall the whole application
+  for a package that carries nothing an existing install needs. Asking for the
+  check yourself in the menu still finds and offers it.
+
+v0.1.45
+- A quick update waits for POV to be usable again before refreshing the skin,
+  so an update can no longer rebuild the home screen while POV is restarting.
+- When it cannot be applied straight away the update now says so plainly
+  instead of reporting that it was applied.
+
+v0.1.44
+- Recovering an add-on left switched off by an interrupted update is
+  quicker and no longer gives up on a temporary hiccup.
+
+v0.1.43
+- Fixes a fresh install failing to start: the startup script logged before
+  it created its own folder, and the log write took the whole script down.
+- The wizard log can no longer break whatever was writing to it.
+
+v0.1.42
+- A quick update is applied without closing Kodi. Anything that cannot be
+  applied in place still falls back to the old restart, and an add-on left
+  disabled by an interrupted reload is switched back on at the next start.
+- Nothing is reloaded while something is playing.
+
+[COLOR yellow][B]v0.1.41[/B][/COLOR]
+* Account Manager is no longer opt-in: it installs by itself, once, on every
+  device including ones that already have the build. It is what lets
+  "Connect Services" fill a debrid account into every add-on at once instead
+  of into POV alone. Nothing you have already connected changes, and if you
+  uninstall it we do not put it back.
+
+[COLOR yellow][B]v0.1.40[/B][/COLOR]
+* New opt-in pilot: "Install Account Manager (experimental)" in the wizard
+  menu. Connect your debrid accounts once in one place and it fills them
+  into every add-on you have installed, POV and Umbrella included, and into
+  anything you install later. Ships with its developer's own repository so
+  it updates straight from him. Nothing changes for anyone who does not
+  pick it.
+
+[COLOR yellow][B]v0.1.39[/B][/COLOR]
+* New opt-in pilot: "Install Umbrella (experimental)" in the wizard menu
+  installs the Umbrella addon + CocoScrapers alongside POV, with both of
+  their official repositories so they update straight from their developers.
+  Nothing changes for anyone who does not pick it.
+
+[COLOR yellow][B]v0.1.38[/B][/COLOR]
+* NOX skin updated to 1.0.11: the seek bar now slides away on its own after
+  five seconds of pause, matching FENtastic, and returns on any key press.
+* Devices already on NOX pick the new skin pack up automatically on the next
+  quick update via the existing version gate.
+
+[COLOR yellow][B]v0.1.37[/B][/COLOR]
+* Arctic Fuse 3 skin updated to the current upstream release (6.3.2.14),
+  keeping the mod layer, the Hebrew localisation and all build integrations.
+* A device already ON Arctic Fuse 3 now refreshes the skin pack automatically
+  on quick update, same as NOX -- no need to switch skins back and forth.
+* Re-extracting the AF3 skin now clears the old skin folder first, so files
+  the skin author removed can no longer linger and load as zombie windows.
+
+[COLOR yellow][B]v0.1.36[/B][/COLOR]
+* A new installation no longer skips the five FENtastic home-widget files, so
+  Movies, TV shows and Idan+ come up with their content instead of empty.
+* A home layout you customised is still kept on a quick update; only files that
+  are missing get written.
+
+[COLOR yellow][B]v0.1.35[/B][/COLOR]
+* Legacy Android and Windows installations without a POV package marker no
+  longer receive an automatic full-application dialog after quick maintenance.
+* Manual checks still offer the current package, while marked .48+ packages
+  remain eligible for important future application releases.
+
+[COLOR yellow][B]v0.1.34[/B][/COLOR]
+* Android and Windows application updates now compare the complete POV IL
+  package release (for example 21.3-povil.48), instead of trying to parse that
+  value as Kodi's 21.3 core version.
+* Windows update detection now recognizes the actual Kodi POV IL installation
+  folder, downloads the stable current installer filename, and stages it
+  outside portable_data so the repair setup can safely protect that profile.
+* Existing pre-marker installations are bridged from .47 once, so they receive
+  the repaired .48 package and then use the embedded release marker normally.
+
+[COLOR yellow][B]v0.1.33[/B][/COLOR]
+* Quick-update delivery state is now committed only after the package finishes
+  successfully. A transient download/install failure therefore retries on the
+  next Kodi startup instead of permanently suppressing that release.
+* Automatic quick updates fetch an immutable notification-specific build
+  manifest path, preventing a fresh notification from being paired with a stale
+  quickfix URL at the raw.githubusercontent CDN (which ignores query strings in
+  its cache key).
+* A quick update is accepted only after extraction reaches 100% with zero
+  errors; corrupt or partially extracted packages now return failure and retry
+  instead of advancing the delivery id.
+[COLOR yellow][B]v0.1.32[/B][/COLOR]
+* Fixed the "Kodi POV IL" rebrand not sticking after an update. The update-
+  notification frame and the bottom badge are now carried inside the FENtastic
+  quickfix, so a quick update no longer re-imposes the old Real-Debrid/KODI art
+  on top of the new branding. The wizard bundled in the build is rebuilt from
+  source (correct icons + notification title, home-widget preservation across
+  quick updates, NOX skin 1.0.10) instead of a stale snapshot.
+
+[COLOR yellow][B]v0.1.31[/B][/COLOR]
+* Rebrand: the update-notification title now reads "KODI POV IL" and the bottom
+  badge is the POV IL square (replacing the old circular Real-Debrid/KODI logo).
+
 [COLOR yellow][B]v0.1.30[/B][/COLOR]
 * NOX gate -> skin 1.0.10. Reordered the "my content" tiles on the NOX home
   so each provider's movies and series sit next to each other -- my movies

@@ -147,8 +147,8 @@ msgid "Model Top-P"
 msgstr "Top-P של המודל"
 
 msgctxt "#32408"
-msgid "Controls nucleus sampling. Higher values are more varied; lower values are more focused."
-msgstr "שולט בדגימת התוצאה: ערך גבוה יותר מגוון, ערך נמוך יותר ממוקד."
+msgid "Controls nucleus sampling. Higher values are more varied; lower values are more focused. Only affects Gemini 2.5 and 3.1. Google deprecated this parameter from Gemini 3.5 on, so it is hidden and not sent for newer models."
+msgstr "שולט בדגימת התוצאה: ערך גבוה יותר מגוון, ערך נמוך יותר ממוקד. משפיע רק על Gemini 2.5 ו-3.1. גוגל ביטלה את הפרמטר הזה מ-Gemini 3.5 והלאה, ולכן במודלים חדשים יותר הוא מוסתר ולא נשלח."
 
 msgctxt "#32409"
 msgid "Thinking"
@@ -201,6 +201,34 @@ msgstr "תקציב 1024"
 msgctxt "#32422"
 msgid "Budget 2048"
 msgstr "תקציב 2048"
+
+msgctxt "#32423"
+msgid "Embedded-subtitle translation method"
+msgstr "שיטת תרגום כתובית מובנית"
+
+msgctxt "#32424"
+msgid "Choose how a foreign subtitle embedded in the video becomes Hebrew. Automatic first aligns an external subtitle to the embedded timings, then extracts the embedded text only if needed. Alignment only is gentler for debrid streams. Direct extraction uses the exact embedded text but can be slower or heavier while streaming. Local files only disables every embedded read over debrid/HTTP. Every failure falls back to the normal subtitle path."
+msgstr "בחרו כיצד כתובית זרה המובנית בווידאו תהפוך לעברית. אוטומטי מסנכרן תחילה כתובית חיצונית לפי זמני המובנית, ומחלץ את הטקסט המובנה רק אם צריך. סנכרון בלבד עדין יותר לזרמי debrid. חילוץ ישיר משתמש בטקסט המובנה המדויק, אך עלול להיות איטי או כבד יותר בזמן סטרימינג. קבצים מקומיים בלבד מבטל כל קריאה מובנית דרך debrid/HTTP. בכל כשל התוסף חוזר למסלול הכתוביות הרגיל."
+
+msgctxt "#32425"
+msgid "Automatic (recommended)"
+msgstr "אוטומטי (מומלץ)"
+
+msgctxt "#32426"
+msgid "Timing alignment only (safer for streaming)"
+msgstr "סנכרון זמנים בלבד (בטוח יותר לסטרימינג)"
+
+msgctxt "#32427"
+msgid "Direct embedded-text extraction only"
+msgstr "חילוץ ישיר של הטקסט המובנה בלבד"
+
+msgctxt "#32428"
+msgid "Local files only (no debrid/HTTP reads)"
+msgstr "קבצים מקומיים בלבד (ללא קריאות debrid/HTTP)"
+
+msgctxt "#32429"
+msgid "Disabled"
+msgstr "כבוי"
 
 msgctxt "#33000"
 msgid "AI Hebrew (translated from {0})"
@@ -255,12 +283,12 @@ msgid "Optional. If you have DarkSubs installed, you do not need Wyzie at all --
 msgstr "אופציונלי - לא חובה. אם יש לך תוסף DarkSubs מותקן, אתה לא צריך את Wyzie בכלל. לחיצה על כל כתובית שאינה עברית מ-DarkSubs תפעיל אוטומטית את התרגום AI שלי. Wyzie נחוץ רק אם אין לך תוסף כתוביות אחר ואתה רוצה מקור אונליין בלחיצה אחת מתוך התוסף הזה. 1000 בקשות ליום חינמיות ב-store.wyzie.io/redeem."
 
 msgctxt "#32230"
-msgid "3.1 Flash Lite (recommended, 500/day)"
-msgstr "3.1 Flash Lite (מומלץ, 500 ביום)"
+msgid "3.5 Flash Lite (recommended, 500/day)"
+msgstr "3.5 Flash Lite (מומלץ, 500 ביום)"
 
 msgctxt "#32231"
-msgid "3.1 Flash (premium, 250/day)"
-msgstr "3.1 Flash (פרימיום, 250 ביום)"
+msgid "3.1 Flash (premium, 20/day free)"
+msgstr "3.1 Flash (פרימיום, 20 ביום בחינם)"
 
 msgctxt "#32232"
 msgid "2.5 Flash Lite (fallback)"
@@ -269,6 +297,14 @@ msgstr "2.5 Flash Lite (fallback)"
 msgctxt "#32233"
 msgid "2.5 Flash (fallback)"
 msgstr "2.5 Flash (fallback)"
+
+msgctxt "#32234"
+msgid "3.8 Flash (newest, 20/day free)"
+msgstr "3.8 Flash (החדש ביותר, 20 ביום בחינם)"
+
+msgctxt "#32235"
+msgid "Only affects Gemini 2.5 and 3.1. Google deprecated this parameter from Gemini 3.5 on, so it is hidden and not sent for newer models."
+msgstr "משפיע רק על Gemini 2.5 ו-3.1. גוגל ביטלה את הפרמטר הזה מ-Gemini 3.5 והלאה, ולכן במודלים חדשים יותר הוא מוסתר ולא נשלח."
 
 msgctxt "#32254"
 msgid "Test Wyzie connection"
@@ -287,20 +323,24 @@ msgid "RTL punctuation fix direction"
 msgstr "כיוון תיקון ניקוד RTL"
 
 msgctxt "#32223"
-msgid "How to handle Hebrew end-of-sentence punctuation. Default 'reverse' moves trailing punct to the line start -- correct for Kodi setups that render source order without BiDi reorder (the observed default behaviour across Windows / Android / FENtastic). 'legacy' is the previous default (move leading punct to end) -- only use it if 'reverse' produces wrong output on your particular setup. 'off' disables the post-processor entirely."
-msgstr "איך לטפל בניקוד סוף-משפט בעברית. 'reverse' (ברירת מחדל) מזיז ניקוד מהסוף להתחלה - נכון לרוב המכשירים (Windows / אנדרואיד / FENtastic) שלא עושים BiDi reorder. 'legacy' היא ברירת המחדל הישנה (להזיז להפך) - השתמש רק אם 'reverse' לא נראה נכון אצלך. 'off' מבטל לגמרי."
+msgid "How to handle Hebrew right-to-left rendering. Default 'RTL base' wraps each Hebrew line in an explicit right-to-left embedding so the player's own BiDi places punctuation, numbers, English names and parentheses on the correct side -- the root-cause fix. If your player does not honour the marks, switch to 'Reverse', which only moves the end-of-sentence punctuation (the previous default). 'legacy' moves leading punct to the end. 'off' disables the post-processor entirely."
+msgstr "איך לטפל ברינדור ימין-לשמאל בעברית. 'RTL base' (ברירת מחדל) עוטף כל שורה עברית בכיוון RTL מפורש, כך שה-BiDi של הנגן ממקם ניקוד, מספרים, שמות באנגלית וסוגריים בצד הנכון - תיקון-שורש. אם הנגן שלך לא מכבד את הסימנים, עבור ל-'Reverse' שמזיז רק את נקודת סוף-המשפט (ברירת המחדל הקודמת). 'legacy' מזיז ניקוד מוביל לסוף. 'off' מבטל לגמרי."
 
 msgctxt "#32224"
 msgid "Legacy (move punct to end - old default, usually wrong)"
 msgstr "Legacy (להזיז לסוף - ברירת מחדל ישנה, לרוב לא נכון)"
 
 msgctxt "#32225"
-msgid "Reverse (move punct to start - default, correct on most setups)"
-msgstr "Reverse (להזיז להתחלה - ברירת מחדל, נכון לרוב המכשירים)"
+msgid "Reverse (move only end punctuation - use if RTL base looks wrong)"
+msgstr "Reverse (מזיז רק ניקוד סוף - השתמש אם RTL base נראה שגוי)"
 
 msgctxt "#32226"
 msgid "Off (no punctuation processing)"
 msgstr "Off (בלי תיקון ניקוד)"
+
+msgctxt "#32227"
+msgid "RTL base (default - fixes numbers/English/parentheses/period)"
+msgstr "RTL base (ברירת מחדל - מתקן מספרים/אנגלית/סוגריים/נקודה)"
 
 msgctxt "#32500"
 msgid "Community pool"
@@ -479,9 +519,41 @@ msgid "Keep DarkSubs enabled help"
 msgstr "כברירת מחדל רק MoranSubs פעיל כשהמנוע דולק. הפעל כדי להשאיר גם את DarkSubs/All Subs מופעל — הוא יישאר דלוק גם אחרי אתחול ועדכון."
 
 msgctxt "#32546"
-msgid "שיפור דיוק מגדר בעזרת כתובית ערבית (ניסיוני)"
-msgstr "שיפור דיוק מגדר בעזרת כתובית ערבית (ניסיוני)"
+msgid "שיפור דיוק מגדר בעזרת כתובית ייחוס (ניסיוני)"
+msgstr "שיפור דיוק מגדר בעזרת כתובית ייחוס (ניסיוני)"
+
+msgctxt "#32548"
+msgid "Addons without automatic subtitle search"
+msgstr "תוספים ללא חיפוש כתוביות אוטומטי"
+
+msgctxt "#32549"
+msgid "Comma-separated addon IDs (e.g. plugin.video.idanplus). Playback started from these addons never triggers the automatic Hebrew subtitle search. Live TV (PVR channels / streams with no duration) is always skipped automatically."
+msgstr "מזהי תוספים מופרדים בפסיק (למשל plugin.video.idanplus). ניגון שהתחיל מהתוספים האלה לא יפעיל חיפוש כתוביות אוטומטי. שידורים חיים (ערוצי PVR / זרמים ללא משך) מדולגים תמיד אוטומטית."
 
 msgctxt "#32547"
-msgid "כשמופעל, תרגומי ה-AI מורידים כתובית ערבית אנושית לאותו כותר ומשתמשים בה רק כדי לקבוע מגדר נכון בעברית בכל שורה (הוא/היא, התאמת פועל/תואר) -- בערבית המגדר מסומן כמעט זהה לעברית. אם לא נמצאת כתובית ערבית תואמת, חוזר אוטומטית לתרגום הרגיל. עובד מכל שפת מקור."
-msgstr "כשמופעל, תרגומי ה-AI מורידים כתובית ערבית אנושית לאותו כותר ומשתמשים בה רק כדי לקבוע מגדר נכון בעברית בכל שורה (הוא/היא, התאמת פועל/תואר) -- בערבית המגדר מסומן כמעט זהה לעברית. אם לא נמצאת כתובית ערבית תואמת, חוזר אוטומטית לתרגום הרגיל. עובד מכל שפת מקור."
+msgid "כשמופעל, תרגומי ה-AI מורידים כתובית אנושית של אותו כותר בשפה שמסמנת מגדר ומשתמשים בה רק כדי לקבוע מגדר נכון בעברית בכל שורה (הוא/היא, התאמת פועל/תואר). מנסה קודם כתובית עברית לא מסונכרנת, אחר כך ערבית (מסמנת מגדר כמעט זהה לעברית), ואז ספרדית/צרפתית/רוסית ועוד. אם שום כתובית לא מתיישרת, חוזר אוטומטית לתרגום הרגיל. עובד מכל שפת מקור."
+msgstr "כשמופעל, תרגומי ה-AI מורידים כתובית אנושית של אותו כותר בשפה שמסמנת מגדר ומשתמשים בה רק כדי לקבוע מגדר נכון בעברית בכל שורה (הוא/היא, התאמת פועל/תואר). מנסה קודם כתובית עברית לא מסונכרנת, אחר כך ערבית (מסמנת מגדר כמעט זהה לעברית), ואז ספרדית/צרפתית/רוסית ועוד. אם שום כתובית לא מתיישרת, חוזר אוטומטית לתרגום הרגיל. עובד מכל שפת מקור."
+
+msgctxt "#32550"
+msgid "Fast mode (paid Gemini API tier)"
+msgstr "מצב מהיר (למשתמשי Gemini API בתשלום)"
+
+msgctxt "#32551"
+msgid "Turn ON only if you are on a PAID Gemini plan (billing enabled on your API key). The add-on normally paces requests and limits parallel chunks to stay under the free tier's ~15 requests/minute limit; a paid key has thousands, so this lifts those limits for much faster translation. Leave OFF for a free key (ON would just cause rate-limit errors and retries). Does not change translation quality -- that is set by the Model option."
+msgstr "הפעילו רק אם אתם על תוכנית Gemini בתשלום (חיוב מופעל על מפתח ה-API). התוסף בדרך כלל מווסת את קצב הבקשות ומגביל את מספר המקטעים המקבילים כדי להישאר מתחת למגבלת ~15 בקשות לדקה של התוכנית החינמית; למפתח בתשלום יש אלפים, כך שאפשרות זו מסירה את ההגבלות לתרגום מהיר בהרבה. השאירו כבוי עם מפתח חינמי (הפעלה רק תגרום לשגיאות מגבלת-קצב ולניסיונות חוזרים). לא משנה את איכות התרגום — היא נקבעת באפשרות 'מודל'."
+
+msgctxt "#32552"
+msgid "Leave POV exactly as its author shipped it"
+msgstr "להשאיר את POV בדיוק כפי שהיוצר שלו פרסם"
+
+msgctxt "#32553"
+msgid "Turn ON to stop this add-on making any change to plugin.video.pov. It normally adjusts about twenty of POV's own files on every start (Hebrew menus, genre icons, source-quality labels, and more), and POV updates itself whenever its author publishes -- so if POV ever starts behaving oddly, turning this ON and reinstalling POV from its repository tells you in one step whether the cause was here. Leave OFF for normal use."
+msgstr "הפעילו כדי שהתוסף הזה לא יבצע שום שינוי ב-plugin.video.pov. בדרך כלל הוא מתאים כעשרים מהקבצים של POV בכל הפעלה (תפריטים בעברית, אייקוני ז'אנרים, תוויות איכות למקורות ועוד), ו-POV מתעדכן בעצמו בכל פעם שהיוצר שלו מפרסם - כך שאם POV מתחיל להתנהג מוזר, הפעלה של האפשרות הזו והתקנה מחדש של POV מהמאגר שלו מראה בצעד אחד אם המקור לתקלה כאן. לשימוש רגיל השאירו כבוי."
+
+msgctxt "#32554"
+msgid "POV: fast navigation (reuse Python interpreter)"
+msgstr "POV: ניווט מהיר (שימוש חוזר במפרש פייתון)"
+
+msgctxt "#32555"
+msgid "OFF (default, safe): POV gets a fresh Python interpreter for every menu press, so it reloads its own code each time -- measured at about 1.75 seconds of spinner on every category, on every press, and a repeat visit is no faster. ON: POV keeps one interpreter, so it loads its code once per Kodi session instead of once per press -- the first press after a start still pays it, and the presses after that should be much faster, though exactly how much has not been measured yet. But if several POV requests ever run at the same moment (home widgets refreshing together, or you pressing again before the previous list finished) they share that interpreter, and that is a native crash that closes Kodi completely. This add-on turned it OFF on 14 Aug 2026 after exactly such a crash. Turn ON only if you would rather have the speed and accept that risk. Takes effect after ONE Kodi restart. On that restart POV notices the change and asks to reload your profile -- say OK and it is active immediately; say Cancel and it is active at the next start instead. It only asks once."
+msgstr "כבוי (ברירת מחדל, בטוח): POV מקבל מפרש פייתון חדש בכל לחיצה בתפריט, ולכן טוען מחדש את הקוד שלו בכל פעם — נמדד כ-1.75 שניות של גלגל מסתובב בכל קטגוריה, בכל לחיצה, וגם ביקור חוזר אינו מהיר יותר. מופעל: POV שומר מפרש אחד, ולכן טוען את הקוד שלו פעם אחת בכל הפעלת Kodi במקום בכל לחיצה — הלחיצה הראשונה אחרי ההפעלה עדיין משלמת את זה, והלחיצות שאחריה אמורות להיות מהירות בהרבה, אם כי עדיין לא נמדד בכמה בדיוק. אבל אם כמה בקשות של POV רצות באותו רגע (אריחי מסך הבית מתרעננים יחד, או לחיצה נוספת לפני שהרשימה הקודמת הסתיימה) הן חולקות את אותו מפרש, וזו קריסה שסוגרת את Kodi לגמרי. התוסף הזה כיבה את האפשרות ב-14 באוגוסט 2026 בעקבות קריסה כזו בדיוק. הפעילו רק אם אתם מעדיפים את המהירות ומקבלים את הסיכון. נכנס לתוקף אחרי הפעלה מחדש אחת של Kodi. באותה הפעלה POV שם לב לשינוי ושואל אם לטעון מחדש את הפרופיל — אשרו ב-OK וזה פעיל מיד; תבחרו ביטול וזה יהיה פעיל בהפעלה הבאה. הוא שואל פעם אחת בלבד."

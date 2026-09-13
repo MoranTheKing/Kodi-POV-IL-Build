@@ -500,8 +500,17 @@ def _search_inner(info, modal_progress=True):
         # thumbnail field (via xbmc.convertLanguage) -- use it so Kodi shows
         # the right flag. Normalize a few common non-standard codes.
         code = _LANG_NORMALIZE.get(thumb_code, thumb_code)
+        # Machine/AI-translated flag carried by the provider (currently the
+        # OpenSubtitles source sets download_data['mt']; it requests MT subs
+        # from the API but the flag used to be dropped, letting an MT Hebrew
+        # sub masquerade as human). Old cached results simply lack the key ->
+        # False, same behavior as before.
+        is_mt = ((parsed['download_data'] or {}).get('mt') == 'true')
         # Classify. Hebrew (human / machine) first, everything else after.
-        if lang == 'HebrewMachineTranslated' or 'HebrewMachineTranslated' in label0:
+        if (lang == 'HebrewMachineTranslated'
+                or 'HebrewMachineTranslated' in label0
+                or (is_mt and (code in ('he', 'iw', 'heb')
+                               or lang == 'Hebrew' or 'Hebrew' in label0))):
             kind = 'mt_he'
             code = 'he'
         elif (code in ('he', 'iw', 'heb') or lang == 'Hebrew'
@@ -544,6 +553,10 @@ def _search_inner(info, modal_progress=True):
             'is_hd': False,
             '_engine_kind': kind,
             '_pct': pct,
+            # Machine/AI-translated (any language). The gender-reference oracle
+            # rejects these outright -- an MT sub in ANY language is a poisoned
+            # gender oracle (MT defaults to masculine).
+            '_is_mt': is_mt,
         })
 
     kodi_utils.log('subs_engine_bridge: {0} engine results'.format(len(out)),
@@ -628,6 +641,19 @@ def _stream_key(info):
     return f or ((info or {}).get('filepath') or (info or {}).get('title') or '')
 
 
+def have_playback_snapshot(info=None):
+    """True when the file playing RIGHT NOW already has a real (non-empty)
+    play-start snapshot. Lets a caller skip an expensive stream poll it does not
+    need. An EMPTY snapshot deliberately reads as False -- it means "captured
+    nothing yet", so a retry is still wanted (see note_playback_streams)."""
+    try:
+        snap = _snap_get()
+        return bool(snap and snap.get('key') == _stream_key(info)
+                    and snap.get('streams'))
+    except Exception:
+        return False
+
+
 def note_playback_streams(info, streams=None):
     """Snapshot the embedded/local subtitle streams at PLAY START, before any
     external sub is loaded. Call ONCE per file, as early as possible. `streams`
@@ -640,7 +666,14 @@ def note_playback_streams(info, streams=None):
             return
         key = _stream_key(info)
         cur = _snap_get()
-        if cur and cur.get('key') == key and cur.get('streams') is not None:
+        # Only a NON-EMPTY snapshot is final. An empty one is provisional: the
+        # demuxer may simply not have enumerated the tracks yet, and a caller
+        # whose poll timed out first must not be able to latch [] and discard a
+        # real list that arrives afterwards -- that would silently reproduce the
+        # "no embedded rows" bug through a different door. A file that genuinely
+        # has no subtitle streams just gets rewritten as [] each time, which
+        # costs one window-property write and changes nothing downstream.
+        if cur and cur.get('key') == key and cur.get('streams'):
             return  # already captured for this file
         if streams is None:
             streams = _wait_for_subtitle_streams(player)
@@ -651,13 +684,46 @@ def note_playback_streams(info, streams=None):
         # source screen flags it "BUILT-IN 100%" for everyone. Automatic,
         # deduped + backgrounded inside pool.report_embedded; never blocks.
         try:
-            has_he = any(
-                (_LANG_NORMALIZE.get((n or '').strip().lower(),
-                                     (n or '').strip().lower()[:2]) == 'he')
-                for n in (streams or []))
+            def _is_he_label(n):
+                low = (n or '').strip().lower()
+                if not low:
+                    return False
+                if _LANG_NORMALIZE.get(low, low[:2]) == 'he':
+                    return True
+                # Descriptive labels a code/2-char lookup misses:
+                # "Hebrew", "Hebrew SDH", "Forced Hebrew", or Hebrew script.
+                if 'hebrew' in low:
+                    return True
+                return any('֐' <= ch <= 'ת' for ch in (n or ''))
+            has_he = any(_is_he_label(n) for n in (streams or []))
+            _rel = ''
             if has_he:
                 from resources.lib import pool
+                _rel = pool._release_from(info)
                 pool.report_embedded(info)
+                try:
+                    from resources.lib import he_sub_match as _hsm
+                    if _rel:
+                        _hsm.merge_embedded(info, [_rel])
+                except Exception:
+                    pass
+            # Diagnostic (once per play): shows WHY a source did/didn't get the
+            # BUILT-IN flag -- whether Hebrew was detected, the release we stored,
+            # and which field it came from. Makes a release-name mismatch vs the
+            # source row, or an empty release, visible in a single line.
+            try:
+                kodi_utils.log(
+                    'embedded-report he={0} rel={1!r} ids(tmdb={2!r} imdb={3!r} '
+                    's={4!r} e={5!r} mt={6!r} isep={7}) (picked={8!r} li={9!r} '
+                    'fp={10!r})'.format(
+                        has_he, _rel, info.get('tmdb_id', ''),
+                        info.get('imdb_id', ''), info.get('season', ''),
+                        info.get('episode', ''), info.get('media_type', ''),
+                        info.get('is_episode', ''), info.get('picked_release', ''),
+                        info.get('li_filename', ''), info.get('filepath', '')),
+                    level='INFO')
+            except Exception:
+                pass
         except Exception:
             pass
     except Exception:
@@ -679,17 +745,24 @@ def _wait_for_snapshot(key, timeout=3.0):
         player = xbmc.Player()
         monitor = xbmc.Monitor()
         elapsed = 0.0
+        provisional = None
         while elapsed < timeout:
             if not player.isPlayingVideo():
-                return None
+                return provisional
             snap = _snap_get()
-            if (snap and snap.get('key') == key
-                    and snap.get('streams') is not None):
-                return snap
+            if snap and snap.get('key') == key:
+                if snap.get('streams'):
+                    return snap
+                # Empty means "captured nothing YET" (see note_playback_streams):
+                # keep waiting for a real list rather than accepting it, but
+                # remember it so a file that truly has no streams still resolves
+                # instead of blocking the dialog for the full timeout twice.
+                if snap.get('streams') is not None:
+                    provisional = snap
             if monitor.waitForAbort(0.2):
-                return None
+                return provisional
             elapsed += 0.2
-        return None
+        return provisional
     except Exception:
         return None
 
@@ -724,6 +797,13 @@ def embedded_candidates(info):
                for n in streams):
             from resources.lib import pool
             pool.report_embedded(info)
+            try:
+                from resources.lib import he_sub_match as _hsm
+                _rel = pool._release_from(info)
+                if _rel:
+                    _hsm.merge_embedded(info, [_rel])
+            except Exception:
+                pass
     except Exception:
         pass
     out = []
@@ -834,7 +914,11 @@ _SUB_EXTS = ('.srt', '.ssa', '.ass', '.sub', '.smi', '.vtt', '.txt')
 # reads it to show "(נטענה מהקאש)", exactly like DarkSubs's cache note.
 LAST_DOWNLOAD_FROM_CACHE = False
 
-_CACHED_SUBS_DIRNAME = 'Cached_subs'
+_CACHED_SUBS_DIRNAME = 'Cached_subs_v2'
+# Do NOT bump/delete this cache for the RTL compatibility repair. Existing
+# Ktuvit files may already carry a ".shared" marker, and throwing them away
+# would cause needless provider fetches plus pool de-dup lookups. Old v2 bytes
+# stay immutable; playback gets a separate locally-rendered copy instead.
 # DarkSubs caches every download keyed {source}_{language}_{filename}{ext} and
 # wipes the whole folder once it exceeds this many files (its
 # "subtitle_trans_cache" setting). We keep the same count-based prune.
@@ -906,7 +990,12 @@ def _cached_subs_prune(cache_dir):
         names = os.listdir(cache_dir)
     except Exception:
         return
-    if len(names) <= _cached_subs_max():
+    source_names = [
+        n for n in names
+        if os.path.splitext(n)[1].lower() in _CACHED_SUBS_EXTS
+        and '.povil-rtl.' not in n
+    ]
+    if len(source_names) <= _cached_subs_max():
         return
     for n in names:
         try:
@@ -929,6 +1018,213 @@ def _cached_subs_store(keybase, sub_file):
         kodi_utils.log('subs_engine_bridge: cache store skipped: {0}'
                        .format(e), level='DEBUG')
         return None
+
+
+# Only plain timed-text formats can be passed through srt.fix_rtl_punctuation
+# line-by-line. ASS/SSA and MicroDVD SUB carry timing/style fields on the SAME
+# line as the dialogue; wrapping the full line would corrupt their syntax.
+_RTL_PLAIN_TEXT_EXTS = ('.srt', '.vtt')
+_RTL_DISPLAY_TOKEN = '.povil-rtl'
+_LOGICAL_SOURCE_MARKER = '.logical-v1'
+
+
+def source_path_for_delivery(path):
+    """Map our private display-copy path back to the immutable source file.
+
+    Pool hashing/sharing must always read and mark the source, never the copy
+    carrying playback-only BiDi controls. Falls back to the input path.
+    """
+    try:
+        root, ext = os.path.splitext(path or '')
+        if root.endswith(_RTL_DISPLAY_TOKEN):
+            source = root[:-len(_RTL_DISPLAY_TOKEN)] + ext
+            if os.path.isfile(source):
+                return source
+    except Exception:
+        pass
+    return path
+
+
+def is_logical_source(path):
+    try:
+        return os.path.isfile(path + _LOGICAL_SOURCE_MARKER)
+    except Exception:
+        return False
+
+
+def _mark_logical_source(path):
+    """Mark a freshly downloaded file as pristine logical-order text.
+
+    Existing unmarked v2 entries are known to predate this change and may carry
+    the vendored engine's physical punctuation reversal. The tiny local marker
+    prevents that compatibility inverse from being applied to new downloads.
+    It causes no network traffic and is never uploaded.
+    """
+    try:
+        marker = path + _LOGICAL_SOURCE_MARKER
+        if not os.path.exists(marker):
+            with open(marker, 'w', encoding='ascii') as f:
+                f.write('1')
+    except Exception:
+        pass
+
+
+def _render_hebrew_rtl_copy(sub_file, legacy_engine=False):
+    """Return a playback-only RTL copy while leaving ``sub_file`` untouched.
+
+    The source bytes, source hash and ".shared" marker remain stable, so this
+    repair cannot re-upload existing pool subtitles. Unsupported structured
+    formats are deliberately returned verbatim rather than risking their
+    timing/style syntax. Fail-open on every error.
+
+    ``legacy_engine`` reverses only the old engine's known punctuation shapes;
+    fresh logical downloads pass False.
+
+    Deliberately does NOT run srt.clamp_cue_durations, unlike every other place
+    the RTL fix is applied. That clamp exists for a failure this path cannot
+    have: our own model mistyping a timecode it was told to copy verbatim.
+    These bytes come from Ktuvit / OpenSubtitles / Wizdom and never touch
+    Gemini, their timing is treated as MORE trustworthy elsewhere in the add-on
+    (subsync uses a foreign-language human sub as the oracle it corrects AI
+    timing against), and real-world third-party SRT formatting is far more
+    varied than Gemini's output -- so silently re-timing it is a risk taken for
+    no matching benefit. If a stuck-cue report ever arrives against an engine
+    download, this is the considered decision to revisit, not an oversight.
+    """
+    try:
+        if os.path.splitext(sub_file or '')[1].lower() \
+                not in _RTL_PLAIN_TEXT_EXTS:
+            return sub_file
+        with open(sub_file, 'rb') as f:
+            raw = f.read()
+        # extract_sub.convert_to_utf normalizes engine downloads first. Decode
+        # strictly here so an unexpected binary/legacy file is never rewritten
+        # with replacement characters.
+        text = raw.decode('utf-8-sig')
+        from resources.lib import srt
+        fixed = srt.fix_rtl_punctuation(
+            text, legacy_engine=legacy_engine)
+        if fixed == text:
+            return sub_file
+        root, ext = os.path.splitext(sub_file)
+        out = root + _RTL_DISPLAY_TOKEN + ext
+        tmp = out + '.tmp'
+        try:
+            with open(tmp, 'w', encoding='utf-8', newline='') as f:
+                f.write(fixed)
+                f.flush()
+                try:
+                    os.fsync(f.fileno())
+                except OSError:
+                    pass
+            os.replace(tmp, out)
+        except Exception:
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+            raise
+        return out
+    except Exception as e:
+        kodi_utils.log('subs_engine_bridge: RTL display copy skipped: {0}'
+                       .format(e), level='DEBUG')
+        return sub_file
+
+
+def _is_plausible_hebrew(text):
+    """True if `text` reads as Hebrew subtitle text rather than noise.
+
+    This is the guard that stops the cp1255 fallback below from being a blunt
+    instrument. "Not valid UTF-8" does not mean "cp1255 Hebrew" -- it also
+    describes a perfectly good UTF-8 file with ONE damaged byte, and cp1255
+    happily decodes almost any byte sequence, so without this an English
+    subtitle whose only flaw was a single bad byte would be re-read as cp1255
+    from end to end and every curly quote and em-dash in it turned into
+    mojibake. A near-invisible glitch would become a ruined file.
+
+    So the conversion is only accepted when it produces what it claims to have
+    found. Same majority-Hebrew test the pool applies to a contribution, on a
+    smaller sample."""
+    heb = letters = 0
+    for ch in text:
+        o = ord(ch)
+        if 0x590 <= o <= 0x5FF:
+            heb += 1
+            letters += 1
+        elif ('a' <= ch <= 'z') or ('A' <= ch <= 'Z'):
+            letters += 1
+    if letters < 40:
+        return False
+    return (heb / float(letters)) >= 0.5
+
+
+def _ensure_utf8(path):
+    """Rewrite `path` as UTF-8 if it is not already valid UTF-8. Returns True
+    when the file was converted.
+
+    The engine normalises encodings in extract_sub.convert_to_utf -- but ONLY
+    for files it pulled out of an archive. Ktuvit sometimes serves the .srt
+    directly rather than zipped; ZipFile() then raises, extract() falls back to
+    `return archive_file`, and the RAW bytes (cp1255, the legacy Israeli Hebrew
+    encoding) are used as-is.
+
+    Nothing downstream survives that. Every consumer reads the file as UTF-8
+    with errors='replace', so each Hebrew letter becomes U+FFFD -- which is in
+    none of the letter ranges the code counts. The pool's quality gate sees a
+    subtitle with no Hebrew and drops it before uploading (a Ktuvit sub that
+    should have been mirrored for everyone silently never arrives), and subsync
+    sees one dialogue cue instead of hundreds and cannot verify the timing.
+    Both were observed in the field on Rick and Morty S01E09, where the pool
+    ended up with nothing while the same flow had mirrored four variants of
+    S01E01 -- the difference being that those came zipped.
+
+    Deliberately conservative: a file that already decodes as UTF-8 is not
+    touched at all, so its bytes, its source hash and its ".shared" marker stay
+    exactly as they were and this can never trigger a re-upload of anything
+    already in the pool. Fail-open on every error."""
+    try:
+        with open(path, 'rb') as f:
+            raw = f.read()
+    except OSError:
+        return False
+    try:
+        raw.decode('utf-8-sig')
+        return False                 # already UTF-8 -- leave it completely alone
+    except (UnicodeDecodeError, LookupError):
+        pass
+    try:
+        text = raw.decode('cp1255')  # also decodes iso-8859-8 Hebrew correctly
+    except (UnicodeDecodeError, LookupError):
+        kodi_utils.log('subs_engine_bridge: {0} is neither UTF-8 nor cp1255 -- '
+                       'left as-is'.format(os.path.basename(path)),
+                       level='WARNING')
+        return False
+    if not _is_plausible_hebrew(text):
+        # Reading it as cp1255 does not produce Hebrew, so cp1255 is not what
+        # this file is -- most likely a UTF-8 file with a damaged byte. Leaving
+        # it alone keeps that damage to the one byte it already was.
+        kodi_utils.log('subs_engine_bridge: {0} is not valid UTF-8, but '
+                       'reading it as cp1255 does not give Hebrew -- left '
+                       'as-is'.format(os.path.basename(path)), level='WARNING')
+        return False
+    tmp = path + '.utf8tmp'
+    try:
+        with open(tmp, 'w', encoding='utf-8', newline='') as f:
+            f.write(text)
+        os.replace(tmp, path)
+    except OSError as e:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        kodi_utils.log('subs_engine_bridge: UTF-8 rewrite failed for {0}: {1}'
+                       .format(os.path.basename(path), e), level='WARNING')
+        return False
+    kodi_utils.log('subs_engine_bridge: converted {0} from cp1255 to UTF-8 '
+                   '(a provider served it unzipped, so the engine never '
+                   'normalised it)'.format(os.path.basename(path)),
+                   level='INFO')
+    return True
 
 
 def _looks_like_subtitle(path):
@@ -966,7 +1262,15 @@ def select_embedded(stream_index, lang=None):
     appends external subs at HIGHER indices, so this index still points at the
     embedded stream. Use it directly. Only if it's out of range do we re-find
     the first stream of the requested language (lowest index = the embedded
-    one), never an external appended later."""
+    one), never an external appended later.
+
+    NOTE (2026-08-15): an embedded HEBREW track renders with its line-final
+    punctuation at the wrong end, because Kodi draws the track itself with an
+    LTR BiDi base direction and we cannot put RLE..PDF into bytes we do not
+    own. The only repair is to extract the track's text and deliver our own
+    copy, and that was built and then REMOVED at the build owner's decision --
+    extraction is not dependable enough across debrid providers to be the
+    answer. Do not rebuild it here without that conversation. See HANDOFF.md."""
     try:
         import xbmc
         p = xbmc.Player()
@@ -993,27 +1297,31 @@ def select_embedded(stream_index, lang=None):
         return False
 
 
-def download(payload):
+def download(payload, for_delivery=True):
     """Resolve an 'engine' link to a Hebrew SRT path on disk. Returns
-    the path or None. Called from translate.resolve()."""
+    the path or None. Called from translate.resolve().
+
+    ``for_delivery=False`` returns the immutable canonical/cache source for
+    hashing, pool sharing and language/timing analysis. The default returns a
+    separate RTL-rendered copy for a Hebrew SRT/VTT. Neither path performs any
+    Worker request by itself.
+    """
     if not enabled():
         return None
     try:
-        return _download_inner(payload)
+        return _download_inner(payload, for_delivery=for_delivery)
     except Exception as e:
-        kodi_utils.log('subs_engine_bridge.download failed: {0}'.format(e),
-                       level='ERROR')
-        # Surface the real reason instead of Kodi's generic "download failed",
-        # so a problem is reportable without digging through the log.
-        try:
-            kodi_utils.notify('הורדה נכשלה ({0}): {1}'.format(
-                (payload.get('source') or '?'), str(e)[:90]), time_ms=6000)
-        except Exception:
-            pass
+        kodi_utils.log('subs_engine_bridge.download failed ({0}): {1}'.format(
+            (payload.get('source') or '?'), e), level='ERROR')
+        # Log only -- no user popup. This fired on every failed provider download,
+        # including background/secondary Ktuvit fetches the server "refuses"
+        # (raising "Ktuvit refused the file...") while the subtitle the user
+        # actually picked loads fine -- which spammed a popup on every playback.
+        # The exact reason is in the ERROR log above for diagnosis.
         return None
 
 
-def _download_inner(payload):
+def _download_inner(payload, for_delivery=True):
     global LAST_DOWNLOAD_FROM_CACHE
     LAST_DOWNLOAD_FROM_CACHE = False
     source = payload.get('source') or ''
@@ -1035,11 +1343,8 @@ def _download_inner(payload):
     if module is None or not hasattr(module, 'download'):
         kodi_utils.log('subs_engine_bridge: no download() for source '
                        + str(source), level='WARNING')
-        try:
-            kodi_utils.notify('מקור לא נתמך להורדה: {0}'.format(source or '?'),
-                              time_ms=6000)
-        except Exception:
-            pass
+        # Log only (logged above) -- no user popup; this fired during background
+        # resolution too and was just playback noise.
         return None
 
     from resources.lib.subs_engine import general
@@ -1056,9 +1361,20 @@ def _download_inner(payload):
         pass
 
     sub_folder = general.MySubFolder
+    # Clear the shared download folder before EVERY fetch. It is one persistent
+    # dir reused by every source/title, and extract() picks a subtitle file out of
+    # it -- so a leftover from a previous, unrelated download (a different title,
+    # or an English file from another source) could be handed back mislabeled.
+    # rmtree+recreate mirrors the reference engine.download_sub, which the bridge
+    # dropped when it added the Cached_subs disk cache (the Wizdom regression:
+    # wrong-title / English-as-Hebrew / unsynced subtitles).
     try:
-        if not os.path.exists(sub_folder):
-            os.makedirs(sub_folder)
+        import shutil as _shutil
+        _shutil.rmtree(sub_folder, ignore_errors=True)
+    except Exception:
+        pass
+    try:
+        os.makedirs(sub_folder)
     except OSError:
         pass
 
@@ -1081,6 +1397,21 @@ def _download_inner(payload):
                 # (LAST_DOWNLOAD_FROM_CACHE is already declared global at the
                 # top of this function -- re-declaring it here is a SyntaxError.)
                 LAST_DOWNLOAD_FROM_CACHE = True
+                # A cache entry stored before this normalisation existed can
+                # still be cp1255. Heal it in place, or the same device keeps
+                # serving the same unreadable copy for as long as the entry
+                # lives -- and keeps failing to mirror it to the pool.
+                _ensure_utf8(hit)
+                if (for_delivery
+                        and kodi_utils.get_bool(
+                            'auto_fix_sub_punctuation', True)
+                        and 'Hebrew' in language):
+                    # Every shipped v2 entry without the local format marker
+                    # predates the single RTL owner and may carry the old
+                    # engine's reversed dash/ellipsis shapes. Render a copy;
+                    # never mutate/delete the cache source or its share marker.
+                    return _render_hebrew_rtl_copy(
+                        hit, legacy_engine=not is_logical_source(hit))
                 return hit
         except Exception as e:
             kodi_utils.log('subs_engine_bridge: cache lookup skipped: {0}'
@@ -1092,11 +1423,9 @@ def _download_inner(payload):
         kodi_utils.log('subs_engine_bridge: download returned no file '
                        '(source={0}, got={1})'.format(source, sub_file),
                        level='WARNING')
-        try:
-            kodi_utils.notify('השרת לא החזיר קובץ כתובית ({0})'.format(source),
-                              time_ms=6000)
-        except Exception:
-            pass
+        # Log only -- no user popup. This fires for a single failed provider
+        # download (e.g. a background/secondary Ktuvit fetch) while the sub the
+        # user actually picked works fine; a popup here just spams playback.
         return None
 
     # Validate it's an actual subtitle, not an HTML error page / un-extracted
@@ -1106,28 +1435,29 @@ def _download_inner(payload):
         kodi_utils.log('subs_engine_bridge: downloaded file is not a valid '
                        'subtitle ({0})'.format(os.path.basename(sub_file)),
                        level='WARNING')
-        try:
-            kodi_utils.notify('הקובץ שהתקבל אינו כתובית תקינה ({0})'.format(
-                source), time_ms=6000)
-        except Exception:
-            pass
+        # Log only -- no user popup. A provider (often Ktuvit, when rate-limited)
+        # occasionally hands back an HTML/empty blob for ONE result; the user's
+        # actual subtitle still loads, so the repeated popup was pure noise.
         return None
 
-    # Optional Hebrew punctuation fix, mirroring engine.download_sub.
-    try:
-        if kodi_utils.get_bool('auto_fix_sub_punctuation', True) \
-                and 'Hebrew' in language:
-            from resources.lib.subs_engine import engine as _eng
-            fixed = _eng.fix_sub_punctuation_and_write(sub_file)
-            if fixed:
-                sub_file = fixed
-    except Exception as e:
-        kodi_utils.log('subs_engine_bridge: punct fix skipped: {0}'
-                       .format(e), level='DEBUG')
+    # Normalise the encoding BEFORE the pristine copy is taken, so the stored
+    # source -- the one the pool hashes, uploads and marks as shared, and the
+    # one subsync reads -- is the UTF-8 text everything downstream assumes.
+    _ensure_utf8(sub_file)
 
-    # Store the validated, punctuation-fixed file in the persistent cache so
-    # the next pick of the same subtitle is served from disk (see above).
+    # Store the validated PRISTINE provider file before any playback rendering.
+    # This preserves one stable source hash for pool de-dup and sharing.
+    source_file = sub_file
     if keybase:
-        _cached_subs_store(keybase, sub_file)
+        cached = _cached_subs_store(keybase, sub_file)
+        if cached:
+            source_file = cached
+    _mark_logical_source(source_file)
 
-    return sub_file
+    # The old vendored fixer is intentionally gone. One canonical MoranSubs
+    # processor owns Hebrew playback, on a disposable local copy only.
+    if (for_delivery
+            and kodi_utils.get_bool('auto_fix_sub_punctuation', True)
+            and 'Hebrew' in language):
+        return _render_hebrew_rtl_copy(source_file, legacy_engine=False)
+    return source_file

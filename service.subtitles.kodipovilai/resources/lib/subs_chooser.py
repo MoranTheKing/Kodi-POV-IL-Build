@@ -209,6 +209,22 @@ def _start_ai_apply(link, info):
                 'force_ai': True,
             }
             ai_link = translate._encode_link(ai_payload)
+        # embedded_ai: do NOT extract here -- a scattered remux takes minutes and
+        # would freeze this short-lived chooser process. Hand the embedded_ai
+        # link straight to the background translator below (ai_link / ai_payload
+        # stay as the embedded_ai link set above): its resolve() extracts, with a
+        # corner progress bar, THEN translates.
+        elif payload.get('type') == 'embedded_ai':
+            # Show the embedded SOURCE track now (native, instant + already synced
+            # to the video) so the user sees it while the Hebrew cooks, instead of
+            # the stale sub they picked embedded to replace. Best-effort.
+            try:
+                _si = payload.get('stream_index')
+                if _si is not None:
+                    subs_engine_bridge.select_embedded(
+                        _si, lang=payload.get('src_lang') or 'en')
+            except Exception:
+                pass
         # English source -> show it immediately (broadly readable); other
         # languages get no intermediate, exactly like the fast path.
         src_lang = ai_payload.get('source_lang') or 'en'
@@ -418,7 +434,7 @@ def _show_pyxbmct():
                 # 1-2 minutes, so it must NOT block the window. CLOSE the window
                 # and translate in the background, applying when ready, with a
                 # progress banner -- exactly like picking it from the search.
-                if kind in ('engine_ai', 'ai'):
+                if kind in ('engine_ai', 'ai', 'embedded_ai'):
                     self.close()
                     _start_ai_apply(link, self.info)
                     return
@@ -538,7 +554,7 @@ def _deliver_pick(c, info, close_cb):
                 _log('embedded select failed: {0}'.format(_e), level='WARNING')
             close_cb()
             return
-        if kind in ('engine_ai', 'ai'):
+        if kind in ('engine_ai', 'ai', 'embedded_ai'):
             close_cb()
             _start_ai_apply(link, info)
             return

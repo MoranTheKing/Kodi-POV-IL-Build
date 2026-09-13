@@ -1,3 +1,3167 @@
+0.2.526
+- "Share my cached translations" was uploading nothing at all.
+
+  The action walks the translation cache, parses each filename for the title
+  and language, and contributes it to the community pool. The pattern it parsed
+  with had no slot for the quality-tier suffix -- and a translation that used a
+  gender reference is saved as "<key>.ar.he.srt", which is the NORMAL case,
+  since the gender reference is on by default and was force-enabled for every
+  device. So the pattern matched almost nothing: every file was counted as
+  skipped, and the action reported success having sent nothing.
+
+  Fixed, and the tier is now read from the filename rather than assumed. That
+  second half matters as much as the first: the tier decides which variant the
+  pool records, and the setting's value TODAY says nothing about whether a
+  reference actually aligned for that title back then. Taking it from the
+  filename means a gender-boosted translation is recorded as one, and a plain
+  one is not recorded as boosted -- which would have served everyone else a
+  weaker file labelled as the better one.
+
+  Releasing this needed a new packaging path, because pool.py carries the pool
+  credential and the two existing flows could not cover a deliberate change to
+  its logic: one takes the file whole and would have discarded the fix, the
+  other re-derives the credential with a tool only the maintainer has. The new
+  one copies the credential BLOCK byte for byte and changes nothing else, then
+  proves both halves of that before writing -- the block is identical to the
+  shipped one, and nothing outside it moved. The credential is never decoded or
+  re-derived, so it cannot be got subtly wrong. It is opt-in and it says so in
+  the build log, because the failure this guards against -- shipping the
+  placeholder and silently breaking the pool for everyone who updates, which
+  happened in 0.2.438 -- is silent by nature.
+
+0.2.525
+- The final subtitle swap claimed success it had not verified, and then
+  deleted the file the player was still on.
+
+  When a translation finishes, the add-on copies the result to a clean
+  <release>.he.srt, hands it to Kodi, and deletes the transient per-chunk slot
+  files. It marked that swap successful because setSubtitles() had not raised.
+  But setSubtitles POSTS to the video-player thread and returns before the
+  stream is registered -- so the stream list read on the next line was the list
+  from BEFORE the add, and "select the most recently added stream" selected the
+  last SLOT instead. The cleanup then deleted exactly that file. The viewer was
+  pinned to a stream whose file no longer existed: no subtitles for the rest of
+  playback, and toggling them off and on did not help.
+
+  This was reachable only on a minority of jobs until now, because the path it
+  looked for was computed without the quality-tier suffix and therefore usually
+  did not exist, which skipped the whole block. Making the finished file
+  actually get delivered would have turned that rare failure into the normal
+  one. So the swap now counts the streams, waits up to a second for the count
+  to really grow, and only then claims success and pins the stream. If the
+  count never grows the slot files are KEPT and a warning is logged -- worst
+  case a few stale files the cache prune sweeps up, instead of a viewer with no
+  subtitles.
+
+  "No player at all" is treated as safe to clean rather than as a failure,
+  otherwise every job that outlives playback left its slots behind. And the
+  cleanup now escapes glob characters: release names keep their brackets on
+  purpose, and glob reads [YTS.MX] as a character class, so for those releases
+  it had been silently deleting nothing.
+
+- One success path never reported at all. When the model returns empty or
+  echoes the source, the add-on falls back to Google Translate and returns the
+  result -- but it returned WITHOUT telling the caller it was done, so the swap
+  above never ran and the viewer was left on the slot file holding the very
+  output that had just been rejected as not-Hebrew. That is the same "it plays
+  the original language" symptom, on the one path nobody had wired.
+
+- A cache marker could be evicted out from under the file it describes. The
+  zero-byte '.google' marker says a translation is machine output and must
+  never reach the community pool, and '.shared' records that a file was already
+  uploaded. Reading a translation refreshed only the translation, so on a file
+  watched for years the markers aged out on their own and were deleted while
+  the file stayed. After that the add-on no longer knew, and the next play
+  could have pushed machine translation into the shared pool. A marker now
+  counts as being as recent as the file it belongs to.
+
+- Two labels in the model picker were wrong. "3.1 Flash (premium, 250/day)"
+  and "3.8 Flash (newest, heavier quota use)" both have a real free cap of 20 a
+  day, so the quota panel would have said "24 of 20 (120%)" on the first film.
+  Both now state 20, and a test reads the add-on's own quota table so the two
+  cannot drift apart again.
+
+- KNOWN AND NOT FIXED HERE: a second entry to the same title does not always
+  load the cached translation automatically, and the subtitle has to be picked
+  by hand. The cause is understood and written down at the exact line someone
+  will try to change -- the cache lookup is pinned to one quality tier, and
+  simply widening it makes things worse, because the early cache return happens
+  before anything is listening and a hit is then delivered to nobody. Fixing it
+  properly means wiring those returns into the progress callback, which is its
+  own change.
+
+0.2.524
+- The gender check could rewrite a CORRECT line into a wrong one.
+
+  A feminine verdict on a reference does not merely fail to help -- it ACTS.
+  wrong_gender_entries flags the entry, and _regender_blocks then hands the
+  model the Hebrew alone with the flat assertion "these address a FEMALE
+  listener, but they were written addressing a male". Its only acceptance test
+  is that the rewrite no longer says "ata". So a false feminine does not
+  degrade gracefully: it rewrites a correct masculine line into a wrong
+  feminine one, and nothing downstream can veto it.
+
+  "at" is Hebrew's definite-object marker as well as the feminine pronoun, and
+  the old guard only refused it before a he-definite noun. Definiteness is an
+  OPEN class -- "at ze", "at kol", "at atzmi", "at ma" -- so no list of
+  exceptions ever finishes the job. Measured on a full human episode, 13 of 60
+  feminine verdicts were ordinary object marking, one of them on a line whose
+  speaker is explicitly male.
+
+  Hebrew MORPHOLOGY has no such ambiguity. The 2fs future/imperative and a
+  short list of bare imperatives can only address a woman, and reading those
+  adds 23 cues the pronoun alone missed. The pronoun still counts, but only
+  when at least one of its occurrences is not followed by an unmistakable
+  definite object. Net on that episode: 57 -> 69 verdicts with the 13 false
+  ones gone -- precision and recall both improve, which is why this replaces
+  the guard rather than extending it.
+
+  Two details that took a measurement to get right: the 1sg past ending -ti
+  must not be read as a 2fs imperative, and "kol kach" is "so/very", not an
+  object, so "at kol kach yafa" does address a woman.
+
+- Arabic verbs carrying an object pronoun are now read too. Arabic glues the
+  object straight onto the verb, and a suffix-must-end-the-word rule missed
+  every one of them. The clitic set is closed, so the noun classes refused in
+  0.2.523 stay refused -- the six-letter floor blocks those whatever follows.
+  It does open one new class, a broken plural carrying a possessive, which is
+  structurally identical to a real verb and cannot be separated without a
+  lexicon; it is pinned as a test so the trade stays visible rather than being
+  rediscovered later as a surprise.
+
+0.2.523
+- The Arabic gender reference could not read Arabic.
+
+  Arabic anchors more real jobs than any other reference language -- 41% of
+  every job that got one, measured on 5,708 of them. And every pattern this
+  module used to read it required HARAKAT. Real subtitles carry none: a full
+  human episode has 7,415 Arabic letters and TWO diacritics, and not one
+  vocalised anta/anti. So reference_addressee_gender(line, 'ar') returned
+  F=0, M=0, None=370 across that entire file. The most-used reader we had was
+  the emptiest.
+
+  The 2fs PRESENT suffix is consonantal and always written, so it can be read
+  from the text real people actually get. Two noun classes wear the same
+  ending and had to be refused: the tafʿil verbal noun (tamrin, taʿyin,
+  tahsin, tadkhin) and the feminine sound dual (tafsila -> tafsilatayn). The
+  first is FIVE letters and structurally identical to a real five-letter verb,
+  so the floor is six letters and three genuine verbs are given up on purpose.
+  Recall loses a little; precision wins, and that is the right way round --
+  this reader feeds a repair pass, and a false feminine spends a request
+  rewriting a line that was already correct.
+
+  Measured on that episode: 0 -> 19 of 370 cues (5.1%), eleven distinct forms,
+  every one a genuine second-person feminine verb, with twelve noun controls
+  all correctly refused.
+
+- The Hebrew reader was better at finding a MALE addressee than a female one.
+
+  _HE_MASC has always carried the proclitic alternation -- it matches ve-ata,
+  she-ata, kshe-ata. _HE_REF_FEM did not, so ve-at, she-at and kshe-at read as
+  no pronoun at all. An asymmetry in exactly the wrong direction, in a check
+  whose entire purpose is catching masculine-where-feminine. Three more cues
+  on the same episode, and the object-marker guard is untouched.
+
+- A guard that was promised and not kept. begin() is documented "Fully
+  guarded; never raises" and everything after the candidate fetch sat outside
+  every handler, so a candidate the source engine returned in an unexpected
+  shape left the function as an AttributeError. The single caller does wrap
+  it, so the user outcome was always the correct silent fallback -- but a
+  module documented as never raising has to actually never raise.
+
+- Two statements in our own code that were not true. The docstring on
+  reference_addressee_gender said only 'ar' and 'he' were read; nine more
+  languages have been read from _ADDRESSEE_MARKERS since it landed, and our
+  own test exercises all of them. And the alignment comment claimed a random
+  pairing votes ~0.30: measured, a true pair votes 0.742, twenty randomised
+  starts vote 0.417-0.441, and nine time-reversed references 0.439-0.441. The
+  floor is ~0.43. The gate still clears it, by less than we said.
+
+- Two tests had been red for a layout the product handles fine. POV keeps
+  moving its debrid clients between resources/lib/debrids/ and indexers/; the
+  patchers try both, the tests pinned one. A release gate that fails on a
+  non-problem is a gate people learn to wave through. Both now ask the tree.
+
+0.2.522
+- POV: restore navigation timing on 6.09.03 and preserve metadata timeout repairs after Windows patchers.
+- Umbrella: reject malformed watched-sync pages, freeze the server checkpoint before forced refresh, and backfill skipped history once.
+- Build: current-host integration and portable regression tests now cover these failures.
+
+0.2.521
+- POV 6.09.02 and Umbrella 6.7.87 both fixed a bug we were patching. Neither
+  repair is re-anchored, and neither will cry wolf.
+
+  Both add-ons moved in the same week. Every patcher was run against real trees
+  of the new and previous versions, a FRESH copy per patcher, and the verdicts
+  compared. Exactly one changed on each side, and in both cases for the same
+  reason: THE UPSTREAM AUTHOR FIXED THE BUG.
+
+  POV 6.09.02 rewrote its resume-cancel line to call progress_media() itself,
+  and progress_media is bound to the resolving dialog's own kill method at the
+  call site -- so the modal window that used to be left open is now closed by
+  POV. Checked at the call site rather than assumed.
+
+  Umbrella 6.7.87 rewrote its MDBList watched-sync cursor to store the SERVER's
+  checkpoint instead of the device's wall clock, to refuse to advance when a
+  fetch failed, and to move to a new cursor key that backfills from scratch on
+  upgrade. That is all three parts of our patch, and two of them done better
+  than we did -- their own comment names the same defect ours does.
+
+  NEITHER IS RE-ANCHORED. Fitting an edit onto a correct implementation buys
+  nothing and can only break at the next refactor. Both are KEPT, because
+  devices still on the older versions genuinely have the bugs.
+
+  AND THE HEALTH REPORT LEARNED THE DIFFERENCE. A repair whose bug the host
+  fixed is not a repair that stopped working, but until now both read as
+  LAPSED -- a WARNING. Two of them in one week would have taught everyone to
+  ignore the one status that means something. A patcher can now declare the
+  host version from which its bug is gone, and an absent marker at or above
+  that version is reported as `superseded` instead. Below it, it is still a
+  lapse, because a device on an older host really does need the repair -- so a
+  rollback starts warning again. Unreadable versions fail CLOSED, keeping the
+  warning rather than going quiet.
+
+  A PHANTOM REPAIR, found by reading the report instead of the diff. Markers
+  are harvested by SHAPE -- any identifier ending in _v<digits> -- from the
+  whole patcher source, comments included. The comment explaining Umbrella's
+  fix quoted Umbrella's own new cursor key, which invented a marker this
+  add-on never writes; the report then found it in Umbrella (they do write it)
+  and called it a healthy repair. A phantom `ok` is worse than a phantom
+  lapse, because it MASKS. The comment was fixed, never the rule -- and there
+  is now a check that no harvested marker may already exist in a clean host,
+  demonstrated to fail on the exact mistake that produced it.
+
+  THREE, NOT TWO. The review of this release caught it removing two false
+  alarms and leaving a third standing -- on pov_alldebrid_status_fix, the very
+  patcher this entry cites as the precedent for the judgement. Its bug exists
+  in POV 6.08.14 and nowhere else (measured across every version on disk), so
+  every device that ran 0.2.513-0.2.517 while still on 6.08.14 has been warning
+  about it ever since. Declared too. Removing two and leaving the third would
+  have taught exactly the habit this change exists to prevent.
+
+  Three more the review found, each a way for an alarm to go quiet:
+    * A version segment that is not a number no longer ranks at all. Stripping
+      non-digits INVERTED the order -- '6.7.9~rc2' became (6,7,92) and compared
+      above 6.7.87, silencing a repair a device still needed.
+    * The declaration is now read with ast rather than a regex, so it cannot be
+      picked up out of a docstring, a string or a commented-out line. That is
+      the phantom-marker trap pointed the other way: there it invented a
+      repair, here it would have silenced one.
+    * The one-line boot summary counts superseded. It was added without
+      touching that line, so `ok` silently dropped with nothing to account for
+      it -- and that line, not the report file, is what reaches a pasted log.
+
+  A SECOND REVIEW ROUND, and it caught the fix for the third of those:
+    * The test written to prove the summary line counts superseded was
+      VACUOUS. It asserted on the renderer, which already counted correctly
+      before the fix; the three lines that were actually changed were never
+      executed by it. Proved by deleting them and finding the suite still
+      green. It now drives the real boot summary against real trees, and the
+      same deletion now fails it. Third vacuous test caught this way -- a test
+      that cannot fail is worse than no test, because it is counted.
+    * Reading the declaration with ast costs a parse of every module in the
+      add-on -- 234ms over 152 files at boot, to read a literal that exists in
+      four of them. A substring test now runs first, so the parse only happens
+      where there is something to parse.
+
+  Two limits are now written down where the decision is made rather than left
+  to be discovered: the gate is MONOTONE (once the host is at or above the
+  declared version this marker never warns again, including if upstream
+  reintroduces the bug -- only a rollback re-alarms), and the declaration is
+  PER-MODULE, so a multi-marker patcher must use the per-host form or be split
+  before declaring one.
+
+  Nothing else moved: POV's route table is identical between the two versions,
+  so no menu the build points at can have broken, and Umbrella's settings keys
+  are unchanged. POV also RESTORED the DMM source it dropped in 6.09.01, so
+  that provider works again on its own.
+
+0.2.520
+- When there is no embedded subtitle to extract, the log now says WHY instead
+  of looking like a failure.
+
+  A report: "why did it fail to extract the embedded subtitle?" The log said
+
+      embedded_extract: no matching text track (num=None lang=en)
+      embedded: no usable text track for en
+
+  and nothing else. It had not failed. The file was a BluRay remux, and a
+  BluRay carries its subtitles as PICTURES, not text -- so the three subtitle
+  tracks the player listed were images of text, and there was nothing for a
+  text extractor to take. Falling through to the ordinary subtitle search was
+  the correct outcome, not a fallback from an error.
+
+  THE LINE COULD NOT SAY THAT, and three different situations produced it word
+  for word: every track is a picture format, the only matching track is flagged
+  "forced" (signs only, which is deliberately refused), or the language really
+  is absent. Verified by running all of them against the real selector -- same
+  line every time. So the reader's next question is always "is our extractor
+  broken?", and usually the answer is "that file has no text subtitles".
+
+  It now prints what the file actually contains -- track number, codec,
+  language, forced flag -- and then says which of the three it is. The
+  inventory is already parsed at that point, so this costs one line and no
+  work. Behaviour is unchanged; only the log is.
+
+  AND IT ASSERTS ONLY WHAT IT TESTED, which the first version of this did not.
+  It began by treating "no S_TEXT/* track" as "every track is a picture", and
+  those are different claims: Matroska has text subtitle codecs that predate
+  the S_TEXT/* naming and sit outside it -- S_ASS, S_SSA, S_USF (what older
+  muxers wrote), S_HDMV/TEXTST, S_KATE. On such a file the new line would have
+  said there was nothing but pictures and that the external search was correct
+  "not a fallback from a failure" -- steering the reader away from a real gap,
+  in the release whose entire purpose is to stop the log giving a confident
+  wrong answer. There is now a list of the codecs that genuinely are pictures,
+  and a track outside both sets gets its own line saying it is text this
+  extractor does not read yet and is worth investigating. Checked by running
+  every codec class through it.
+
+  A language the file does not declare is also marked. The parser substitutes
+  'eng' when a track carries no Language element, and printing that as though
+  it were declared makes this line disagree with mkvinfo and read as a parser
+  bug. It now shows [eng?].
+
+  This one applies to the standalone add-on as well, which ships the same
+  extractor.
+
+0.2.519
+- Standalone installs were reading the wrong changelog, and had been for
+  eleven releases.
+
+  The release notes shipped in the standalone package are the shared notes with
+  every entry that does not apply to you filtered out. The code that cuts them
+  into sections looked for a version line spelled "v0.2.500"; the leading "v"
+  was dropped from the file at 0.2.508. So eleven releases collapsed into one
+  block headed by the newest number, and the filter ran across the pile: you
+  opened the notes, saw the current version, and under it a paragraph from an
+  older release about machinery this add-on does not contain -- with three
+  releases missing entirely.
+
+  Fixed, and made narrower at the same time: a version line only starts a
+  section when a note actually follows it, so a version number quoted inside a
+  paragraph can no longer cut it in half and drop the rest.
+
+- Two releases that DID apply to standalone installs had been filtered out of
+  those notes by the sentence that said so.
+
+  The filter drops any note mentioning something this package does not ship.
+  Six of the words it looks for are ordinary English -- "build", "home",
+  "skin" -- meant to catch a note ABOUT those things. They also match the
+  phrase "the build edition and the standalone", which is exactly what a note
+  promising both editions get a change has to say. The Gemini 3.8 move and the
+  sampling-parameter change both run here, and both were deleted from these
+  notes by the sentence promising they would.
+
+  A note that names the standalone now outranks those six words -- and only
+  those six. Anything naming a component this package does not carry is still
+  dropped, absolutely.
+
+- The rest of this release is build-only: a repair to the per-skin favourites
+  seeds that never ran on a fresh install, and a debrid client patcher that
+  could pick a stale file.
+
+  The seed repair added in 0.2.515 sat after eight early returns in its own
+  function. On a device with no favourites.xml yet, the canonical home screen
+  is written and the function returns before reaching it -- so the tile worked
+  while the per-skin seed files still held the old action, and the first skin
+  switch in that session brought the empty window back. It healed on the next
+  boot, which is the kind of "it came back" nobody can reproduce on demand. The
+  repair now runs first, and the test drives the real entry point on all three
+  shapes a device arrives in instead of calling the helper directly.
+
+  The debrid unbound-name guard chose its target file by existence alone, so
+  two spellings of the Real-Debrid client in one tree would have had it patch
+  the stale copy and report success. It now sorts on one key: the folder POV
+  imports from first, then the filename POV's own import line names.
+
+  This entry exists because a review of the four releases before it found all
+  of the above. The reviewer is a step the release procedure has always
+  required and those four skipped.
+
+0.2.518
+- POV 6.09.01 broke two repairs. Both are fixed, and the other 56 were
+  checked rather than assumed.
+
+  POV jumped 6.08.15 -> 6.09.01 (a minor release, ~45 files). Every patcher
+  this add-on has for POV was run against a real 6.09.01 tree and a real
+  6.08.15 tree, a FRESH copy per patcher, and the verdicts compared. Exactly
+  two differ.
+
+  1) THE INTERNAL-SCRAPER SHIM, and this one is subtler than it looks. POV
+  changed two things in the same loop:
+
+      -   for loader, module_name, is_pkg in __import__('pkgutil').iter_modules([source_path]):
+      +   for loader, module_name, is_pkg in pkgutil.iter_modules([source_path]):
+      ...
+      -   append(('internal', loader.find_spec(module_name).loader.load_module(module_name).source, module_name))
+      +   try: module_source = importlib.import_module('.' + module_name, package='debrids').source
+
+  The first is cosmetic (pkgutil moved to a top-level import) and is what made
+  the anchor stop matching. THE SECOND IS THE ONE THAT MATTERS: loading now
+  resolves through POV's own `debrids` package instead of through the folder a
+  module was discovered in, so a scraper anywhere else is FOUND by the scan and
+  then fails to import. Repairing only the scan line would have moved the
+  failure two lines down and left the symptom identical -- the add-on's
+  internal sources missing, exactly as before.
+
+  So the repair now covers scan and load together: POV's own import is tried
+  first and unchanged, and only when it raises does the module load from the
+  file it was actually discovered in. POV's own scrapers take the first branch
+  and behave exactly as upstream wrote them.
+
+  2) THE DEBRID UNBOUND-NAME GUARD. POV renamed
+  `indexers/real_debrid_api.py` -> `realdebrid_api.py`, and the guard reported
+  `realdebrid=no_file` -- silently not applying, on the client that carries the
+  very crash it exists to stop. It already knew how to follow a FOLDER move
+  (debrids/ <-> indexers/); it now follows file renames too, first existing
+  name wins, so one build serves both POV versions.
+
+  NOT A REGRESSION, though it reads like one: `pov_alldebrid_status_fix` is
+  `unmatched`, and that is correct. It repaired a `result['magnets'][0]`
+  subscript that POV itself fixed in 6.08.15. The bug is gone, so the repair
+  has nothing to do. Left alone deliberately rather than re-anchored onto code
+  that is already right.
+
+  UMBRELLA was checked the same way. It has moved 6.7.85 -> 6.7.86, and all
+  seven Umbrella repairs apply cleanly on both -- zero regressions. That also
+  retires a long-standing "never verified against current Umbrella" note: they
+  are now measured against the shipped version and the newest upstream.
+
+  tools/test_pov_internal_scraper_loads.py is new and does not trust a return
+  value. It pulls the patched block out of the real sources.py, runs it, and
+  requires a scraper in the legacy folder to arrive at POV's own `append` as a
+  LOADED object -- which is the difference between the two POV versions and
+  the thing `ensure_patched() == 'patched'` cannot see. Two mutants, both
+  caught.
+
+0.2.517
+- The AI translation add-on moves to Gemini 3.8 Flash. Anyone already on 3.5,
+  3.6 or 3.7 Flash is moved across once, automatically.
+
+  Google published 3.8 Flash as the current regular-Flash model ("our most
+  intelligent Flash model") and reclassified 3.7 as previous-generation. It sits
+  on identical rate limits in every table Google publishes -- same tokens per
+  minute, same tokens per day, same free requests per day -- so this is a
+  drop-in swap exactly like the 3.5/3.6 -> 3.7 move before it, with no change
+  to quota use or pacing.
+
+  3.7 still answers, so nothing here was urgent. What is not fine is leaving a
+  stored model id the picker no longer lists: the settings screen then shows a
+  blank where the model should be. Hence the one-shot migration.
+
+  IT RUNS ON BOTH CHANNELS. The build edition and the standalone (repo-channel)
+  add-on do NOT run the same service file, and changelog text is shared between
+  them -- so a promise like the one at the top of this entry can be true for one
+  and a lie for the other. That is not hypothetical: the 3.7 migration in
+  0.2.494 reached the build and never reached the standalone, and survived three
+  releases before a user found it by reading the zip. tools/test_channels_agree
+  .py now checks this claim against both services, and the 3.8 migration was
+  written into both at the same time.
+
+  Each bump gets its OWN marker (`_gemini_model_bump_v3`), never a reused one.
+  The previous marker is already set on every device that took the previous
+  bump, so reusing it would skip the migration for precisely the users who need
+  it. The retired set covers 3.6 and 3.5 Flash too, so the migration is correct
+  on its own rather than correct only because of the order two functions happen
+  to run in.
+
+  The free-tier daily counter keeps its row for 3.7 even though the picker has
+  dropped it. A stored id outlives a dropdown -- a device that has not booted
+  since the update, or one restored from a backup, still asks that table for a
+  number, and a missing row would silently hand it the Flash-Lite figure of 500
+  a day against a real free cap of 20.
+
+  tools/test_gemini_model_table.py is new and holds four tables to one list of
+  models: the picker, the daily-cap table, the requests-per-minute pacing and
+  what the migrations write. It was written before the change and immediately
+  caught two defects in it -- a migration still pointing at 3.7, which the
+  picker no longer offers, and a marker count that only looked right.
+
+0.2.516
+- temperature and Top-P are no longer sent to the models that stopped
+  accepting them.
+
+  Google's Gemini API docs, verbatim: "temperature, top_p, and top_k are
+  deprecated and ignored. In future model generations, supplying these
+  parameters returns an HTTP 400 error. Remove these parameters from all
+  requests."
+
+  Ignored today, a hard 400 tomorrow -- and a 400 on a translation chunk is
+  not a worse translation, it is no translation: the request raises and the
+  chunk is lost. But the parameters are NOT simply removed, because on Gemini
+  2.5 and 3.1 they still do real work, and the build's 1.0 / 0.95 defaults
+  were measured on exactly those models. So the rule is per model: 3.5 and up
+  send neither, 2.5 and 3.1 keep both.
+
+  ONE PLACE DECIDES. gemini.sampling_params_supported() reads the generation
+  out of the model id and both request builders consult it, so a caller may
+  keep passing temperature= and top_p= without knowing the rule and a caller
+  added later cannot forget it. That matters more than it sounds: the audio
+  call SubSync makes for speech intervals lives in subsync.py with a hardcoded
+  temperature=0.0, nowhere near the translation code, and is precisely the
+  site an if-per-call-site would have missed. It is covered now by
+  construction. (top_k is in Google's list too; this add-on has never sent it
+  and has no setting for it, so there was nothing to gate.)
+
+  THIS RUNS ON THE STANDALONE TOO. gemini.py and settings.xml are both in the
+  repo-channel package, so the gate and the two hidden sliders reach those
+  users exactly as they reach the build. Said out loud because the changelog is
+  shared between the two editions and a note that does not mention the
+  standalone gets filtered out of its package -- which is how a change that
+  DID run there ends up announced nowhere.
+
+  A model id with no readable generation -- an alias like
+  'gemini-flash-latest' -- also sends neither. That direction is chosen: such
+  an alias resolves to whatever is newest, which is where the parameters are
+  going away; omitting them is a valid request on every model that ever took
+  them; and guessing the other way costs a 400.
+
+  THE TWO SLIDERS ARE GONE FROM THE SETTINGS SCREEN on a model that ignores
+  them -- a control that changes nothing is worse than no control. They come
+  back on 2.5 and 3.1 with the user's own numbers intact, because the settings
+  are still stored and still read; only the request changes. The default model
+  is 3.5 Flash Lite, so out of the box neither slider shows.
+
+  The visibility list in settings.xml is a WHITELIST of the models that still
+  honour the parameters, not a blacklist of the ones that do not: add a newer
+  model to the picker and forget the list, and the slider correctly stays
+  hidden. tools/test_gemini_sampling_params.py fails if the list and the code
+  ever disagree, builds real payloads through a stubbed requests to prove what
+  each model's request actually carries, and catches eight mutants of the rule.
+
+0.2.515
+- "חיבור שירותים" opened an empty screen, and then POV's own English menu.
+
+  The tile did not go to POV's services screen. It opened a POV "shortcut
+  folder" -- a row in POV's navigator.db holding exactly one item,
+  {'mode': 'myservices'} -- and the row was gone. The log says it plainly:
+
+      0.03s route=0.03s mode=navigator.build_shortcut_folder_list
+                        &name=[B]חיבור שירותים[/B]
+      Control 50 in window 10025 has been asked to focus, but it can't
+      Unable to find plugin / GetDirectory - Error getting plugin://
+
+  0.03 seconds is POV returning an empty directory (get_shortcut_folder_contents
+  finds no row -> `except: return []`). Kodi then walks UP out of the empty
+  folder, and the parent of a plugin path is the plugin ROOT -- POV's stock
+  English menu. That root menu is the screenshot people send, which is why the
+  report reads as "POV opens instead of the services screen"; one Back further
+  is the bare `plugin://` in those two errors.
+
+  Not the reader. Seconds earlier in the same log, every OTHER shortcut folder
+  loaded normally -- both FENtastic personal areas, both networks rows -- so
+  pov_navigator_read_patcher is doing its job. It is this one row, and it is
+  the only custom row in the shipped navigator.db that no reseeder of ours
+  restores: the networks and genre rows have one, the personal areas are
+  rewritten on every startup. So it is the only one that stays gone.
+
+  THE FOLDER WAS NEVER NEEDED. It holds a single item, so the indirection
+  bought one keypress and one thing to lose. Arctic Fuse 3 has always called
+  mode=myservices directly and has never had this report -- and myservices is
+  a DIALOG, not a directory, so ActivateWindow was the wrong verb for it from
+  the start. The tile now calls it directly on every skin. No database row in
+  the path, no window left empty, nothing to walk up out of. Name, icon and
+  position stay exactly as each user has them.
+
+  The per-skin favourites SEEDS are repaired too, not just the user's own file.
+  The wizard copies a seed OVER favourites.xml on every skin switch, so a fix
+  that lives only in the user's copy comes back broken the first time somebody
+  changes skin. The same pass also carries the older "send log" action fix into
+  the seeds, which had the same hole.
+
+  tools/test_connect_services_tile.py replays it: the old tile is rewritten and
+  only that one element changes, a shortcut folder the USER added themselves is
+  left alone, both seeds are repaired, a torn seed is never written back, and
+  five mutants of the repair are each caught.
+
+0.2.514
+- The health report now covers the Connect Services window too, which was the
+  most visible thing it did not cover.
+
+  Three patchers BUILD their marker from an integer constant -- '# ..._v{0}'
+  .format(INJECT_VERSION) -- so the live name exists nowhere in the source and
+  the highest literal in the file is a RETIRED one. 0.2.513 refused to guess
+  and reported those as unmeasurable. One of the three is the patcher that
+  builds Connect Services.
+
+  The name is not unknowable: the family comes from the retired literals and
+  the number from the constant. Verified rather than assumed -- running the
+  patcher against a real POV 6.08.14 writes exactly the name this
+  reconstruction produces.
+
+  Rebuilt is not proven, so such a marker starts UNVERIFIED. If the host is
+  seen carrying it, the guess was right and it is alarmable from then on like
+  any other. If it is never found it stays unverified and never raises: "the
+  repair is gone" and "I guessed the name wrong" look identical from outside,
+  and only one of them is worth an alarm.
+
+  45 of 51 POV markers now verified present on a real 6.08.14, up from 44 with
+  Connect Services outside the count entirely. The remaining six are each
+  explained and none is an alarm.
+
+0.2.513
+- A repair that stops applying now says so, on the next boot, by name.
+
+  Every repair this add-on makes to another add-on is a text edit gated on a
+  versioned marker. When the other add-on refactors, the anchor stops matching
+  and the repair stops applying. That is expected and it is handled -- the
+  patchers refuse rather than guess. What was NOT handled is that it happened
+  in complete silence.
+
+  The mechanism, exactly: the startup pass runs `step()` and DISCARDS the
+  return value, and all 123 step functions return None anyway. A no-longer-
+  matching anchor is not an exception, so it never reaches the WARNING branch
+  either. POV 6.08.14 broke five repairs this way and the first anyone knew was
+  a user reporting a symptom days later. One of the five had been dead even
+  longer, from a duplicate `def` in our own file.
+
+  So a new last step asks the host add-ons what they actually contain, rather
+  than trusting what anything returned -- a patcher that reported success and
+  whose write silently failed would still have read green. Marker present, the
+  repair is applied; absent, it is not.
+
+  THE HARD PART IS SILENCE, NOT DETECTION. Most devices do not have most hosts,
+  and a repair for a skin nobody installed is absent forever; reporting that
+  every boot trains everyone to ignore the report. So absence is only news
+  against history: a marker seen applied before and missing now is LAPSED and
+  is named at WARNING. Never once seen applied is quiet. A host that was
+  patched and has since been UNINSTALLED is quiet too.
+
+  Two findings from running it against the real tree rather than reasoning
+  about it. A patcher keeps its own superseded markers so it can strip its
+  previous work, and looking for those reported eleven false absences from one
+  module -- so each marker family is collapsed to the one live version. And
+  three patchers BUILD their live marker from an integer constant, so it exists
+  nowhere in the source and the highest literal is a retired one; those are
+  reported as unmeasurable and named, rather than as permanently broken.
+
+  The full table is written to addon_data/.../patcher_health.txt every boot.
+  The WARNING lines are always logged, so any log a user uploads now carries
+  the diagnosis instead of just the symptom. The on-screen popup appears only
+  where the log level is DEBUG -- a viewer cannot act on this, and telling them
+  the build is broken would be alarming and useless.
+
+  Measured, not assumed: 0.15s per boot, reading 1.1 MB of host text, against a
+  pass that already runs for tens of seconds. It covers 68 patchers across 10
+  host add-ons, and it never raises into the boot -- every failure path returns
+  less information instead.
+
+0.2.512
+- Internal sources are found again. POV 6.08.14 did not restructure the folder
+  it loads internal scrapers from, it RENAMED it, with a byte-identical file
+  list, and moved its own pointer with it:
+
+      6.08.13   resources/lib/scrapers/   kodi_utils.scrapers_path
+      6.08.14   resources/lib/debrids/    kodi_utils.internal_path
+
+  POV scans exactly ONE folder, so after 6.08.14 any scraper a third-party
+  add-on had installed there was never looked at -- "it shows the external
+  sources only" in the field. Worse, the installer writes its module as the
+  FIRST of several edits, so the missing folder raised ENOENT and aborted
+  everything after it, including the settings edit that registers the name.
+  That is why the feature vanished outright instead of degrading.
+
+  Two edits, and both are needed. The old folder is re-created with its
+  __init__.py, so the installer's write succeeds. And the one line in
+  modules/sources.py that reads the folder is taught to scan BOTH --
+  pkgutil.iter_modules already takes a list of directories. POV's own folder
+  goes FIRST, so a stale copy of one of POV's own modules left behind in the
+  legacy folder can never shadow it; iter_modules dedupes by module name and
+  the first directory wins. Verified by running POV's own patched line through
+  pkgutil against both real trees, not by reading the text.
+
+  An earlier attempt mirrored files between the folders instead. It only works
+  if our pass happens to run after the other add-on's service that boot, and
+  that add-on re-checks on its own timer, so a device could sit for an hour
+  with the file written and never copied. Teaching POV to scan both removes the
+  race: whenever the file appears, the next scrape sees it. It also stops us
+  writing inside somebody else's add-on directory.
+
+- And a third edit, which is what makes the other two safe rather than
+  dangerous. Once a module POV does not know about is loaded, its rows flow
+  into POV's sorter, and modules/sources.py does this for every row of every
+  result set:
+
+      def get_provider_rank(self, account_type):
+          return self.source.provider_sort_ranks[account_type] or 11
+
+  A bare subscript. A provider name that is not in that dict raises KeyError
+  out of sort_results, which process() -> get_sources() -> source_select()
+  calls unguarded, so the WHOLE list dies -- POV's own sources included.
+  Reproduced against POV's own function: `rd_cloud` ranks 2, an unregistered
+  name raises. The fix is one token, `.get(account_type)`, and it changes
+  nothing for a name that is registered, because POV already treats a falsy
+  rank as 11 and .get returns None for a miss. It also protects POV from every
+  future provider it does not know, not just this one.
+
+  Both edits refuse rather than guess: two copies of either line, a shape that
+  does not match, or a result that would not compile leaves POV byte-for-byte
+  as it was, and says so in the log.
+
+0.2.511
+- AllDebrid plays again. POV 6.08.14 shipped a one-line regression that broke
+  playback for every AllDebrid user: indexers/alldebrid_api.py torrent_info()
+  went from `result['magnets']` to `result['magnets'][0]`. Queried with an id
+  that endpoint returns a single object, so indexing it with [0] raises
+  KeyError(0) -- which is exactly what two field logs show, dozens of times
+  each, once per source tried:
+
+      >> resolve_external_sources exception <<: 0
+         {'debrid': 'alldebrid', 'cache_provider': 'Unchecked alldebrid', ...}
+
+  It fails inside parse_magnet_pack, before any file is chosen, so POV moves to
+  the next source and fails the same way. To a user that is "it goes through
+  every source and plays nothing", and on a title whose sources are all
+  external it looks like "no results" instead.
+
+  The identical line appears twice in that file and only one is wrong --
+  create_transfer() calls an endpoint that really does return a list and
+  carried [0] in 6.08.13 too. The patch matches the whole torrent_info body so
+  it cannot land on the other one, and it does not simply revert: it uses what
+  the API returned and indexes only if it is a list, so it is right under
+  either response shape. Verified by executing POV's own method before and
+  after against a single object, a list, and an empty list.
+
+- Our own account check was importing a module POV moved. `debrids.alldebrid_api`
+  became `indexers.alldebrid_api` in 6.08.14, and the log said so plainly --
+  "AllDebrid status lookup failed: No module named 'debrids.alldebrid_api'" --
+  on every account read, on both devices. The file-path patchers were taught
+  this rename in 0.2.510 and this runtime import was missed. It now tries the
+  new package first and falls back.
+
+0.2.510
+- POV 6.08.14 compatibility. POV restructured itself and several of our repairs
+  stopped applying -- silently, with no error, reporting "no file" as if that
+  were healthy. The defects they prevent did NOT go away; they moved with the
+  files.
+
+  What moved: the debrid API clients went from resources/lib/debrids/ to
+  resources/lib/indexers/, and resources/lib/scrapers/ was renamed to
+  resources/lib/debrids/. Four repairs were looking in the old place and one
+  more had its anchor shifted by a refactor.
+
+  Re-pointed, and the folder is now decided by POV's own import line rather
+  than by which file happens to exist -- both folders ship in 6.08.14, so
+  "first one found" would rewrite a dead copy and report success while the file
+  POV actually imports went untouched. Verified on a deliberately mixed tree.
+
+  Two of the five guard the PLAY path specifically: one prevents POV's debrid
+  error handlers from crashing in a way that deletes the real error, the other
+  keeps TorBox links legal. Both had lapsed.
+
+- Every repair we ship was run against both POV versions, file by file. Seven
+  behaved differently on 6.08.14; five are fixed here, one is a difference by
+  design, one was an artefact of the test harness. After all repairs are
+  applied to a real 6.08.14 tree, POV still compiles with zero errors, and no
+  repair injects a reference to anything 6.08.14 removed.
+
+- A third-party add-on that installs a scraper into POV was writing to the
+  folder that got renamed and failing with "no such file or directory". The
+  folder is re-created so its installer can complete. Whether that alone is
+  enough is not established -- POV gates which scrapers it loads by a fixed
+  list, so the rest depends on that add-on's own author. Said plainly here
+  rather than claimed as fixed.
+
+0.2.509
+- Measurement only. Nothing about how the build behaves changes in this
+  version; one instrument gets more honest.
+
+- The timing line now reads `1.50s route=0.30s exit=1.20s` instead of one
+  number. v1 and v2 timed `with self: return routing(sys)`, and POV's
+  Router.__exit__ sits inside that `with` -- it calls get_property(), which is
+  a Kodi GUI call that takes the graphics lock. So a call that finished its POV
+  work in a second and then waited on a busy GUI thread was reported as a slow
+  POV call.
+
+  That is not academic: it sent a diagnosis into a ditch. A field log was read
+  as database lock contention between concurrent POV calls, a patch to POV's
+  cache layer was written, tested and nearly shipped. An independent
+  re-analysis then showed every slow call had already blown past its own
+  baseline by 1.25-4.11s WHILE RUNNING ALONE, and that six of eight finished
+  within 1-56 ms of a rival call's end -- the signature of waiting on a
+  handoff, not on a database. The patch was deleted unreleased. A second review
+  found it would also have raised inside POV's own cache constructor, turning a
+  slow category into one that does not load at all.
+
+- Recorded, not acted on: three of our modules justify themselves with "POV
+  ships reuselanguageinvoker=true, so concurrent invocations share ONE Python
+  interpreter." Measured on a device with reuse on: 11 concurrent pairs, none
+  sharing an invoker, and all 8 second-arrivals started cold. Kodi declines
+  reuse for a concurrent caller and builds a fresh sub-interpreter. The crash
+  those modules address is real; the mechanism written above it is not what
+  happens. Nothing was loosened on the strength of that -- the headers now
+  carry the correction so the next person re-derives it.
+
+- The upgrade harness could not see a patcher whose version marker was spelled
+  in a shape its regex did not know, so the module was absent from the report
+  rather than listed as unproven. It now requires any runnable patcher with a
+  versioned constant to be pinned.
+
+0.2.508
+- The poster view's logo comes back on Estuary, and it was never FENtastic's
+  bug. 0.2.507's write-up credited a clearlogo error in a field log to
+  fentastic_clearlogo_var_patcher; a fact-check caught that the module only
+  ever touches skin.fentastic and the device was running Estuary. Scanning the
+  shipped build instead of assuming: skin.estuary/xml/Variables.xml has the
+  same two unclosed brackets in the same ClearArtLogo variable -- and unlike
+  FENtastic's copy, whose only consumer is commented out, Estuary's is live at
+  View_51_Poster.xml:256. Both conditions unparseable means both are false,
+  the variable resolves to nothing, and that texture has been drawing nothing
+  in the default poster view on every Estuary device. The patcher now carries
+  the skin per site and repairs all four; a device has one of the two skins, so
+  the other reporting no_skin is the healthy answer. Exactly two lines and two
+  bytes change in the file, and the test proves it by diff.
+
+- The fast-navigation switch needs ONE restart, not two, and the release that
+  shipped it said two. The first field log with it on shows POV noticing the
+  change, offering a profile reload, and applying it in that same session --
+  one dialog, once. Corrected in the help text (both languages), the README
+  and the line service.py logs.
+
+- What the switch actually bought, now measured rather than predicted. The
+  mods= counter added in 0.2.507 reports len(sys.modules) either side of each
+  call, and it settles it: the same route ran 7.22s at mods=81->355 and 1.08s
+  at mods=355->355, and a local menu is 0.01s reused. Like-for-like on
+  tmdb_tv_networks the floor went 1.72s -> 1.09s. That is about 0.6s a press,
+  NOT the whole 1.75s that release predicted -- the rest is TMDb and Trakt
+  network, which no interpreter setting can touch. Recorded in the guard's
+  header so the next person reads the measurement, not the forecast.
+
+v0.2.507
+- POV's menus have felt heavy since 14 August, and this release says why and
+  hands the choice over. The cause is ours: pov_language_invoker_guard turns
+  POV's reuse-language-invoker flag off, because concurrent POV invocations
+  sharing one Python interpreter is a native crash that closes the whole
+  application. That fix is real and it is staying on by default. What nobody
+  had was its price.
+  Now measured, from a reporter's device on 0.2.506 running Estuary, using the
+  per-navigation timing line 0.2.506 itself shipped. Sixteen navigations, and
+  five unrelated route families -- tmdb_tv_networks, tmdb_movies_popular,
+  trakt_tv_trending, tmdb_tv_premieres and tmdb_movies_latest_releases -- all
+  landing between 1.72s and 1.89s. That is a spread of 0.17s across different
+  modules talking to different companies' servers; tmdb_movies_popular and
+  trakt_tv_trending both took 1.77s, to the hundredth. Repeat visits do not move it: FOX 2.46s then 1.78s,
+  Amazon 2.24s then 1.73s, so roughly 0.6s of a first visit is cacheable
+  network and the floor beneath it is not.
+  A route-independent, cache-immune floor is a fixed per-invocation cost, and
+  POV pays it somewhere unusually visible: every route defers its weight into
+  the call itself. Counted over top-level imports, POV's entry.py loads 4 of
+  its own modules and 10 stdlib ones before the call begins -- and reaching
+  menus.tvshows then adds twenty more of its own, 210KB, and twenty-seven more
+  stdlib packages, requests and concurrent.futures and unicodedata among them.
+  A reused interpreter pays that once per session. A fresh one pays it per
+  press.
+- So there is now a switch: "POV: fast navigation", in the add-on's settings
+  under Advanced, at Expert level. Off out of the box, which is exactly what
+  every device has been doing since August.
+  Turning it on gives POV its reused interpreter back -- the first press after
+  each Kodi start still pays the imports, everything after it does not -- and
+  accepts the crash with it. It takes two Kodi restarts to activate: one for
+  the add-on to write POV's flag, one for Kodi to read it.
+- The idea this release deliberately did NOT ship, recorded so it is not tried
+  again: the crash was reported on Arctic Fuse 3, so keeping the guard on only
+  for that skin and giving everyone else their speed looks obvious. The same
+  log kills it. That device is on Estuary, with one person pressing buttons,
+  and it still produced two overlapping POV invocations -- one route stuck at
+  7.31s while the next press started underneath it. Concurrency is not a
+  property of a skin; it is a property of a call being slow enough for the
+  next one to land inside it, which turning reuse off makes more likely, not
+  less.
+- The timing line itself gained a field, so the next log settles this instead
+  of arguing about it. It now reads `1.75s mods=64->431 ?action=...`: the two
+  numbers are how many Python modules were loaded before and after the call.
+  The first says whether the interpreter arrived cold or warm at a glance, and
+  the difference is what that route had to load for itself. On the reading
+  above it should be hundreds today and zero with the switch on -- same route,
+  same work, different starting point. If it is not, the diagnosis is wrong and
+  the log will say so.
+- The test that pinned the old behaviour was replaced rather than deleted. It
+  used to assert that the guard could never re-enable the flag; it now asserts
+  the property that still protects people, which is that OFF is the
+  destination of every failure -- no kodi_utils, a settings store that throws,
+  a setting nobody has ever touched -- and that the only route to ON is an
+  explicit true. Unlike the regex it replaces, it is executed.
+
+v0.2.506
+- Umbrella and its scraper module now arrive on every device instead of
+  waiting behind a menu entry nobody had to find. Half the build already
+  assumed they were there: the home screen carries Umbrella tiles, the search
+  wiring has an Umbrella branch, the account manager pushes debrid accounts
+  into it, and a dozen small repairs exist for no other reason than to make it
+  speak Hebrew. On a device without it every one of those quietly did nothing,
+  and the screen looked identical either way -- which is exactly why it should
+  not have been left to chance. It installs once, in the background, and its
+  own repositories come with it, so from that moment the developers publish
+  its updates rather than us. A tile you remove stays removed.
+- An update no longer throws away settings you changed that evening. The
+  wizard closed Kodi by killing it, which skips the save Kodi does on a normal
+  shutdown -- correct after a full build install, where a save would overwrite
+  the guisettings.xml that was just extracted, and wrong after a quick update,
+  where nothing of the kind was written. Audio passthrough turning itself back
+  off is what made it visible, because that is a setting people set once and
+  notice immediately, but every setting was affected. The quick update now
+  asks Kodi to close properly and falls back to the kill only if that does not
+  take; the build install and the skin switch keep the kill they need.
+- Pressing a tile in the second and a half after an update no longer drops you
+  into an empty video screen. To make a fix take effect the same evening the
+  build switches the video add-on off and on again, and it waits for the home
+  screen to settle first -- but if the screen never settled it used to go
+  ahead anyway. A log showed exactly what that costs: three minutes of
+  browsing without a pause, the switch fired at the deadline, and 1.2 seconds
+  later a press on the Disney+ tile landed in the bare Videos list because
+  Kodi could not resolve the add-on it points at. Three minutes of continuous
+  activity means somebody is watching the screen, which makes it the worst
+  possible moment. It now gives up instead, records that the switch is still
+  owed, and does it at the next start.
+- Sources no longer arrive late, or come back empty when they exist. Two
+  reports on the same evening -- "the results take ages again" and "no sources
+  for a title that definitely has them" -- and two logs that say the same
+  thing in different words. To make a fix take effect the same evening the
+  build switches the video add-on off and on again, and it waits for the home
+  screen to be idle first. But every window that add-on puts up while it works
+  -- the search progress, the list of sources -- FLOATS over the home screen.
+  Start a title from a home-screen row and the home screen is still there
+  underneath, nothing is playing, no row is loading, and somebody reading a
+  list of sources is not pressing buttons. Every test for "idle" said yes
+  while the user was mid-search with a dialog in front of their face. One log
+  shows the switch landing on an open source list and then pulling the focus
+  back to the home screen; the other shows it killing a search seven seconds
+  in -- and that is the search reported as "no results". A dialog on screen is
+  now never a moment to do this, checked again in the last second before it
+  happens.
+- Add-ons that stopped updating themselves update again. Kodi keeps a table of
+  add-ons excluded from automatic updates, and it writes rows into it by
+  itself: an add-on whose ORIGIN repository stops answering has no version to
+  be compared against, so it is marked "not the latest" and excluded for good.
+  This build has such a repository -- a field log catches it returning 404 --
+  and five of the add-ons registered to it are ones the build ships. The
+  excluded add-on still appears in the manual "available updates" list, which
+  is why updating by hand worked and made the fault look random. The build now
+  clears those automatic exclusions for the add-ons it ships, never touches
+  one somebody set by hand or a version somebody installed from a zip on
+  purpose, and names every one it finds in the log. It also checks the
+  "install updates automatically" setting itself, puts it back once if it has
+  drifted, and says so at every start if it has not.
+- A debrid service that refuses your account now says why, instead of turning
+  into "no sources". AllDebrid, TorBox and Premiumize all answer normally --
+  HTTP 200 -- and put the refusal in the body, and the video add-on only
+  records a problem when the status code is bad, so the reason the provider
+  spelled out in words was dropped one line after it arrived.
+- And Premiumize had a second, worse version of it, which explains a report
+  that read as nonsense: "the count of sources found goes up while it
+  searches, and then it says no results and never shows the list -- only on
+  Premiumize". The add-on's Premiumize cache check reads one field of the
+  reply without checking it is there. A refusal has no such field, so that
+  line fails, and the caller catches every error and returns an empty list of
+  cached sources. Every source found is then marked uncached and filtered
+  away: the counters really did climb, and the list really was empty. It was
+  never visible because the reason was destroyed two steps before anyone could
+  read it. It now says so, on screen and in the log -- and the refusal itself
+  is the account's, not something this build can fix for you.
+- And a third cause of it, which is the one that was doing most of the damage.
+  Once the scrapers have found their torrents, POV asks the debrid service
+  which of them it already holds -- and it builds the list it shows you
+  entirely out of the answers that came back in time. One debrid configured
+  means one answer, so a debrid that is a second late leaves nothing to build
+  from and the whole search is discarded unread: three hundred sources found,
+  "no results" on screen. Worse, a check that FAILED -- timed out, refused,
+  answered nonsense -- is recorded as a definite "none of these are cached",
+  and the default setting then deletes every one of those from the list. Both
+  roads end at an empty screen after the counters climbed.
+  Why Premiumize and not TorBox on the same build: one number, "Scraper/Debrid
+  Timeout", is both how long POV waits for the answer and how long the
+  Premiumize request itself is allowed to take, so a slow request always
+  finishes at or after the moment POV stopped waiting -- and raising the
+  number raises both halves equally, which is why raising it in the last
+  update helped some people and not others. TorBox sends all of its torrents in
+  one compact request; Premiumize sends each one as a separate field, hundreds
+  of them on a popular title. And it works on the second try because POV
+  remembers the answers, so a title you just searched skips the request
+  entirely.
+  Now: a debrid that does not answer no longer erases anything. Its sources
+  are kept and marked "not checked" -- which is exactly what POV already does
+  for Real-Debrid and AllDebrid every time -- so you get the list, with the
+  unverified ones at the bottom. A debrid that DOES answer is treated exactly
+  as before, down to the byte; an honest "nothing cached here" is still
+  believed and still hidden.
+- Every category POV opens now records how long it took. A report of a spinner
+  on each press came with a log that contains no POV timing at all, so the
+  only evidence was the gaps between unrelated errors -- reading time and
+  loading time added together, and impossible to separate. This does not make
+  anything faster and must not be mistaken for having done so: it puts a
+  number and a route on each press, so the next report of a slow build can be
+  answered instead of guessed at.
+- The logo in the player's on-screen display now draws. Under it, a pair of
+  images: the title's own logo, and the studio logo when the title has none.
+  Each is shown by a condition missing one closing bracket, so Kodi cannot
+  parse either, treats both as false, and draws NEITHER -- on every device, on
+  every title, since the day it was written. One of the two is meant to be
+  showing at all times. Also repaired, and honestly worth less: the same
+  mistake in the skin's poster-view logo variable, which is the line the log
+  actually complains about. That one changes nothing on screen, because the
+  block that would draw it is commented out in the skin -- somebody clearly
+  tried it, saw nothing (for this exact reason), and gave up. Un-commenting it
+  is a visible change nobody asked for, so it is left alone. Nineteen other
+  conditions in the same skin have the same defect and are deliberately not
+  touched: most are compound, where the bracket could close in two places that
+  mean different things, and repairing one blind would make something appear,
+  or something happen, that no user of this build has ever seen.
+- And a line of red that a device without Umbrella collected every sixty
+  seconds, forever: asking Kodi whether an add-on is installed by trying to
+  open it makes Kodi write "Unknown addon id" at error level before it
+  answers, and the background job that keeps Umbrella's accounts in step with
+  POV's asked exactly that way, once a minute, for as long as Kodi was up.
+
+v0.2.505
+- Right after an update, the POV home tiles could come back empty and the
+  error log could fill with red -- and it was this build doing it. When a fix
+  lands, the video add-on is holding the old code in memory, so we switch it
+  off and on again to make it pick the fix up the same evening. For the second
+  and a half it is off, Kodi does not know it. On a cold start the home screen
+  is still loading its rows in exactly those seconds, so the rows asked an
+  add-on that was not there, failed, and -- because it is the switching OFF
+  that triggers the rebuild -- nothing rebuilt them afterwards. They stayed
+  empty for the session. Clearing the cache appeared to fix it; so did moving
+  to the 64-bit build. Neither fixed anything: both just shifted the timing.
+  Now the switch waits for the home screen to be genuinely settled, and if the
+  rows still come back empty it redraws them once. None of the waiting happens
+  where anyone can feel it, and startup is in fact a little faster than before.
+- The error screen also filled with "Unknown addon id" for Umbrella and its
+  scraper module on devices that simply do not have them. Asking "is this
+  installed?" the obvious way makes Kodi write that line before it answers, so
+  a device without them collected a handful of red on every start for a
+  question whose answer was "no, and that is fine" -- and the one line that
+  mattered scrolled past unnoticed. It reads the disk now and says nothing.
+- A debrid service that refuses your account now says so, on screen, instead of
+  failing every source in silence. AllDebrid reports that kind of refusal
+  inside a normal reply rather than as an error, so three separate layers threw
+  it away and the log ended up with no reason at all. If the key is not valid,
+  the access is blocked, the account is suspended or it is not premium, you get
+  told which, in Hebrew. Nothing is said for a timeout or a bad connection --
+  only for an answer the service actually gave.
+- Subtitle sync learns from you again. While one of our subtitles is playing,
+  the amount you shift it by hand is meant to be the strongest possible
+  evidence about whether it is in sync -- it is the only thing that resolves
+  files no automatic method can. That measurement was reading zero every time,
+  and the watch never started at all, because of three missing lines that each
+  failed quietly into a handler that swallowed them. It has never once
+  reported. It does now.
+
+v0.2.504
+- POV's source list appears the moment the sources are ready again. Someone
+  reported it taking five to ten seconds to draw after the search had clearly
+  finished, where it used to be about one, and the log timed it: two seconds
+  with three Hebrew subtitles available for the title, four with six, ten with
+  seventeen. The Hebrew-match badge on each row was comparing every source
+  against every available subtitle name, and re-deriving both names from
+  scratch every single time -- so seventeen names were taken apart seventy
+  times each before one row could be drawn. Each name is now read once, the
+  built-in-Hebrew check costs nothing at all, and no comparison runs that
+  cannot change the answer: about twenty-five times less work, with every
+  badge coming out identical. Umbrella's source list gets the same.
+- And the reason the POV source screen slowed down out of nowhere, with
+  nothing having changed: the subtitle lists that badge walks were never
+  trimmed, so they grew a little with every title watched until the delay
+  became visible. They are capped now, far above anything a real title has, so
+  it cannot creep back. Three leftover diagnostics that wrote whole lists into
+  the log on every play and every source screen are gone with it.
+
+v0.2.503
+- Kan 11 items in Idan Plus play again. Nothing from that channel would start:
+  YouTube answered "This video is unavailable" for every one of them, five
+  different player clients in a row, because the id it was being asked for was
+  the literal word "watch". Idan Plus reads the video id out of the address
+  path, and in the ordinary youtube.com/watch?v= form the id is not in the
+  path -- it is in the part that gets cut off. The add-on builds that address
+  itself, from a bare id Kan hands it, and then fails to read back what it just
+  wrote. So this was never a Kan change and never a regression: those items
+  have never played. One line now reads the id from the right place, and only
+  where what was extracted cannot be an id at all, so every link the add-on
+  already opened correctly opens exactly as before. If Idan Plus fixes this on
+  its side, the fix simply stops applying and changes nothing.
+
+v0.2.502
+- AllDebrid sources that refused to play now say why. A report of "no results"
+  turned out not to be a no-results condition at all: 70 sources were found,
+  and all 38 of the AllDebrid ones failed to start with the same internal
+  error. POV's own error handler was crashing on a variable it never set, and
+  that crash was replacing the message AllDebrid had actually sent -- so the
+  reason, whatever it was, never reached the log. The handler no longer
+  crashes, and for AllDebrid and Real-Debrid the provider's real message now
+  comes through, which is what makes the problem diagnosable instead of just
+  visible. This does not by itself make a refused account work; it makes the
+  refusal readable.
+
+v0.2.501
+- Umbrella's "Shows in Progress" and "Episodes in Progress" fill themselves in
+  again, with no manual refresh in either one. Update 599 fixed the shows list
+  by clearing the sync cursor, but it cleared two more keys alongside it, and
+  those two were not cursors -- they are the signal Umbrella reads to decide
+  whether there is new watched activity worth syncing. Zeroing them meant
+  "nothing new, serve the cache" forever, so the episodes list, which had
+  always been right, started needing a refresh too. Only the fetch cursor is
+  cleared now, and the devices that took the previous release are repaired on
+  their next start.
+- And the root cause underneath both: Umbrella's MDBList sync wrote "synced up
+  to now" even when the fetch had failed. The cursor only ever moves forward,
+  so anything that fell inside a failed request was skipped permanently. The
+  cursor now advances only when the fetch really returned a page of results --
+  a failed request, an unreadable response, or an error envelope all leave it
+  where it was, so the same window is asked for again next time.
+
+v0.2.500
+- The update itself no longer rewrites the whole build to change a handful of
+  files. Every quick update was laying down all 1,969 files, 1,330 of them
+  belonging to the skin that was on screen at that moment -- and on some
+  devices Kodi force-closed partway through, over and over, before the update
+  could finish. It now writes only the files that actually differ from what is
+  already on the box: five, on a typical update, instead of 1,969. A device
+  that is several updates behind still receives everything it is missing --
+  the comparison is against that device's own files, so the further behind it
+  is, the more it gets.
+- POV's "Reuse Language Invoker SETTING/XML mismatch" message no longer
+  appears. POV updates itself and its update restores a setting we deliberately
+  turn off, so POV noticed the disagreement and asked to reload the profile.
+  We were already repairing it -- nine seconds too late, every time. The repair
+  now runs first, before POV looks. Pressing OK on that message was always
+  harmless.
+
+v0.2.499
+- The player bar now hides itself on every skin that can do it, not only on
+  FENtastic. The setting that closes it after a few idle seconds was being
+  turned on by a check that named one skin and returned for all the others, so
+  anyone on Nox had the bar stay up until they pressed Back. It is detected
+  from the skin's own files now, so a skin that has the feature gets it, and if
+  you turn it back off yourself it stays off.
+- Umbrella's "continue watching" for SERIES no longer gets stuck several
+  episodes behind while the EPISODES list is correct. The two read different
+  things: episodes come from MDBList live, series are rebuilt from a table on
+  the device. That table was losing rows -- Umbrella moves its sync marker
+  forward to the current time even when a request failed or came back empty,
+  and the marker never moves back, so whatever was in that window was skipped
+  for good. The sync now reads thirty days further back so a missed window is
+  picked up instead of lost, and a table that has already lost rows is refilled
+  once, by itself -- the same thing Umbrella's own "Force MDBList Sync" button
+  does, without needing to know the button exists.
+
+v0.2.498
+- If you installed the AI subtitles add-on on its own, from the repository,
+  rather than as part of the build: the automatic move to Gemini 3.7 Flash
+  announced in 0.2.494 never reached you. The announcement was shared between
+  both, the change itself was not. Anyone still on 3.5 or 3.6 Flash is moved
+  across once, now, and any other model you chose yourself is left as it is.
+  Nothing to do; it happens at the next start.
+
+v0.2.497
+- Pressing Like or Unlike on a list you found by searching used to say
+  "Success" and then re-open the search keyboard. It now simply redraws the
+  list you were looking at, with the entry flipped to the other one. The same
+  applied to Unlike, and to both alike.
+- MDBList list search now opens a screen of its own instead of the keyboard
+  directly, listing the searches you have run before. Pressing Back from a set
+  of results returns to that screen rather than all the way out to the home
+  screen, so looking up another list no longer means starting over. A search
+  you have run before is one click away, and can be removed from the list or
+  the whole history cleared. The results themselves also carry a "new search"
+  row at the top, so a second search never needs Back at all.
+- Cancelling the search keyboard leaves you where you were. It used to take
+  you to an empty listing with nothing in it, which then had to be backed out
+  of.
+
+v0.2.496
+- MDBList lists now carry the same long-press menu that Trakt lists already
+  had, including Like and Unlike. The entry shown is the one that applies: a
+  list you have already liked offers Unlike, one you have not offers Like. The
+  check reads the list data the add-on has already fetched, so it costs no
+  extra network request; when that data is not there to read, both entries are
+  offered rather than the wrong one guessed. Lists that belong to you, and
+  lists MDBList itself only mirrors from elsewhere, are left alone -- neither
+  can be liked, so neither is offered a button that cannot work.
+- A new row in the subtitle list, "עברית מסונכרנת למובנה", takes a Hebrew subtitle and
+  re-times it onto the timeline of the film's own built-in subtitle track. It
+  appears only when there is both a Hebrew subtitle to re-time and a built-in
+  track to time it against, and it is never chosen for you -- it delivers a
+  different translation from the one inside the file, so it is offered as a
+  choice rather than applied automatically.
+- A raw subtitle number and timecode could appear inside the text of a
+  subtitle, mid-film. Two entries had been welded into one when the translation
+  lost the blank line between them, and everything after the weld was read as
+  text. They are separated again, and a cue is only ever split where real text
+  follows.
+- The "piratebay" source provider is now off. Anyone who turns it back on keeps
+  it on, through this and any later update.
+- Around forty of the repairs this add-on applies to the other add-ons could
+  stop silently on a file they failed to read, leaving the repair unapplied
+  with nothing said about it. They now report it. The tool that audits them was
+  itself unable to fail, and now can.
+
+v0.2.495
+- Films and episodes play again. The video add-on updated itself this morning
+  and began asking the file host to put the file's name inside the download
+  link; the name arrives with spaces in it, which makes the link invalid, and
+  Kodi refused it without ever contacting the file. Every release name has
+  spaces, so nothing played at all. The link is now made valid before playback
+  instead of the request being taken away, so the add-on keeps the feature it
+  added and a future version of it needs no further repair.
+- The same add-on update moved its favourites code, which quietly stopped the
+  repair that makes an added title appear straight away instead of only after
+  navigating away and back. It works again, and it is now matched in a way
+  that a further change of that kind cannot break.
+
+v0.2.494
+- Kodi no longer force-closes when several rows on the home screen reload at
+  once -- most often on the way back from a submenu to the home screen. The
+  video add-on was set to run every one of those loads inside a single shared
+  Python interpreter, and loading them together corrupted it. Each load now
+  gets its own, which closes the whole family of crashes rather than the one
+  way of provoking it that was reported. Takes effect from the next start of
+  Kodi after this update, and rows may take slightly longer to draw.
+- The AI translation add-on moves to Gemini 3.7 Flash. Anyone already on 3.5
+  or 3.6 Flash is moved across once, automatically; any other model you chose
+  yourself is left exactly as it is.
+
+v0.2.493
+- The "10 latest updates" tile is now only offered once the wizard installed on
+  this device is new enough to open it. Until then nothing is written and
+  nothing is shown, so the tile never appears as something that cannot be
+  clicked; it arrives on its own the moment the wizard catches up.
+- The main video add-on is now also covered at the earlier of its two moments
+  -- the one during import, before its own code runs -- so the seconds in which
+  Kodi still calls a just-re-enabled add-on unknown can no longer take its
+  background service at either point.
+
+v0.2.492
+- The ten most recent update notes are now readable from a tile on the home
+  screen. Removing the tile is respected: it does not come back at the next
+  update or the next start. Switching skin rewrites the home tiles from the
+  skin's own defaults -- if that removes the tile without you asking it is
+  restored, and if you removed it yourself it stays removed.
+- The main video add-on no longer loses its background service to the seconds
+  in which Kodi still calls a just-re-enabled add-on unknown, so Trakt sync
+  keeps running instead of stopping for the rest of the session.
+- Two of the bundled add-ons stop offering a newer version at every start that
+  their own settings screen had no way to accept. Switch the check back on and
+  it stays on.
+- An add-on you switched off yourself is no longer switched back on. The build
+  only repairs one it disabled itself and could not restore.
+- Arctic Fuse 3 no longer force-closes Kodi when a submenu with no content of
+  its own is opened.
+- You are not asked to reinstall the whole application for a package that
+  carries nothing new for an install that already exists.
+
+v0.2.491
+- A quick update no longer freezes Kodi. The build refreshes the skin after an
+  update, and it also restarts POV so the update takes effect straight away;
+  when the two happened at the same moment the home screen was rebuilt while
+  POV could not load, every POV row on it failed and Kodi had to be closed.
+  Each refresh now waits for POV to be ready first, on every skin, and if it
+  is not ready in time the refresh is left for the next start instead of being
+  forced through.
+
+v0.2.490
+- Umbrella now looks up a series by its original name before searching for
+  sources, so a show with a Hebrew name gets its own sources instead of
+  whatever happened to share the same season and episode number.
+
+v0.2.489
+- Fixes POV search, and the new/popular rows being empty or missing, after
+  POV updates itself: the new version writes its caches in a different order
+  than the tables it inherited, so everything landed in the wrong column.
+  The tables are rebuilt once, keeping every entry that is still readable.
+- POV favourites saved before that update are back - the new version keeps
+  them somewhere else and left them behind.
+- Fixes a fresh install that could not start at all.
+- The watched tick no longer appears on films and series you never watched
+  in the album-icons view.
+- An add-on that an interrupted update left switched off is recovered more
+  reliably, and an update is never told it was applied when it was not.
+
+v0.2.486
+- MDBList now shows up in "My Movies" and "My Series" after you connect it in
+  Account Manager, which is how it is connected now.
+- The two MDBList tiles sit next to their own kind on the home screen - films
+  with films, series with series - instead of side by side at the end.
+
+v0.2.485
+- The tick that marks something as watched now appears on the poster too. It
+  was showing in every other view and missing only in the one the build opens
+  by default, in POV and in Umbrella alike, for films and for seasons.
+- An update no longer closes Kodi. It is applied in place, so there is nothing
+  to reopen afterwards. This takes effect from the next update onwards, since
+  this one is still installed by the previous version.
+
+v0.2.484
+- Trakt no longer has to be reconnected by hand either. When the server stops
+  accepting the saved authorisation, POV now renews it and retries, the same
+  way MDBList already does, instead of going quiet for half an hour.
+
+v0.2.483
+- MDBList no longer has to be reconnected by hand. When the server stops
+  accepting the saved authorisation, POV now renews it and retries instead of
+  going quiet for half an hour, and Umbrella picks the renewed one up instead
+  of asking you to authorise it again in a screen this build does not use.
+- Umbrella's watched marks and resume points come back if something has reset
+  them. If you connect the service again it is restored automatically; if it
+  was reset without you connecting anything, you are asked once, and an answer
+  of no is never asked again.
+- The two MDBList tiles on the home screen come back for anyone who lost them.
+
+v0.2.482
+- Trakt is now connected once, for both POV and Umbrella. Connecting it in POV
+  used to leave Umbrella with nothing, which is why Umbrella showed every
+  episode as unwatched while POV showed the ticks.
+- Umbrella now actually reads watched state and resume points from whichever
+  service you connected. Connecting one never made Umbrella use it, so the
+  ticks stayed missing even when everything said "connected". MDBList is
+  preferred when both are connected, whichever you connected first. A source
+  you have chosen yourself is never changed.
+- The season list now opens in a view that shows each season's own poster.
+  POV always supplied them; in some skins the screen was a plain list with no
+  poster in it at all. If you pick a view yourself afterwards, it stays.
+- Season names are in Hebrew.
+- Our own settings screen no longer logs an error every time it opens.
+
+v0.2.481
+- Fixed the "POV error" when opening a search screen. POV changed the layout
+  of its cache between versions but kept the old one on devices that had it,
+  so anything it saved afterwards was written into the wrong place. The cache
+  is repaired in place and your saved searches are kept.
+- MDBList is now connected once, for both POV and Umbrella. Umbrella used to
+  need a separate authorisation of its own; it no longer does.
+
+v0.2.480
+- Connecting MDBList now offers Umbrella's own one-time authorisation.
+  Umbrella cannot accept the key from Account Manager - it needs its own
+  authorisation - which is why it used to show as connected while staying
+  empty.
+
+v0.2.479
+- The Hebrew search fix in 0.2.478 never actually reached your device. It
+  looked for a line ending that the copy of Umbrella this build installs
+  does not use, so it reported that it could not apply and changed nothing.
+  Searching in Hebrew now works.
+- "Playback failed" no longer appears when you back out of the source list
+  without picking anything. It was Kodi's own message, raised on a timer
+  after 20 seconds of browsing rather than by any real failure.
+
+v0.2.478
+- Searching Umbrella in Hebrew now finds what you are looking for. Typing a
+  title in Hebrew returned "no results" while the same title in English
+  worked; the search request was never actually being sent. Movie search, TV
+  search and person search are all fixed, and so are titles with an
+  apostrophe in them.
+- Repaired the unified Discover data source for POV 6.08, which had stopped
+  being applied after a POV update.
+
+v0.2.477
+- The Hebrew keyboard comes back by itself. If the Hebrew layout ever
+  disappears from Kodi's keyboard-layout list - so the on-screen keyboard can
+  only type English, everywhere - it is now restored automatically on the next
+  start. Your chosen layout, and any other layout you added, are left exactly
+  as they are.
+
+v0.2.475
+- Umbrella (optional): the source list now shows, under each source and before
+  you pick it, how well an available Hebrew subtitle matches that exact
+  release - the same badge POV already has, and the two share their data, so a
+  title checked in one shows its badge straight away in the other.
+- MDBList: connecting or disconnecting it can no longer disturb any other POV
+  setting. Kodi rewrites a whole add-on's settings file around every single
+  write, and this was the last place still doing that the old way.
+- Both source lists are now protected against a failure in that badge. It
+  could previously have hidden every source in the list, which would have
+  looked like the sources themselves had stopped working.
+
+v0.2.474
+- "Connect Services" now connects your debrid accounts everywhere at once.
+  Real-Debrid, Premiumize, AllDebrid, TorBox, OffCloud and Easynews go
+  through Account Manager, so one connect fills them into every add-on you
+  have installed instead of into POV alone. Same screen, same single click,
+  and it is in Hebrew now. Each row says whether it is connected everywhere,
+  connected to POV only, or not connected. Trakt, TMDb lists and EasyDebrid
+  still connect to POV directly.
+- Account Manager now installs by itself, for everyone, including anyone who
+  already has the build. Nothing you have connected changes.
+- MDBList keeps its QR pairing from a phone, and now passes the key on to
+  your other add-ons too.
+- New: you can choose whether the search button searches with POV or with
+  Umbrella. The new tile "מנוע החיפוש" on the home screen switches between
+  them, on all four skins, and the change appears right away. Only shown if
+  Umbrella is installed.
+- New home tile for Umbrella itself, for anyone who installed it.
+
+v0.2.473
+- Umbrella (optional): the rest of the menus are now in Hebrew too - the main
+  menu, the Discover lists and the personal lists. A few rows stay in English
+  because their names are fixed in the add-on and cannot be translated.
+
+v0.2.472
+- Umbrella (optional): its menus are now in Hebrew, and it asks for titles,
+  plot summaries and artwork in Hebrew too. Anything with no Hebrew
+  translation still shows in English, exactly as before. If you already chose
+  a language yourself, your choice is kept.
+
+v0.2.471
+- New optional add-on in the wizard menu: Account Manager. Connect your
+  debrid accounts once in one place and it fills them into every add-on you
+  have installed, POV and Umbrella included - and into anything you install
+  later, by itself. Nothing installs or changes unless you pick it.
+
+v0.2.470
+- Umbrella (optional): three more search providers are switched on in the
+  search engine it uses, a source that fails to play now moves on to the next
+  one instead of stopping, and a search that gets stuck gives up sooner.
+  Anything you changed yourself is left exactly as you set it.
+
+v0.2.469
+- Umbrella (optional): two extra search providers are now switched on in the
+  search engine it uses, so a search reaches sources it previously missed.
+  Anyone who prefers otherwise can turn them off and the choice is kept.
+
+v0.2.468
+- Three long-standing POV fixes started silently missing their target after
+  POV's latest rewrite and now apply again: sources coming back empty for
+  some setups, a Trakt cache crash, and lists that would not clear.
+- Umbrella (optional): the lists no longer come up empty when its language
+  is set to Hebrew, CocoScrapers is set up automatically on install, and
+  subtitle matching now works for sources whose link hides the file name.
+
+v0.2.467
+- Umbrella (the optional pilot addon) showed blank labels throughout its
+  settings on a Hebrew-language Kodi: it ships its texts only in the legacy
+  language layout. The texts are now mirrored into the modern layout Kodi
+  looks for, self-healing after every Umbrella update.
+
+v0.2.466
+- The "last watched" gold badge on the source you picked last time is back:
+  it was being written to a field the current player version no longer
+  displays, so it silently vanished. It now marks the field that is
+  actually shown, with the old field kept as a fallback.
+
+v0.2.465
+- Lines the AI silently skipped (usually strong language) are no longer left
+  in English as a group: each one is now isolated and translated on its own,
+  through every fallback engine, before English is ever accepted -- and only
+  ever for a single line, never a whole stretch.
+
+v0.2.464
+- Stopping an episode part-way no longer leaves the screen on a spinner (or
+  a bare ".." listing) while the episode list rebuilds: the list now stays
+  live and refreshes once, after the progress sync finishes.
+
+v0.2.463
+- Masculine forms used where a woman is being addressed were the biggest
+  quality complaint, and two separate things caused them. The add-on could
+  end up translating with no gender information available to it at all, in
+  which case it fell back to masculine everywhere; and even when it had that
+  information it sometimes did not apply it. Both are fixed, and the finished
+  translation is now checked line by line before it is saved. On a full film
+  this took gender agreement to 100% -- no wrong lines at all, against 24 in
+  the same file before.
+- MoranSubs opened with an empty list and no explanation for anyone whose
+  Kodi subtitle languages did not name Hebrew. Opening a Hebrew subtitle
+  add-on IS the request for Hebrew, so the list is no longer withheld over a
+  setting. The automatic on-play translation still follows the setting, as it
+  must, but now records why it skipped instead of going silent. Nothing in
+  Kodi's own settings is changed on your behalf.
+- Speaker names stopped appearing inside the Hebrew ("- איאן: לא, לא."). A
+  name is removed only where the English line it came from really did start
+  with one, so a line that genuinely uses a colon is never touched. There
+  were 60 of them in one file a viewer sent in.
+- The stray "-" cues are gone. A sound-effect line behind a dialogue dash
+  lost its bracketed part and shipped the dash on its own -- 95 of those in
+  that same file, 14 cues that were nothing else at all.
+- Letters from another alphabet in the middle of a Hebrew word are now
+  repaired instead of deleted. The word itself was right; only some of its
+  letters were typed in the wrong script, and removing them left half a word
+  ("לעצמי" arrived as "לעצ"). They are spelled back into Hebrew now.
+- Vowel points that turned up here and there are removed. Hebrew subtitles
+  are written without them.
+- A line the AI refuses to translate is now passed to a different
+  translation engine before it is given up on and left in English.
+- Subtitles already saved on your device, and anything already shared to the
+  community pool, get the wrong-alphabet and vowel-point repairs as they are
+  read -- so they improve without being translated again.
+
+v0.2.462
+- Fresh installs came up with empty Movies, TV shows and Idan+ screens. The
+  five FENtastic widget files those screens are built from were being skipped
+  during installation: the wizard skips them on purpose so a quick update
+  never overwrites a home layout you customised, but the check it used also
+  matched a brand new install, where there was no layout to keep and the files
+  simply never arrived. The skin then failed every widget include and drew
+  nothing. The check now keeps a file you actually have and writes one you are
+  missing, and the add-on also puts any missing widget file back at startup, so
+  a device that already lost them repairs itself.
+- The seek bar Kodi refused to load on every single start is fixed. The shipped
+  file was missing one closing tag, so Kodi rejected the whole window and fell
+  back to the plain one.
+- "חיבור שירותים", "חיפוש לפי שנה", "לפי רשתות" and both personal areas opened
+  onto nothing. Every folder POV ships is stored in one spelling and read in
+  another, so POV read them all as empty and never said so. POV now reads them
+  the way they are written. Nothing in the database is touched, so anything you
+  have set up stays exactly as it is.
+- The same mismatch also made POV quietly replace the build's menus with its
+  own defaults. That stops too.
+
+v0.2.461
+- Kodi's own Hebrew strings now self-heal, not just the skin's. A strings.po
+  that stops part-way through leaves Kodi falling back to English for the ids
+  it cannot find and showing nothing at all for ids missing everywhere, so one
+  damaged file looked like three faults: "Favourites" and "Exit" suddenly in
+  English, two power-menu entries with no caption, and a FENtastic home that
+  reads as empty because on that skin the labels ARE the content. A pristine
+  copy of Kodi's Hebrew file now ships inside this add-on and is restored when
+  the live one is damaged. Kodi reads those strings once at startup, so that
+  repair shows up on the NEXT start; the skin's own files take effect at once,
+  because the skin is reloaded for them.
+- Damage detection no longer trusts file size alone -- a write killed in the
+  last third passed that check and still lost every label after the cut. It now
+  also looks for far fewer entries than the shipped copy, or a final entry that
+  never finished. A cut landing exactly between two entries is deliberately
+  left alone, and so is a translation that merely differs from ours.
+- 43 settings Kodi dropped on every startup are fixed. They used a control type
+  that does not exist for add-on settings, so Kodi logged an error and threw
+  each one away -- and they are the markers that record which one-time
+  migrations have already run.
+- Restored two repairs POV 6.08 had quietly outgrown, retired a diagnostic that
+  answered its question years of releases ago, and the MDBList pairing QR no
+  longer calls itself Gemini.
+
+v0.2.460
+- Fixes "no results" on the first attempt at a movie or episode, with sources
+  appearing on the second. POV 6.08 spends one setting, the scraper/debrid
+  timeout, on two phases that run back to back: finding torrents, then asking
+  the debrid which of them it already holds. After each phase it keeps only the
+  threads that finished, and the final source list is built exclusively from the
+  debrid phase -- so with a single debrid configured, one slow answer discards
+  every source that was found. The torrents are not lost: each provider caches
+  its own results as it finishes, which is why the next attempt is instant and
+  works.
+- POV shipped 6.08.01 with this setting's default raised from 10 to 20 and
+  renamed from "Scraper Timeout" to "Scraper/Debrid Timeout (secs)". Our build
+  pinned 10 in userdata, and a stored value beats a schema default forever --
+  an add-on update replaces the add-on folder and never touches userdata, so
+  the new default could not reach anyone. It is now raised to POV's own 20,
+  only upwards: anyone who set it higher keeps their number, and anyone who
+  lowers it afterwards keeps that too.
+- The write also drops POV's cached settings snapshot, without which the value
+  would be correct on disk while POV's running process kept using the old one,
+  and it is verified by reading it back, so a write Kodi silently swallows is
+  retried instead of being recorded as done.
+
+v0.2.459
+- Two text defects in AI translations, and the repair now runs where the text is
+  MADE rather than only on a later pass over it. A cue sometimes came back
+  holding the source-language lines above the Hebrew ones; only the Hebrew is
+  kept now. A single letter sometimes drew as a square, which is the player
+  saying it has no glyph for that codepoint -- Hebrew presentation forms
+  (U+FB1D-FB4F) are folded to the ordinary letters the shipped fonts do have,
+  and invisible zero-width and bidi controls are dropped.
+- Both repairs previously ran only on the RE-repair paths, so the FIRST watch of
+  a new translation still showed the defect, cached it, and contributed it to the
+  community pool -- where it could never be fixed afterwards, because pool entries
+  are written once and only repaired on read. They now run in the fresh-
+  translation path before the file is cached or contributed, in the live preview
+  shown during translation, and on both delivery repairs.
+- The echo strip only ever touches OUR OWN output, only removes leading lines
+  with no Hebrew in them, and never empties a cue or orphans a styling tag. A cue
+  the model left untranslated has no Hebrew in it and is exempt in full; a line
+  with Hebrew in it, like "נולדתי בChina", is never a candidate.
+
+v0.2.458
+- POV now says WHY a debrid source refused to play. Its one message,
+  "selected_files failed", covered two opposite failures: the debrid returned no
+  files at all (the source is advertised as cached by an external scraper but
+  the provider does not actually hold it), or it returned files and POV's own
+  season/episode filter rejected every one. From outside those are
+  indistinguishable, so "I clicked a source, it ran through twenty and played
+  nothing" could not be diagnosed without guessing. The message now carries the
+  evidence -- "(0 file(s) from torbox)" or "(14 file(s) from torbox, filtered
+  out: ...)". Behaviour is untouched; only the log grows.
+- Restored a guard POV had silently outgrown. It protects resolve_external_
+  sources' error handler from crashing on its own unbound variables, which would
+  abort the whole "try the next source" loop and end at "no results" with
+  sources still on screen. It matched one exact signature line, POV turned that
+  function into a method, and it has been quietly skipping ever since.
+
+v0.2.457
+- A fresh install that lands on an EMPTY FENtastic home screen now repairs
+  itself. The build ships a 36-tile favourites.xml, something between the zip
+  and the first boot was losing it, and the workaround people found -- switch
+  the skin to NOX and back -- says what was missing: that path makes the wizard
+  copy a favourites seed over the file. We were holding the same canonical file
+  all along and refusing to use it, because the repair was disabled outright
+  after an older version of it resurrected tiles users had deliberately deleted.
+  That refusal still stands for any home with tiles on it; it no longer applies
+  to one with almost nothing, which cannot be a preference. Tiles you added
+  yourself are kept, and a missing or truncated file is covered too.
+- The MDBList "My Movies / My Series" tiles get one way back. Insert-once was
+  unable to tell a deletion from a wipe -- a skin switch, a favourites reseed, a
+  home-widget edit -- so installs that lost them the second way were refused
+  forever. They are restored once for anyone who still has MDBList connected,
+  and the credit is not spent on anyone who has not connected yet. After that
+  the normal rule resumes: delete them and they stay deleted.
+
+v0.2.456
+- Embedded subtitle extraction stops punishing one congestion event six times.
+  The pace controller backed off per 429 RESPONSE rather than per congestion
+  EPOCH: a single cluster fetch retries up to five times, and every retry that
+  answered 429 widened the gap again, so one unlucky cluster could multiply it
+  by 1.5^5 on its own. A field log shows the whole failure in thirty-three
+  seconds -- first refusal after 68 requests, sixth refusal 27 requests later,
+  and the pace at its 2.00s ceiling for the rest of the run. It was overshoot,
+  not a slow provider: the same log then records 25 consecutive CLEAN requests
+  at that ceiling. Now, after widening, the controller refuses to widen again
+  until the new pace has actually been measured, so repeat refusals from the
+  same event are honoured and retried without compounding.
+- Recovery could not keep up with the back-off either. 0.9x per 25 clean
+  requests is one 10% step per fifty seconds at a 2.00s pace, and that run
+  managed exactly one such step in its lifetime. Now 0.85x per 12 -- still far
+  more cautious than the 1.5x back-off, so it errs slow rather than fast, but
+  no longer permanently.
+- And it no longer relearns the same lesson every episode. Every extraction
+  started at the same optimistic pace, spent the provider's burst allowance
+  discovering it was too fast, and paid the climb again. The pace a run settles
+  on is now remembered per provider and the next run starts there, 25% quicker
+  so it keeps probing and one bad night fades over a few runs. It can never
+  start faster than a fresh install would, only slower.
+  Measured against the real debrid link from the field log: a 2.79GB BluRay
+  REMUX that had reached 143 of 364 cues in four minutes now returns all 364 in
+  just over two, with the subtitle complete and no errors.
+- The MDBList "My Movies / My Series" home tiles appear as soon as MDBList is
+  connected, instead of needing two restarts. Kodi reads favourites.xml exactly
+  once, when the profile loads, and answers everything afterwards from memory --
+  so the tiles our startup repair appended were on disk but not on screen, and
+  the restart that wrote them could never be the one that revealed them. They
+  are now also handed to the running Kodi through its own API, and connecting
+  MDBList runs the repair there and then. Tiles you deleted stay deleted.
+
+v0.2.455
+- The three-connection extraction from the last version is switched back off,
+  and the harm it did is undone. It was wrong, and the reasoning was wrong in a
+  way worth writing down: keeping the same gap between requests is not the same
+  as keeping the same request RATE. Serially each line cost the gap AND a round
+  trip to the provider; with three connections the round trip stops counting and
+  only the gap remains, so we asked about three times as often. That IS the
+  speedup -- waiting less means asking more -- and it is also three times the
+  load, which is exactly what a debrid account limits. TorBox refused within
+  thirty seconds, and by the time the add-on had backed off to one connection
+  the automatic slow-down had already widened the gap tenfold, where it stays
+  until hundreds of clean requests walk it back. An episode that used to take
+  four minutes was left crawling for nineteen.
+- So: back to one connection, and a slow-down caused by our own burst is now
+  undone when the burst stops, instead of being carried for the rest of the
+  extraction. Anyone who saw an extraction crawling after the last update gets
+  the old speed back. The faster path is kept and still tested, switched off,
+  until there is a provider it can be shown to help on -- measured against that
+  provider rather than against a stand-in.
+
+v0.2.454
+- Extracting a built-in subtitle is about twice as fast. It was never limited by
+  bandwidth -- it was waiting: one connection, one request at a time, so every
+  line cost the gap we deliberately leave between requests AND a round trip to
+  the debrid server on top of it, and the link sat idle for most of the four
+  minutes an episode took. It now uses three connections while the provider is
+  behaving, and -- this is the part that matters -- they all take their turn from
+  ONE shared schedule, so the server is still asked at exactly the same rate as
+  before. Only our own waiting disappears. Measured at the real settings against
+  a typical debrid round trip: an episode goes from about three minutes to about
+  one and a half, for exactly the same number of requests.
+- It stands down at the first sign of trouble. The moment the provider pushes
+  back even once, or the file turns out to be one whose structure has to be
+  re-learned as it goes, everything hands back to the single connection and
+  finishes the way it always did. That is deliberate: pushback is judged by how
+  many refusals pile up against progress, and three connections pile them up
+  three times faster -- which would make the add-on give up on exactly the
+  awkward-but-usable provider it was taught to patiently crawl through.
+- And a fault while fetching can no longer end as a quiet success. If anything
+  unexpected goes wrong on one part of the file, that part is now re-read the
+  slow, thorough way instead of vanishing from a subtitle that still reports
+  itself complete -- which would also have thrown away the saved progress that
+  exists to recover it next time.
+
+v0.2.453
+- Ktuvit subtitles that arrive unzipped now reach the community pool, and their
+  timing can be checked again. The engine converts a downloaded subtitle to
+  UTF-8 only when it has just unpacked it from an archive; Ktuvit sometimes
+  hands over the .srt on its own, and those files were used exactly as they
+  arrived -- in the older Hebrew encoding. Everything that reads a subtitle
+  afterwards reads it as UTF-8, so every Hebrew letter turned into a
+  replacement character: the pool's own quality check then saw a subtitle with
+  no Hebrew in it and refused to upload it (which is why it never appeared in
+  the channel), and the timing check saw one line of dialogue instead of
+  hundreds and gave up. A downloaded subtitle is now converted whichever way it
+  arrived, including one already sitting in the local cache from before. A file
+  that is already UTF-8 is not touched at all, so nothing already shared is
+  re-uploaded.
+- ...and the conversion can no longer damage a file it was not meant to touch.
+  "Not valid UTF-8" is not the same as "the old Hebrew encoding": it also
+  describes a perfectly good file with one damaged byte, and the old encoding
+  accepts almost any bytes. Reading such a file the wrong way turned every
+  curly quote and dash in it into gibberish -- a glitch nobody would notice
+  made into a ruined subtitle. The conversion is now accepted only when it
+  actually produces Hebrew, in the engine's own converter as well as the new
+  one, so an English subtitle with a single bad byte keeps the single bad byte.
+
+v0.2.452
+- Hardening on yesterday's TorBox repair, from a review of it. The repair now
+  refuses to install its copy of POV's file unless that copy compiles: POV
+  imports the TorBox client the moment anything debrid-related loads, so a file
+  that will not parse would take down every debrid path rather than just the
+  one line being fixed. It also no longer accepts the mere mention of the
+  missing property as proof a device is healthy -- only an actual assignment
+  counts -- and it clears up the stray file our old packages planted even on
+  devices where POV had already replaced the client on its own.
+- The log stops repeating a warning it cannot act on. A patch that adds TorBox
+  30-day usage to POV's account screen has been aiming at a file POV deleted;
+  it only appeared to still apply because our own package kept putting an old
+  copy of that file back. It now recognises that POV moved on and says nothing
+  further, so the log keeps meaning something when the next problem arrives.
+
+v0.2.451
+- Picking a source plays it again. Since 6.07.92 POV reads a property on its
+  TorBox client one line AFTER the source has already resolved and the playable
+  link is in hand -- and on this build that property was missing, so the link
+  was thrown away and POV moved on to the next source, and the next, until the
+  list ran out and it said "no results". The property was missing because of
+  us: the build's quick-update package had been carrying a copy of POV's own
+  TorBox file from June, and Kodi lays a quick update straight over the add-ons
+  folder, so every update quietly put that older copy back over POV's. It did
+  no harm for weeks, until POV started needing something only its own newer
+  copy has. The package no longer carries any POV file at all, and this version
+  puts POV's own file back where an earlier package overwrote it. Nothing is
+  touched on a device that was not affected.
+
+v0.2.450
+- "No results" on every movie and every episode is fixed. POV's own scraper
+  list starts with a line that is a takeover rather than a filter: if the
+  AIOStreams provider is switched on, AIOStreams becomes the ONLY scraper POV
+  will ask, and every other one -- external, the debrid cloud scrapers,
+  easynews -- is dropped before it is ever consulted. The AIOStreams scraper in
+  turn returns an empty list immediately, without a single network request,
+  when its username and password are blank. The two together are exactly what
+  users saw: POV's progress window flashing open and shut in a twentieth of a
+  second, then "no results", on every title, forever. POV removed AIOStreams in
+  6.04 and brought it back in 6.07, and Kodi keeps a setting's stored value even
+  while an add-on stops declaring it -- so a switch left on years ago got its
+  meaning back with the update, without anyone touching it. That takeover now
+  also requires the credentials to be present, and a switched-on AIOStreams with
+  no credentials is switched back off. Both only ever act when the credentials
+  are empty, so anyone actually using AIOStreams is left exactly as they were.
+- Added a switch that stops this add-on touching POV at all. It rewrites about
+  twenty of POV's own source files on every startup, and POV updates itself
+  whenever its author publishes, so any of those rewrites can stop being right
+  at a moment nobody chooses. Turning the switch on makes every one of them
+  return before doing anything; reinstall POV from its repository and it stays
+  as its author shipped it. It exists so "is it the add-on?" can be answered by
+  trying it instead of by guesswork.
+
+v0.2.449
+- Sources are found again. POV updated itself and every title began answering
+  "no results", which is what POV shows when its result list comes back empty.
+  This add-on corrects rows POV labels SD whose own release name says 1080p --
+  and, having corrected one, it also re-applied the user's resolution filter and
+  removed the row if the corrected quality was not in it. That read a POV
+  setting by name and split its value on commas, both of which are POV's to
+  change; a value in any other shape produces a filter that matches nothing and
+  removes every row it touches. It now corrects the label and never removes a
+  row: POV has already applied the filter itself, so a row that reached the list
+  is one POV chose to show.
+- Kodi no longer updates, closes itself, and then does it again on every launch.
+  The update recorded that it had run through a store that silently discards
+  errors, at the moment the package it had just unpacked replaced the wizard's
+  own files, and then force-closed Kodi in a way that deliberately skips saving.
+  Lose that write and the next launch finds the same update waiting. The record
+  now goes to a second place as well, is read back to confirm it survived, and
+  Kodi is not closed unless it did -- the update is installed either way and
+  simply takes effect the next time Kodi starts on its own. Repeated attempts
+  are also counted and capped, so nothing can retry without end.
+- Pressing play during a subtitle extraction no longer risks closing the film.
+  Resuming after a pause used to cancel the extraction; not cancelling it left
+  the player's first read of the film competing with it for the same debrid
+  connection, which could be refused and end playback. Neither was necessary:
+  the extraction now stands aside for a few seconds so the player can get ahead,
+  then carries on from where it was.
+
+v0.2.448
+- Pressing play no longer cancels an extraction in progress. The rule was that
+  resuming the film mattered if the provider had refused even one request -- and
+  one refusal in fifty-seven is ordinary busy-CDN noise, not a provider in
+  trouble. Worse, the pause being resumed is usually one the add-on itself
+  caused, because opening the subtitle list pauses playback: every subtitle
+  picked by hand therefore began paused, and pressing play to carry on watching
+  was being read as a signal about the provider. A field log shows an extraction
+  killed at 51 lines of 321 the instant play was pressed, and again on the next
+  attempt, so that file never got past 18 per cent. Cancelling now requires the
+  provider to have actually throttled the extraction down, and to have done so
+  recently rather than at some point earlier in the run. The separate guard that
+  watches for the picture freezing is unchanged.
+- Extraction says that it is working, from the first line it reads. It used to
+  wait for the first whole twenty per cent, which on a distant provider is
+  minutes, and the run above never reached twenty per cent at all -- so the only
+  thing that user ever saw was the message saying it had stopped. It now reports
+  as soon as the first line comes out, then every ten per cent, and never goes
+  more than three quarters of a minute without saying something while lines are
+  still arriving. On a fast provider it is still only a handful of messages.
+
+v0.2.447
+- An extraction in progress is no longer cancelled by pausing the film and
+  resuming it. Handing the connection back to the player is only worth doing
+  when the provider is actually pushing back on the extra requests; when it is
+  not, the extraction simply carries on and the player is unaffected. Before
+  this, a single pause part-way through threw away minutes of work.
+- Extraction now shows how far along it is. It reports its progress as it goes,
+  including over a full-screen picture, where previously nothing at all appeared
+  for several minutes. An extraction that is cut short says how much of the file
+  it managed to read; that much is kept, and choosing the subtitle again picks up
+  from there instead of starting over.
+- A provider that starts refusing requests part-way through no longer ends the
+  extraction. It is now crawled through at whatever rate the provider will
+  tolerate, and the rate is raised again once the refusals stop. On a provider
+  that refused two out of every three requests, this is the difference between
+  no subtitle at all and a complete one.
+- A subtitle can no longer come out with only part of its lines because a
+  provider quietly returned a short answer. A capped or cut-off response carries
+  no error of any kind, and when the bytes happened to run out on an internal
+  boundary even reading them back looked normal. The amount of data returned is
+  now checked against the amount owed, both for the file's index and for the
+  subtitle data itself, and anything short defers the extraction rather than
+  handing over a subtitle that is missing lines without saying so. A file whose
+  provider merely reports its size a little wrong still finishes, because that
+  case is settled by asking the provider how long the file actually is, rather
+  than by guessing from an answer that did not arrive.
+- Lines the AI leaves out of its reply are asked for again instead of being left
+  in the original language. A reply that came back missing a hundred lines used
+  to leave a hundred lines untranslated in the middle of the film; the missing
+  ones are now re-requested on their own, in smaller pieces, and only what still
+  does not come back stays as it was.
+
+v0.2.446
+- Reading a video's embedded subtitle track over a debrid link now costs about
+  half the network requests it used to. Every subtitle line was paying for two
+  separate range requests: one at the start of its cluster, purely to work out
+  where the line sits and what time it begins, and one for the line itself.
+  Neither of those two facts has to be re-read for every line -- the first is a
+  property of how the file was muxed, the second is already recorded in the
+  file's own index. Both are checked against the old method before they are
+  relied on, and anything that does not check out falls back to it, so a file
+  can only be read faster, never less accurately.
+- A short buffering hiccup no longer cancels an extraction in progress. Kodi
+  reports a buffering stall and a seek exactly the way it reports a pause, and a
+  single momentary one was enough to cancel -- which is why extraction could run
+  for minutes and finish nothing while the movie was simply playing. A pause now
+  has to be held for a few seconds to count. Pausing deliberately and then
+  resuming still hands the connection straight back to the player, as before.
+- An interrupted extraction keeps what it collected, and the next attempt
+  continues from there. On a provider that limits requests aggressively an
+  extraction can only ever be cut short, so it previously never finished at all,
+  no matter how many times the file was played. A partial result is still never
+  used as a subtitle; this only decides what survives an interruption.
+- When a provider pushes back, extraction slows down as before -- and now speeds
+  back up once the provider stops. It used to stay slow for the rest of the run.
+  It never goes faster than its normal starting rate.
+- Extracting from a file stored on the device is no longer refused because
+  another extraction appeared to be running. That guard protects a shared debrid
+  connection and has no purpose for a local file.
+- A translated line whose start time the AI mistyped is now given its correct
+  start back, in the cases where the surrounding lines make its position certain.
+  Such a line appeared several cues early, sat on screen over unrelated dialogue,
+  and vanished at the moment it was actually spoken. Only the timing is touched;
+  text, entry count and order are never changed, and anything less than certain
+  is left exactly as it is.
+- Stray Arabic letters are now also removed when they appear glued inside a
+  Hebrew word rather than as a separate word, and one Arabic character block that
+  was missing from the check is covered. Subtitles already stored on your device
+  are cleaned again on this update.
+
+v0.2.445
+- Fixed embedded subtitles disappearing from the subtitle list for anyone who
+  turned OFF automatic Hebrew search on playback. The two were wired together by
+  mistake: the list of a file's built-in subtitle tracks was only ever recorded
+  as part of the automatic search, so switching that off silently removed every
+  built-in entry as well, including "built-in translated to Hebrew (AI)". They
+  are separate now. With automatic search off you still get the entries and can
+  pick them yourself; you just do not get an automatic search.
+- Fixed stray Arabic words and fragments appearing inside translated Hebrew
+  lines. Hebrew and Arabic both mark gender, so a human Arabic translation of
+  the same scene is given to the AI purely as a gender reference, and it
+  sometimes copied a word out of it. Such a word is now removed on delivery.
+  This is deliberately cautious: it only removes Arabic from a line that also
+  has Hebrew, never removes a line, never removes a subtitle entry, and never
+  touches a line that is entirely Arabic -- so nothing can fall silent while
+  people are talking. Subtitles already translated and stored with the problem
+  are cleaned on this device as they are delivered.
+- The "searching for subtitles" banner no longer flashes on live TV channels.
+  The check that recognises a live stream ran after the banner was already
+  drawn, so a channel briefly showed a search that had in fact been cancelled.
+- Built-in subtitle tracks tagged with a three-letter language code -- Spanish,
+  German, Dutch, Japanese, Swedish, Czech and about fifteen more -- are matched
+  correctly again, so translating them works instead of reporting that no track
+  was found.
+
+v0.2.444
+- Fixed a translated Hebrew line staying frozen on screen while the rest of the
+  dialogue came and went underneath it. The AI is handed whole subtitle entries
+  including their timecodes and is asked to copy the timings verbatim; when it
+  mistyped one digit, a single entry could last an hour. Every translated entry
+  now gets its ORIGINAL timecode back, so the AI is never trusted with timing.
+- Added a conservative safety bound on how long any subtitle entry may stay on
+  screen, as a second line of defence for the cases the first cannot cover. It
+  is deliberately gentle: long holds and deliberate overlap that real subtitles
+  legitimately contain are left exactly as authored, and a correct subtitle is
+  never altered.
+- Subtitles that were already translated and shared with a frozen line are
+  repaired on this device as they are delivered -- from the community pool,
+  from the local cache, and from a file saved next to the video. Shared and
+  cached source files stay immutable, so nothing is re-uploaded and no cache is
+  purged. Entry count, text and language are provably untouched, so no subtitle
+  becomes newly rejected.
+
+v0.2.443
+- Fixed Hebrew RTL display for human subtitles previously processed by the
+  built-in sources engine: dialogue dashes and trailing ellipses now render on
+  the correct visual edge. Existing cache and community-pool source files stay
+  immutable; the correction is applied to a local display copy, so it causes
+  no cache purge, provider refetch, or pool re-upload.
+- Community-pool subtitles are cached locally by hash after their first fetch,
+  and Ktuvit release-name de-dup now protects both the immediate and durable
+  upload paths. Re-picking the same pool subtitle does not spend another /sub
+  request, while future Ktuvit rows retain pristine logical punctuation.
+- Kodi POV IL profiles still using the exact shipped subtitle appearance now
+  use white text with a black glyph outline and no rectangular background.
+  The migration is retry-safe and preserves the entire style when the user has
+  customized any visual subtitle setting.
+
+v0.2.442
+- Gender-reference search can now examine up to 50 subtitle candidates across
+  the researched language-priority chain, while still trying at most 10 inside
+  one language, stopping on the first aligned subtitle, and retaining the same
+  30-active-second latency guard.
+
+v0.2.441
+- Embedded-subtitle translation now has one explained Advanced-mode selector:
+  Automatic (recommended), timing alignment only, direct text extraction only,
+  local files only, or disabled. Existing hidden choices migrate safely, and
+  every failed method still falls back to the normal external-subtitle path.
+- Gender-reference selection now follows the researched language priority and
+  tries up to 10 candidates inside a language before moving to the next one.
+  Downloads and alignment remain strictly serial and first-aligning-candidate
+  wins, with a 15-download / 30-active-second safety budget for hard titles.
+
+v0.2.440
+- Settings: hide three internal implementation toggles that Kodi exposed as
+  blank rows in Expert mode. They were never user-facing controls, and their
+  stored values and runtime behavior are unchanged. The fix applies to every
+  MoranSubs installation.
+
+v0.2.439
+- Hotfix: restore the community-pool signing credential that was accidentally
+  omitted from the packaged 0.2.438 update. The request-saving quality and
+  capacity gates from 0.2.438 remain unchanged and now operate with authenticated
+  lookup/contribution requests again. No settings or user action are required.
+
+v0.2.438
+- Efficiency: the add-on no longer uploads a translation to the community pool
+  when the server would only reject it -- a partial/low-quality result (fails the
+  Hebrew-ratio / length gate) or an episode already holding the maximum number of
+  variants. It now runs the SAME checks the server does, BEFORE the upload, so
+  those wasted network requests are never sent (they were the dominant source of
+  requests against the pool's free-tier quota). Invisible to users: a genuine
+  Hebrew subtitle is never withheld -- the checks fail open, and you still get
+  every subtitle you did before.
+
+v0.2.437
+- New: the "My Movies / My Series (MDBList)" tile now also appears as a native row
+  in the FENtastic personal area (navigator.db) and the Arctic Fuse 3 home layout
+  (skinvariables), not just in the favourites shortcuts. It shows only when MDBList
+  is connected and -- like the TMDB/Trakt rows -- routes to the newest-first
+  mdblist_watchlist list, so it inherits that sort. Add-only: a tile you remove
+  stays removed, and existing personal-area customizations are left untouched.
+
+v0.2.436
+- Fix: the "My Movies / My Series (Trakt)" home lists now also lead with the most
+  recently added title. Those lists merge your Trakt collection + watchlist +
+  favorites, and the merge was concatenating them (so a freshly-added watchlist
+  title landed after the whole collection). It now sorts the combined list by
+  date-added, newest first. (MDBList was already fixed in 0.2.435; TMDB has no
+  per-item date so it keeps its own newest-first order.)
+
+v0.2.435
+- Fix: the "newest added first" sorting from 0.2.433 wasn't actually taking
+  effect (POV serves its sort setting from a cache our background write couldn't
+  refresh). Now handled directly in POV's sort logic, so the My Movies / My
+  Series lists (MDBList/Trakt/TMDB) really do lead with the most recently added
+  title. If you deliberately pick a different sort from POV's own sort menu, that
+  still wins. In-progress / watched lists are unchanged.
+
+v0.2.434
+- Gemini models updated to the newer versions. The default free model moves from
+  3.1 Flash Lite to 3.5 Flash Lite (identical free daily quota, better quality),
+  and the paid "newest" option moves from 3.5 Flash to 3.6 Flash. Existing users
+  on those two are upgraded automatically on next start; if you deliberately chose
+  a different model, your choice is kept. No action needed.
+
+v0.2.433
+- Personal lists now sort by "recently added" (newest first) by default, instead
+  of A-Z. Applies to the My Movies / My Series lists across MDBList, Trakt AND
+  TMDB (and the combined views) -- so a title you just added leads the list. One-
+  time default; if you later pick a different sort from POV's own "sort by" menu,
+  that choice is kept. Same on every skin.
+- "My Movies / My Series (MDBList)" now shows BOTH your Watchlist and your
+  Collection ("Recently Added" on mdblist.com, where a Trakt import lands) in one
+  list, newest first -- no extra tiles. Titles you add via the long-press manager
+  and titles synced from Trakt now appear together in the same place, most-
+  recently-added first. Reading only (no crash risk); MDBList's cached list is
+  reused so there's no extra API cost.
+
+v0.2.432
+- MDBList home tiles: "הסרטים שלי (MDBList)" and "הסדרות שלי (MDBList)" now appear
+  in your personal-tiles area (next to the TMDB/Trakt/POV "My Movies/My Series"
+  tiles), each opening your MDBList Watchlist filtered to movies / to series
+  respectively -- routed through POV's own cached watchlist read (no extra API
+  cost). They show up ONLY if you've connected MDBList; branded MDBList artwork
+  included. Add-only and one-time -- if you delete them, they stay deleted.
+
+v0.2.431
+- MDBList list manager is now Watchlist-only. The "Collection" button kept
+  crashing on some POV builds (a version-specific POV bug in its post-add sync
+  that we can't patch reliably across every build), and MDBList "Collection"
+  marks media you OWN -- which never applies to a streaming setup. We removed the
+  Collection button entirely: adding/removing to your MDBList Watchlist works as
+  before, and there's nothing left to crash. (Shows still get the "Dropped"
+  toggle POV adds; only Collection was removed.)
+
+v0.2.430
+- MDBList "Collection" no longer crashes on the post-add refresh. After the
+  previous fix correctly routed the Collection button, POV's own activity-sync
+  step could still crash: when POV's cached "last activity" row can't be read
+  back as a table, POV handed the raw database row (a tuple) to code expecting a
+  table -> "tuple indices must be integers" -> crash on every sync (the periodic
+  monitor and the Collection button alike). Fixed: we guard that step -- if the
+  cached value is malformed we clear POV's MDBList cache once (it rebuilds clean
+  on the next pass) and skip the bad run instead of crashing. Also covers the
+  case where MDBList briefly returns a non-JSON response. Watchlist unaffected.
+
+v0.2.429
+- MDBList "Collection" in the list manager no longer crashes on a Hebrew UI. POV
+  routes the Watchlist/Collection buttons by their English label text; our Hebrew
+  translation of "Collection" -> "קולקציה" made POV treat it as a user list by
+  that name, POST to a non-existent list (404), and crash on the empty result.
+  Fixed: POV now uses stable ids for those two buttons, and the add/remove calls
+  no longer crash on a failed request. Watchlist was unaffected.
+
+v0.2.428
+- MDBList "No Account Active" repair: if you connected MDBList but it showed as
+  inactive -- the list manager said "No results", the sync monitor kept aborting
+  ("No MDBList Account Active"), and marking watched didn't sync back -- it is now
+  fixed automatically on the next start. POV keys the whole MDBList account on the
+  stored username, and a connect that couldn't capture it (a transient network
+  blip at pairing time) left the account looking empty. We re-fetch the username
+  from MDBList once and restore it. Direct scrobbling was never affected (that
+  only needs the key), which is why some titles still synced.
+
+v0.2.427
+- MDBList watched-sync fixes (when MDBList is your Watched Status Provider):
+  (1) your MDBList API key is no longer written to kodi.log -- POV logged the
+  full request URL, apikey and all, on any MDBList error; it is now redacted.
+  (2) "Mark as watched" now clears the paused state on MDBList and counts the
+  title in your Watch Stats. POV was posting to a scrobble/clear endpoint that
+  returned 404, so the title stayed "paused" and never registered; we now send
+  a scrobble/stop at 100%, which MDBList treats as finished (marks watched and
+  clears the resume). Applies to POV 6.x; harmless no-op otherwise.
+
+v0.2.425
+- MDBList can now be paired by scanning a QR code from your phone, like the
+  other services -- until now it was the only one that required typing the API
+  key by hand into Kodi. In "My Services" pick MDBList and either scan the QR
+  and paste the key on your phone (the phone page verifies it against MDBList
+  first, with the same iOS/WebKit paste fix used for Gemini pairing) or type it
+  in Kodi. Connecting and disconnecting now mirror POV's own MDBList setup
+  exactly -- account name, token, and the watched-status provider -- and a
+  mistyped or unverifiable key is never saved.
+
+v0.2.424
+- iPhone Gemini pairing fix: the "pair from phone" page now works on iOS. iOS/
+  WebKit was silently corrupting a pasted API key in the text field (smart-
+  punctuation / autocorrect), so Kodi rejected it with a 401 even though the
+  same key worked from a computer or Android. The page now uses a password
+  field, reads the raw clipboard on paste, and verifies the key with Google
+  directly from the phone before sending it -- so a mangled or invalid key is
+  caught on the phone with a clear message instead of a confusing error in Kodi.
+  Client-only; the local pairing transport and everything else are unchanged.
+
+v0.2.423
+- When the community pool already holds an embedded ("תרגום מובנה") translation for
+  YOUR exact release, the local "translate the embedded track" action is no longer
+  offered separately -- you get the instant pool copy (shown as "· מאגר קהילתי · 100%")
+  instead of re-running the whole extract + AI translate for a result that is already
+  one click away. No behaviour change when the pool does not have your release.
+
+v0.2.422
+- Further reduced background traffic to the community server: within a single playback,
+  the availability check behind the sources-screen badge and the auto-subtitle search now
+  SHARE one pool lookup (they run in the same background process, so the first result
+  serves the second from a short in-memory cache) -- one request per playback instead of
+  two. No change to what you see; purely fewer redundant requests.
+
+v0.2.421
+- The Hebrew-availability badge on the sources screen now also reflects community-pool
+  translations. The lookup behind the badge was being rejected as unauthenticated, so the
+  badge only ever showed human-subtitle availability; it now includes the community AI
+  translations too. The add-on also makes far fewer background requests to the community
+  server for the same information -- it was querying twice per title and re-checking every
+  few hours, and now queries once and caches a known result for longer.
+- Fix: a completed AI translation is now recorded reliably in usage stats -- the last
+  translation of a viewing session could previously be missed. No user-visible change.
+
+v0.2.420
+- Fix: SDH song lines showed an ugly garble ("gimel-TM-x") at the start/end of a line
+  instead of a music note. Downloaded subtitles were always decoded as legacy Hebrew
+  (cp1255), which corrupted the ONE non-ASCII character in an English caption -- the
+  music note -- while leaving the English text intact (so it slipped through and was
+  even translated-through into the shared pool). Subtitles are now decoded as UTF-8
+  first, falling back to cp1255 only for genuinely legacy files, so the music note
+  survives. Already-corrupted lines (including ones already in the community pool) are
+  also repaired on read, so the garble disappears for everyone who downloads them.
+
+v0.2.419
+- Fix: an English (or mixed) subtitle that merely CONTAINED a little Hebrew -- e.g. a
+  Hebrew "translated by..." credit line -- was misdetected as "already Hebrew" and
+  passed through UNtranslated. It showed the source untranslated and silently cached
+  it, so every retry discarded that cache and did nothing (an endless no-op that read
+  as "said it's translating but never does"). Field case: on one movie the English
+  embedded track never translated while the Russian one did. The "already Hebrew"
+  check now measures the Hebrew share of the WHOLE source and only skips translation
+  when Hebrew clearly dominates -- so English/mixed sources translate as expected.
+- Hardening: notifications now fire on their own short-lived thread so a wedged GUI
+  (e.g. during heavy debrid extraction) can never stall a translation; the toast
+  count is bounded. Adds a "language ok, mode=..." diagnostic log.
+
+v0.2.418
+- More translation progress logging (cast / prompt / blocks milestones) to pin down
+  a translation that stalls before it starts sending chunks. Diagnostic only -- no
+  behaviour change.
+
+v0.2.417
+- Fix: a very large subtitle (e.g. a long SDH / embedded track) could silently fail
+  to translate when "Translate whole subtitle in one request" was ON -- the single
+  request overflowed the model's output limit, got truncated, and the whole result
+  was discarded as empty, with no progress shown. Such large sources now
+  automatically fall back to chunked translation (with the normal progressive
+  display), so they translate reliably.
+- Added translation progress logging (chunk count + mode + first-chunk-returned) so
+  a stalled translation can be diagnosed from the log instead of being a black box.
+
+v0.2.416
+- "RTL base" is now the DEFAULT RTL rendering mode (was opt-in in 0.2.414-0.2.415,
+  now verified on-device). Hebrew subtitles get correct placement of numbers,
+  English names, quoted English, parentheses AND end punctuation out of the box --
+  no setting to change. If a player does not honour the directional marks, switch
+  "RTL punctuation fix direction" back to "Reverse" (the previous default, which
+  only fixes the sentence period). Purely a rendering change; nothing is sent to
+  the network and the community pool is unaffected (every mode adapts shared text
+  on read).
+
+v0.2.415
+- "RTL base" mode polish: a username / handle that ends a Hebrew sentence on its
+  own wrapped line (e.g. "Modelbehavior36.") now shows its trailing period on the
+  correct side. Such single-token Latin tails are wrapped too so the player's BiDi
+  places the period correctly; multi-word English lines and names that genuinely
+  start with a dot (".NET", ".exe") are left untouched. Only affects the optional
+  "RTL base" mode; the default is unchanged.
+
+v0.2.414
+- New optional RTL rendering mode "RTL base" (Settings > RTL punctuation fix
+  direction). It wraps each Hebrew subtitle line in an explicit right-to-left
+  embedding so the player's own BiDi puts numbers ("50 miles"), English names
+  ("cutie-patotie87"), quoted English ("Model behavior") and parentheses on the
+  correct side -- not just the end-of-sentence punctuation the default handles.
+  This is a root-cause fix for setups whose base text direction defaults to
+  left-to-right. It is OPT-IN because it relies on the player honouring the
+  directional marks: turn it on and verify on your device; the default
+  "reverse" mode is unchanged.
+
+v0.2.413
+- SDH detection is now stricter, to stop false "SDH (מדויק למגדר)" labels: a
+  subtitle is marked SDH ONLY when the release name has a whole-token "SDH" /
+  "Hearing Impaired" marker, or its CONTENT was detected as SDH (dense speaker
+  labels / sound cues). The subtitle provider's own hearing-impaired flag is no
+  longer trusted -- it flagged ordinary subs as SDH, and "has sound cues" is not
+  the same as "has speaker labels" (what the gender-accuracy claim needs).
+
+v0.2.412
+- SDH-aware AI translation, Phase 3b: content-detected SDH subtitles are now
+  shared through the community pool, so a subtitle one user found to be SDH is
+  preferred + labelled "SDH (מדויק למגדר)" at everyone else's pick list too --
+  even before they download it. Opt-in (rides the existing pool share/use
+  settings), cost-frugal (deduped, fetched at most once every 3 days), and it
+  reads a local cache on the pick path so it never slows subtitle search.
+
+v0.2.411
+- SDH-aware AI translation, Phase 3: an SDH (hearing-impaired) subtitle is now
+  also recognised from its CONTENT -- a subtitle densely marked with bracketed
+  sound cues, ALL-CAPS speaker labels and music glyphs -- even when the provider
+  didn't flag it and the release name doesn't say "SDH". The check is deliberately
+  conservative (a regular subtitle is never misclassified), runs after download,
+  and remembers the release locally so next time it's offered it sorts first and
+  is labelled as the gender-accurate pick.
+
+v0.2.410
+- Idan Plus self-heal now runs FIRST at startup (before any other build repair),
+  so a corrupt channel file is healed before you can navigate to the addon.
+- Fixed the quick-update notification popup: the notification file had two
+  entries, and the wizard's parser expects exactly one, so it raised
+  "too many values to unpack" and showed no notification. Back to a single entry.
+
+v0.2.409
+- Idan Plus (עידן פלוס): fixed the failure where no channel loaded or played and
+  nothing was even shown. idanplus keeps its channel map in displayChannels.json
+  as a JSON object; if that file is ever corrupted (a partial/interrupted write),
+  its own reader falls back to an empty LIST and every channel lookup then dies
+  with "'list' object has no attribute 'items'" -- and the rebuild path crashes on
+  the same list, so it can never recover on its own. A startup self-heal now moves
+  a corrupt displayChannels.json aside so idanplus rebuilds a fresh list from its
+  server (its own reset does exactly this), and best-effort hardens idanplus so a
+  future corruption rebuilds instead of crashing. No-op if idanplus isn't
+  installed; a valid channel file (including your renames/reorder) is never touched.
+- SDH-aware AI translation, Phase 2: ALL-CAPS speaker labels (e.g. "MABEL:") in the
+  source are now kept through to the model, so it can match them to the TMDB cast
+  and choose the correct זכר/נקבה form per line, then drop the tag from its Hebrew
+  output. Any tag it fails to drop is now stripped ONLY from a line that actually
+  became Hebrew -- so an English caption/chyron/URL the model deliberately left in
+  place ("WARNING: ...", "PART 2: ...", "HTTP://...") is never eaten -- and the
+  interim English placeholder no longer shows raw speaker tags.
+
+v0.2.408
+- Cross-language embedded align now reads the video's head + Cues index ONCE and
+  slices the timing skeleton per track, instead of re-reading it per language on
+  the fallback -- fewer debrid requests when the picked language has no synced
+  external subtitle (safer on a strict token like TorBox).
+- SDH / hearing-impaired subtitles are now detected and preferred for AI
+  translation: they carry the COMPLETE dialogue (and speaker labels), so they are
+  the most complete source and the best for זכר/נקבה accuracy. Embedded: the
+  Matroska FlagHearingImpaired flag + track name are read from the head (free,
+  works on a strict token -- it is NOT the full extract), and an SDH track is
+  preferred when translating its own text (never as a mere timing skeleton, so
+  the alignment path is unchanged). External: an SDH sub (provider flag, or a
+  WHOLE-TOKEN "SDH"/"Hearing Impaired" release marker -- never a false match like
+  "Highlander"/"Chihuahua") sorts first within its language and is labelled
+  "תרגום AI לעברית · SDH (מדויק למגדר)".
+
+v0.2.407
+- Embedded (תרגום מובנה) translations are now tracked on the owner dashboard.
+  They already run through the exact same AI + gender pipeline as every other
+  translation -- so they were always counted, just never MARKED as embedded.
+  Each AI translation now tags whether it was embedded-sourced, letting the
+  dashboard surface them in the recent feed, per-title, and in an embedded-only
+  gender-coverage view. Telemetry-only; no user-visible behaviour change.
+
+v0.2.406
+- Multiple embedded translations of the same title are now ordered by gender
+  accuracy, and each shows the language it was translated FROM. Hebrew renders
+  speaker gender; the gender-reference chain covers most lines, but on the rest
+  the AI falls back to the source text's own gender -- so a source that marks
+  gender (Spanish/French/Russian/Arabic/Hindi...) is more accurate than English
+  or German (which don't mark predicative gender and must guess). Strong-gender
+  sources are listed first, e.g. "תרגום מובנה AI (ספרדית)" above "(אנגלית)".
+
+v0.2.405
+- Embedded relabel now also fixes titles clicked on 0.2.403. That build wrote the
+  ai_emb one-shot marker WITHOUT actually posting the promote (its _post still had
+  the old dedup pre-check), so after updating, the relabel would have been skipped
+  forever for any title a 0.2.403 user already opened. The marker suffix is bumped
+  (.emb -> .emb2) so those stale markers are ignored and the promote fires exactly
+  once. No user action needed -- just re-pick "embedded translation" once.
+
+v0.2.404
+- Embedded pool relabel actually lands now. The community-pool "תרגום מובנה AI"
+  upgrade could never reach the server: pool._post short-circuits the upload when
+  the source is already pooled (dedup), so the ai_emb "promote" signal was
+  swallowed and the entry stayed labeled plain AI. ai_emb contributions now
+  bypass that pre-check (still one-shot per file via the .emb marker; the server
+  dedups by hash, so no duplicate row -- only the kind is upgraded). Requires the
+  pool worker's promote logic (already deployed).
+- Clearer cross-language fallback message. When you pick an embedded track in a
+  language whose only external subtitles are CAM/other-release (they don't sync
+  to the embedded timeline and are correctly rejected), the add-on falls back to
+  a language that does sync (usually English) and now says so explicitly ("אין
+  כתובית מסונכרנת ב<שפה> — מתרגם מ<שפה>") instead of a confusing "from cache".
+- Exhaustive synced-source search. When you pick an embedded track, the aligner
+  now tries EVERY external subtitle candidate for a language (was capped at 3)
+  until one syncs -- release-NAME similarity isn't timing similarity, so a
+  lower-ranked release can be the best timing match. No download cap; the search
+  is bounded only by the existing 45s time ceiling (and pause/stop), and the
+  picked language is searched first.
+
+v0.2.403
+- Embedded pool item polish. The community-pool "תרגום מובנה AI" row is surfaced
+  only for your EXACT source, so it now shows "100%" (like the regular AI rows)
+  instead of a blank percentage that looked broken beside a "· 100%" sibling for
+  the same release. Also, re-picking "embedded translation" for a title whose
+  Hebrew was already cached now UPGRADES the pool entry to embedded ('ai_emb'):
+  the early-cache-hit backfill contributes the embedded kind under its own
+  one-shot marker, so a file previously shared as a plain AI translation gets
+  relabeled server-side instead of being skipped by the "already shared" guard.
+  Client-side only; no change to the translation itself.
+
+v0.2.402
+- Embedded translation now works in EVERY language, not just the ones whose
+  2-letter code happens to prefix their 3-letter one. The picker hands a 2-letter
+  ISO 639-1 code (es, de, nl, ja, sv, el, zh, ...) but a Matroska track tags its
+  language with the 3-letter ISO 639-2/B code (spa, ger, dut, jpn, swe, gre,
+  chi, ...); the old prefix match silently failed for ~20 languages, so clicking
+  "embedded translation" in e.g. Spanish or German never found the right track,
+  fell through to English, and served English's cached Hebrew instead of a fresh
+  translation from the language you actually picked. Track selection now
+  canonicalizes both codes (ISO 639-1 / 639-2B / 639-2T) before matching, and no
+  longer hands back a lone English text track for a different-language request.
+  Fully fail-open: any miss still defers to the external-subtitle path.
+
+v0.2.378
+- Pool efficiency (client side): a single browse/play flow used to call the
+  pool's /lookup several times for the same title (picker + sync_map + the
+  contribute pre-check). They now share one short-lived (90s) in-memory
+  response cache, collapsing them into ONE request per title -- fewer Worker
+  requests, same results (negative results cached briefly too; fully
+  fail-open). AUTO sync reports (/syncrep) are also de-duped client-side (the
+  same verdict isn't re-sent for 6h); human delay-fixes are never throttled.
+  No behavior change for users -- purely fewer redundant network calls.
+
+v0.2.377
+- Fixed (POV Trakt add crash -- the REAL root cause, from a second field crash
+  log): the crash was NOT POV's Trakt widget-refresh setting (that path never
+  ran -- zero "Widget Refresh Performed" lines in the log). It was OUR OWN
+  patch: pov_combined_discover_patcher used to rewrite POV's container_refresh()
+  to also fire UpdateLibrary(video,special://skin/foo) so AF3 home widgets
+  reload after mark-watched. But container_refresh() runs from ~30 sites incl.
+  every Trakt add (indexers/trakt_api.py); that ping reloads ALL POV home
+  widgets at once -> concurrent router.py on POV's reuselanguageinvoker
+  interpreter -> CPython dict corruption (SystemError: dictobject.c:1756) ->
+  native crash. Removed the ping from the discover patcher and added
+  pov_container_refresh_crash_fix to revert it on already-patched devices
+  (restores stock Container.Refresh, cycles POV so it applies this session).
+  FENtastic already reloads its widgets on Container.Refresh, so nothing is
+  lost. The 0.2.376 setting-guard is kept as harmless defense-in-depth.
+
+v0.2.376
+- Fixed (POV Trakt add crash, confirmed from a field crash log): adding a
+  title to a Trakt watchlist/favourites/collection could crash Kodi to the
+  Android home screen. Chain: POV's SyncMonitor, when the setting
+  "Attempt to Refresh Widgets After Refresh" (trakt.sync_refresh_widgets) is
+  ON, runs UpdateLibrary(video,special://skin/foo) after the sync -> every
+  home widget reloads at once -> many POV router.py invocations run
+  concurrently on POV's reuselanguageinvoker interpreter -> CPython dict
+  corruption (SystemError: Objects/dictobject.c:1756) -> native crash. A new
+  guard (pov_widget_crash_guard) forces that single setting OFF at startup,
+  but only when it is actually on -- widgets then refresh on the next
+  navigation instead of in a crash-inducing burst. No POV source files are
+  touched.
+
+v0.2.375
+- Fixed (POV Anime Hebrew, the real root cause): POV renders its main menus
+  from a STORED copy in navigator.db (seeded once from menu_lists.py) and an
+  in-memory Window cache -- so patching the .py only helped fresh installs and
+  existing devices kept the English anime menu forever. The patcher now also
+  rewrites the anime labels directly in navigator.db (AnimeList submenu +
+  RootList 'Anime' entry, all list types) and clears POV's in-memory menu
+  cache, so the anime section turns Hebrew this session. Only anime rows and
+  only the name tokens are touched; user menu edits and all other lists stay
+  byte-identical.
+
+v0.2.374
+- Fixed (POV Anime Hebrew, field log + screenshots): on POV 6.07 the anime
+  breadcrumb titles stayed English because navigator.py moved from indexers/
+  to menus/ between POV releases -- the patcher now handles both locations.
+  And because POV runs with reuselanguageinvoker, the freshly-patched menu
+  files were only picked up on the NEXT restart (so an updated device still
+  showed the anime menu in English); the patch now cycles POV so it applies
+  the same session, like the other POV code patchers.
+
+v0.2.373
+- Improved: Gemini API calls now authenticate via the x-goog-api-key HEADER
+  instead of the ?key= query parameter. Google's newer 'AQ.'-prefixed keys
+  reject the query-param method with 401; the header method works for every
+  key type. One credential per request (never both).
+- New (POV): the Anime section is now in proper Hebrew on every skin -- the
+  anime menu (trending/most watched/popular/recent/genres/years for both
+  series and movies), the root Anime entry, the Anime Calendar label and the
+  anime year/genre breadcrumb titles. Genre names inside were already Hebrew
+  via the existing genres patcher. Self-healing on every start, so a POV
+  self-update cannot revert it.
+
+v0.2.372
+- Fixed (standalone, field log + screenshot): the addon disabled itself
+  entirely ("no subtitles found") on Kodi installs whose PLAYBACK subtitle
+  language names a non-Hebrew language, even when Hebrew was wanted. The
+  language gate now treats Hebrew in "languages to download subtitles for"
+  as the strongest signal (it wins over the playback preference), and the
+  standalone service one-shot-seeds Hebrew into Kodi's subtitle-language
+  settings on first run (a later manual change sticks).
+- Fixed: every search on engine-enabled installs logged "EXCEPTION: Unknown
+  addon id 'service.subtitles.All_Subs'" -- the DarkSubs hook check now
+  skips entirely when the engine is on (DarkSubs is deliberately disabled
+  then), mirroring the service-side gate.
+- New: automatic subtitle search is now SKIPPED for live/IPTV playback --
+  PVR channels, streams with no duration, and a configurable addon
+  exclusion list (Settings -> engine; default: plugin.video.idanplus), so
+  channel zapping no longer triggers the Hebrew search overlay.
+
+v0.2.371
+- New: Gemini 3.5 Flash is now available in the model list (Settings ->
+  Translation -> Model). NOT the default -- 3.1 Flash Lite stays the
+  recommended default; pick 3.5 Flash if you have quota to spare.
+- New: the gender-reference feature now falls through a PRIORITY CHAIN of
+  languages when no Arabic subtitle exists (or none aligns): an out-of-sync
+  human HEBREW sub first (the strongest oracle -- it IS Hebrew), then Arabic,
+  then Spanish / French / Russian / Italian / Portuguese / Polish / Ukrainian /
+  Hindi / Czech / Romanian / Greek / Bulgarian / Serbian / Croatian / Slovak /
+  Urdu / Dutch. Each language's block teaches the model that language's gender
+  markers; machine-translated Hebrew is never used (poisoned oracle). One
+  engine search covers the whole chain; still fully fail-open.
+- New (standalone): the repo-channel addon now runs the SAME auto-on-play
+  Hebrew search as the full build -- making MoranSubs a complete PRIMARY
+  subtitle addon on a clean Kodi with independent POV/Umbrella (like DarkSubs):
+  embedded-Hebrew detection, human sources, community pool, and AI translation
+  when no Hebrew exists. The machinery moved verbatim to
+  resources/lib/autosub_service.py (one source of truth for both editions);
+  the full build's behavior is unchanged.
+
+v0.2.370
+- Improved (SubSync): small-offset acceptance now leans on OVERLAP + magnitude,
+  not the coarse "vote". Four correct small offsets for The Flash pinned it down:
+  the right shift ran vote 54-64%, overlap 87-90%, tight 40-45% -- and one at 54%
+  vote was still being rejected on the vote floor. Since every spurious match is
+  a LARGE offset (already blocked by the magnitude-scaled bar), a SMALL shift is
+  now accepted whenever the overlap corroborates strongly (>=85%), with vote kept
+  only as a low >50% majority floor. This lets these genuinely-off community subs
+  self-sync while large/low-overlap/noisy matches stay rejected. Verdict cache
+  bumped.
+
+v0.2.369
+- Improved (SubSync): apply small real offsets more reliably. Two field subs for
+  the same episode made the tuning precise: a genuinely-correct -436ms (64% vote,
+  87% overlap, 40% tight) that was still being rejected, vs. a garbage +230s
+  match (51% vote, 31% tight). The garbage is always a LARGE offset, already
+  rejected by the magnitude-scaled bar; so for SMALL shifts (<1.5s) the tight
+  floor now drops to ~35% when BOTH the vote (>=60%) and overlap (>=85%)
+  corroborate. Different-subber subtitles cap around ~40% tight even at the
+  correct offset, so this lets the real small fix apply while large/weak/noisy
+  matches stay rejected. Verdict cache bumped.
+
+v0.2.368
+- Fixed (SubSync): auto-sync now actually APPLIES a small, real offset that a
+  different-subber reference can only loosely confirm. Real subtitles from
+  another translator split their lines differently, so even at the CORRECT
+  offset the "tight" agreement caps around ~45% -- which the previous floor
+  rejected, leaving a genuinely ~1s-early sub unfixed even though the offset was
+  found (field: The Flash Pilot, -954ms, 89% overlap, 45% tight). The tight
+  requirement is now relaxed for SMALL shifts (<1.5s) when the overlap strongly
+  corroborates (>=85%). This is safe: a small shift is low-harm, and the aligner
+  only picks a small non-zero offset when the sub is genuinely off (an
+  already-synced sub resolves to "confirmed" and is never touched). Large shifts
+  keep the strict, magnitude-scaled bar from 0.2.364, so the old spurious -20s
+  case is still rejected. Verdict cache bumped.
+
+v0.2.367
+- Improved (SubSync): prefer an ENGLISH timing oracle. The Hebrew subtitle is
+  almost always translated from English, so an English reference sub splits its
+  lines the same way and its cue onsets line up -- while a foreign-language
+  oracle of the same release (e.g. a Dutch sub) segments differently and tanks
+  the tight-agreement check (field: The Flash Pilot got a real -926ms offset but
+  only 45% tight against a Dutch oracle, so the fix was correctly rejected).
+  pick_oracle now prefers English within the same match tier (tier still wins
+  first, so this never downgrades the match), which should let the genuine small
+  offset align tightly and apply. Verdict cache bumped so affected episodes
+  recompute and re-pick the oracle.
+
+v0.2.366
+- Improved (SubSync): make the same-source oracle alignment actually land the
+  small real offset it finds. When aligning against a same-source (BluRay/DVD)
+  oracle in a different LANGUAGE, cross-translation cue segmentation depresses
+  the coarse "vote" metric -- a genuine ~1s offset (field: The Flash Pilot,
+  -926ms) scored 61% and was dropped just under the 65% floor, and a full scale
+  search on the cross-language oracle produced a spurious FPS fit (+560s). Now
+  same-source oracle alignment is pinned to identity scale (same disc master =
+  same framerate) and uses a relaxed vote floor, with the graduated tight-
+  agreement gate from 0.2.364 as the real correctness guard -- so a genuine
+  small offset applies while a large/loose one is still rejected. The tight
+  agreement is now shown in every sync diagnostic. Verdict cache bumped.
+
+v0.2.365
+- Improved (SubSync): auto-sync can now actually FIX small real offsets on files
+  that previously found no timing reference. It now accepts a same-source-class
+  oracle for PHYSICAL-DISC masters -- a BluRay sub anchors a BluRay REMUX even
+  when the codec/group differ (REMUX/NOGRP vs x264/ROVERS), because they come
+  from the same disc master and share timing. This matters for season-pack-named
+  files ("...S01..." with no episode token), where every episode-matched sub
+  scored just below the old exact/group-only bar, so subsync had nothing to
+  anchor to and fell back to the noisy embedded-track probe -- leaving a
+  genuinely ~1s-early sub unfixed (field: The Flash Pilot on a BluRay REMUX).
+  WEB/HDTV still require an exact/group match (their "same class" can be
+  different services/airings with different timing), and every offset is still
+  verified by the graduated tight gate from 0.2.364, so a wrong reference is
+  rejected. Verdict cache bumped so affected episodes recompute and pick up the
+  now-eligible oracle.
+
+v0.2.364
+- Fixed (SubSync, important): auto-sync could push an ALREADY-SYNCED subtitle
+  many seconds out of sync. On files whose embedded-subtitle "file probe" yields
+  few, mixed-language cues (BluRay REMUX with many forced foreign PGS tracks),
+  the aligner could land on a spurious large offset (field: a 31-cue union voted
+  -20.3s at only 68% tight agreement) and the old gate applied it, de-syncing a
+  sub that needed no more than a few ms. Three coordinated fixes:
+  * The tight-agreement check is now REQUIRED for every non-trivial shift (not
+    only sparse references) and scaled by the size of the jump -- a multi-second
+    move must clear ~85-93% agreement, a small nudge stays lenient. A genuine
+    offset easily clears it; a coincidental peak (~68%) is rejected and the sub
+    is delivered untouched. Small ms-level corrections are unchanged.
+  * A large shift from an AUTO (machine) community-pool record is no longer
+    applied blindly -- only human-confirmed records jump a sub by many seconds;
+    otherwise the device re-verifies locally. This also neutralises any spurious
+    auto record already shared before this fix.
+  * The verdict cache version is bumped so any shift stored under the looser
+    gate recomputes and is dropped if it can't clear the new bar.
+  Net: subsync only moves a subtitle when it is highly confident, and never
+  turns a good sub into a badly-timed one.
+
+v0.2.363
+- Fixed: the "synced" mark added in 0.2.362 used a check-mark glyph (✓, U+2713)
+  that is missing from some skin fonts (NOX among them), so it rendered as an
+  empty tofu box instead of a tick. Replaced it with the plain ASCII word
+  "SYNC" ("HEB NN% SYNC", or "HEB SYNC" when there's no name match), which
+  renders in every font on every skin. Same bright-green highlight, same
+  meaning; no glyph risk. Nothing else about the badge or syncing changed.
+
+v0.2.362
+- Added (SubSync final polish): the source screen now marks releases the
+  community has CONFIRMED as having a synced Hebrew subtitle. The existing
+  "HEB NN%" badge gains a green tick and turns bright green ("HEB NN% ✓", or
+  "HEB ✓" when there's no name match) for exactly those releases, so the pick
+  that is verified in-sync stands out at a glance. Purely visual — it changes
+  nothing about how syncing works, adds ZERO network requests (the confirmed
+  set rides the /lookup the availability warm already makes and is cached next
+  to the release names), and the tick is an LTR symbol so it never disturbs the
+  badge layout on any skin. Only human-CONFIRMED records are shown; provisional
+  auto verdicts are not surfaced as synced. This completes the subtitle-sync
+  feature (S1-S5 + community registry); no server/pool change was required.
+
+v0.2.361
+- Fixed: the home/favourites screen reverted to default on every quick update.
+  The startup favourites patcher carried three "forced restore" migrations
+  (full canonical surface, Premiumize status tile, personal tiles) that were
+  meant to repair, once per device, an old buggy reseed that had wiped the
+  per-service network rows. While active they also RE-ADDED tiles the user had
+  deliberately deleted, so each update looked like it reset the home screen back
+  to default. That repair is long finished for the whole fleet, so all three
+  forced restores are now retired: deletions are honoured permanently, on every
+  skin (nox, fentastic, estuary, arctic fuse 3). The only remaining canonical
+  restore is the already-disabled heuristic, so a missing tile is treated as
+  intentional user customisation. Action-repair fixes (debrid/torbox tiles) and
+  clean-install seeding from the build zip are unchanged.
+
+v0.2.360
+- Fixed: Disney+ (and other) MOVIE tiles showed only 2-3 unrelated films. The
+  0.2.359 param-key fix un-hung the tiles, but the query correction did not
+  actually apply on many devices: it matched POV's whole query line exactly,
+  and any small difference in POV's surrounding params made it silently no-op,
+  leaving `with_companies=<id>`. Netflix (company 8 -> 44 films) looked okay;
+  Disney+ (company 337 -> exactly 3 unrelated films) looked broken. The patch
+  now rewrites only the minimal `with_companies=%s` fragment to watch-provider
+  discovery (adding the REQUIRED watch_region), independent of POV's other
+  params -- verified against TMDB: Netflix ~4680 movies, Disney+ ~1560.
+
+v0.2.359
+- Fixed: Netflix/Disney (and other streaming-service) MOVIE tiles on the home
+  screen spun forever and never loaded. Root cause: the movie tiles pass a
+  TMDB watch-provider id via network_id (Netflix=8, Disney+=337...), but
+  POV's native movies.py maps the tmdb_movies_networks action to the 'company'
+  param -> params_get('company') is None -> `if not function_var: return`,
+  which exits the list builder BEFORE end_directory() is ever called, so Kodi
+  waits on the directory forever (the infinite spinner). Two fixes:
+  * The movie-networks param key is normalized to 'network_id' (matching every
+    other network tile in the build) in pov_menus_patcher and the bundled
+    native movies.py, so the id is actually read and the folder finishes.
+  * The TMDB query is corrected from `with_companies=<id>` (which treated the
+    provider id as a production-company id -> ~44 unrelated films) to
+    watch-provider discovery `with_watch_providers=<id>&watch_region=US&
+    flatrate` -- verified against TMDB: Netflix now returns its ~4600-movie
+    catalogue, Disney+ ~1500. This also explains why the earlier 0.2.305 try
+    "hung": it fixed the query but not the param key, so the tile stayed empty
+    and spun. Series-by-network tiles were already correct and are unchanged.
+
+v0.2.358
+- SubSync: sub-100ms offset precision. The alignment histogram bins offsets
+  at 500ms, so a computed fix could over/under-shoot the true offset by up to
+  half a second -- field case: a real ~+1s offset landed on the +1500ms bin
+  and left the subtitle ~0.5s early after the fix. The offset is now REFINED
+  after the coarse peak: the median of the actual per-cue deltas nearest the
+  peak, which lands within ~50ms of the truth. Applies to every anchor
+  (oracle, file probe, audio). Existing fixes recompute (verdict cache).
+
+v0.2.357
+- SubSync: removed the "couldn't verify sync" toast entirely. It was firing
+  on subtitles that were ALREADY perfectly synced on screen (the verification
+  simply couldn't PROVE it -- e.g. a high-bitrate 2160p file whose embedded
+  reference is too sparse to sample densely), which read as a failure when
+  nothing had failed and was exactly the kind of toast noise this build works
+  to avoid. Policy now: SubSync speaks only when it actually APPLIED a timing
+  fix ("synced automatically") -- a sub it can't verify is delivered silently
+  as-is, unchanged, no toast.
+- Sparse container-probe references (few cues within the byte budget on
+  high-bitrate files) now use identity-scale-only alignment like the audio
+  anchor, so a handful of points can't be fit to a spurious FPS stretch
+  (field: 16 cues -> bogus scale=1.0427/-77s). A dense reference keeps the
+  full FPS-scale search.
+
+v0.2.356
+- SubSync probe: PTS-origin rebase -- the root cause of "synced subtitle
+  fails verification" on certain remuxes/re-encodes. Field case: an AI-AV1
+  BluRay whose container timestamps START AT ~313s (the source disc's PTS
+  origin, preserved by the muxer). Players rebase to the first timestamp at
+  playback -- so the subtitle looked perfectly synced on screen -- but the
+  probe read RAW cluster timestamps and concluded the sub was +313s off
+  (vote=90%, overlap=100%: a strong, consistent, WRONG verdict, refused only
+  by the implausible-offset cap). The probe now reads the file's FIRST
+  cluster timestamp (the playback zero point) and rebases every cue -- both
+  the subtitle-track reference AND the audio-segment anchors. Zero-based
+  files are unaffected.
+- Window/budget balance: bitrate-scaled windows are now also capped so the
+  byte budget always spans the WHOLE runtime (field: 8.4MB windows burned
+  the 40MB cap after 5 of 10 fractions, so the reference only covered the
+  first half of the file).
+- Probe cue cache is now versioned (v2): entries stored by the un-rebased
+  engine re-probe. Verdict cache v5: UNKNOWNs judged against un-rebased
+  references recompute. Regression test reproduces the exact +313s field
+  file: the synced subtitle now verifies CONFIRMED.
+
+v0.2.355
+- SubSync probe: three field fixes from a Rick&Morty season-pack BDRip where
+  a SYNCED subtitle came back "couldn't verify" (spurious -48.5s peak
+  refused at tight=22%) and the probe re-ran per subtitle:
+  * CRITICAL: the probe cue cache write failed since 0.2.348 ("bytes is not
+    JSON serializable" -- the audio feature added raw CodecPrivate to the
+    track dict), so EVERY probe re-fetched ~30MB. Track dicts are sanitized;
+    results cache again.
+  * The reference now UNIONS all non-forced embedded subtitle tracks (they
+    share one timeline) instead of sampling a single track -- the field file
+    had rus+en+en tracks but only a sparse en signs track was used (9 cues).
+  * Windows are bitrate-aware: the head's Duration + file size scale the
+    window to span ~8s of media (a fixed 3MB window covers ~2s of a BDRip),
+    with an adaptive midpoint top-up when the union is still sparse.
+  Verdict cache v4: UNKNOWNs stored by the sparse-probe engine recompute.
+  Expected outcome for the field case: dense union -> the synced subtitle
+  now verifies CONFIRMED instead of "couldn't verify".
+
+v0.2.354
+- SubSync S3: the community sync registry goes live (Worker /syncrep +
+  /lookup `sync` field deployed by the maintainer).
+  * CONSUME: before any local computation, subsync checks the community map
+    for this exact (subtitle, release) pair -- it rides the pool /lookup the
+    picker already made, so the common case costs a dict lookup, zero
+    requests. A community FIXABLE applies instantly (one gentle toast on the
+    first play on this device, then silent); CONFIRMED delivers as-is.
+    Client-side plausibility gates mirror the engine's before applying.
+  * CONTRIBUTE: every freshly-computed deep verdict (CONFIRMED/FIXABLE) is
+    reported once, fire-and-forget, share-gated (pool_share) -- the verdict
+    cache guarantees no recompute means no re-report.
+  * HUMAN ANCHOR: a new service delay-watcher samples the viewer's manual
+    subtitle delay while a MoranSubs sub plays. A settled >=0.4s delay after
+    5+ minutes watched becomes a human FIXABLE report (correctly folded with
+    any auto-fix already applied); a clean 15+ minute watch becomes a
+    CONFIRMED vote. One report per pair per session. Humans override auto on
+    the server. This closes the class no algorithm can anchor (dubbed
+    re-encodes with no subs anywhere, e.g. the ColdFilm field case): one
+    viewer fixes the delay once -- every future viewer gets it instantly.
+  pool.py: sync_map()/report_sync() + worker_norm_release() (exact mirror of
+  the Worker's key normalization). All existing pool endpoints unchanged.
+
+v0.2.353
+- SubSync goes fully background (self-healing delivery). Field complaints:
+  the "searching subtitles" overlay stayed up for the whole deep
+  verification (10-30s of oracle download / container probe / Gemini audio),
+  and the sync toasts never appeared (they went through the translate
+  status channel, which autosub deliberately silences).
+  * resolve() now delivers the subtitle IMMEDIATELY; deep verification is
+    queued to the long-lived service (subsync_queue, same disk-queue pattern
+    as the he_warm drainer) -- the overlay drops right away.
+  * When the worker proves a fix, it swaps the playing subtitle in place --
+    but ONLY if the user still watches the same stream and hasn't picked a
+    different subtitle meanwhile (pending-marker check).
+  * GENTLE toast policy (most toasts in this build were deliberately
+    silenced after user complaints -- this respects that): at most ONE
+    notification per (subtitle, release) pair EVER -- either "synced
+    automatically (+X.Xs)" when a fix is applied, or "couldn't verify sync"
+    when a fresh deep verification came up empty. Repeat plays, cached
+    verdicts, trusted tiers and nothing-to-verify cases are all SILENT.
+    Toasts go directly through kodi_utils.notify (respecting the master
+    subs_notifications switch), bypassing autosub's quiet mode.
+  Cached verdicts still apply instantly and synchronously as before.
+
+v0.2.352
+- Verdict-cache version bump (v3): UNKNOWN verdicts stored by 0.2.350/351
+  (before the adaptive second pass existed) are recomputed, so an already-
+  judged (subtitle, release) pair gets its pass-2 chance instead of being
+  short-circuited by the cached refusal. The audio-cue cache is reused, so
+  the recompute costs no new downloads or Gemini calls beyond pass 2 itself.
+
+v0.2.351
+- SubSync audio anchor: adaptive second pass. When the coarse histogram
+  finds a STRONG peak (vote>=80%) that fails only the tight +/-450ms check
+  -- i.e. promising but under-determined by too few speech cues -- the probe
+  now samples TWO additional audio positions once, merges the speech cues
+  with the cached first pass, and re-judges. The extension is marked in the
+  probe cache so it never repeats per release. Gemini prompt sharpened to
+  demand word-onset precision (two decimals) -- the tight check depends on
+  it. Field context: the ColdFilm case now correctly REFUSES the spurious
+  +72s peak (tight=20%), and the second pass gives genuine alignments a
+  fair chance to reach confidence instead of giving up at 10 cues.
+
+v0.2.350
+- CRITICAL SubSync fix: a spurious alignment could shift subtitles out of
+  sight. Field case: a sparse 10-cue audio reference against a dense
+  (600-cue) candidate reported vote=120% on a bogus offset of -350s -- the
+  gate passed and the subtitles "disappeared" (they were 6 minutes late).
+  Four-layer fix in the alignment engine:
+  * vote counting deduped -- ONE vote per reference cue per histogram bin
+    (a dense candidate could previously multi-vote a single ref cue, which
+    is how 120% happened);
+  * audio references now search identity scale ONLY and a narrow +/-3min
+    offset window (a sparse VAD reference cannot support scale estimation;
+    every extra scale candidate multiplied the spurious-peak chance);
+  * a global plausibility cap: FIXABLE offsets beyond +/-4min are refused
+    (real wrong-release desyncs are seconds, recuts are refused anyway);
+  * sparse references (<40 cues) additionally require 65% of ref cues to
+    agree at a TIGHT +/-450ms tolerance -- random matches at that tolerance
+    are rare, killing peaks that survive the coarse 500ms bins.
+  Verdict-cache version bumped: verdicts stored by the old engine
+  (including the field device's bad -350s entry) are ignored and recomputed.
+  Regression tests reproduce the exact field failure (must refuse) and the
+  genuine sparse case (must still fix).
+
+v0.2.349
+- SubSync S5 quota hardening (free-tier discipline, same care as the
+  translation path): a Gemini failure (429 quota / key / network) during the
+  audio anchor now STOPS the remaining segment calls immediately instead of
+  burning two more, and -- critically -- no longer caches a permanent
+  "no audio anchor" negative for the release: quota exhaustion is transient,
+  so the next play (e.g. tomorrow, quota refreshed) gets a fresh chance.
+  Genuine negatives (no AAC track / Gemini answered but found no speech)
+  are still cached so they never cost calls again. No key = the audio tier
+  is skipped before any network work; every other tier works keyless.
+
+v0.2.348
+- SubSync S5: AUDIO as the last-resort timing anchor. The field case
+  (From.S04E10.ColdFilm) turned out to have NO embedded subtitle tracks at
+  all (dubbed re-encode: video + Russian audio only), so S4's file probe had
+  nothing to anchor to either. Now, when no matching sub exists in any DB
+  AND the file has no embedded subtitle track:
+  * mkv_probe.audio_segments extracts 2-3 short CONTIGUOUS AAC audio clips
+    (~20s each) by demuxing cluster blocks (full lacing support: Xiph/
+    fixed/EBML) and wrapping raw frames as playable ADTS -- no decoding,
+    hard byte/time caps, longest-contiguous-run selection so a window gap
+    can never skew timestamps.
+  * gemini.generate_media (new, separate from the translation path) sends
+    each clip to Gemini with the user's existing key and gets back speech
+    intervals; those become reference cues on the file's own timeline.
+  * subsync verifies/retimes the Hebrew sub against them with a slightly
+    relaxed gate (VAD boundaries are softer than subtitle cues). Works for
+    dubbed audio too -- dubs are lip-synced, so speech happens at the same
+    moments. AAC only (Gemini can't take AC3/DTS; a secondary AAC track is
+    used when present). Gated by subsync_audio (default on) + requires a
+    Gemini key; results (and negatives) cached per release; fail-open.
+  Anchor chain is now: matched sub -> embedded track -> audio -> honest
+  no-op. E2E test reproduces the exact ColdFilm scenario end to end.
+
+v0.2.347
+- SubSync S4: the playing FILE itself is now a timing anchor. New
+  mkv_probe.py reads the EMBEDDED subtitle track's cue TIMESTAMPS straight
+  out of the playing MKV via HTTP Range requests (debrid direct links) --
+  head + ~10 small sample windows, hard-capped at 40MB / 25s, no decoding,
+  works for text AND bitmap (PGS) tracks, any language, forced tracks
+  skipped. When no release-matched subtitle exists in ANY database (the
+  field case: From.S04E10.1080p.ColdFilm, a re-encode absent from every
+  subtitle DB -- best candidate 46%/fuzzy), subsync now probes the file and
+  verifies/retimes the chosen Hebrew sub against the file's own embedded
+  track. Probe results are cached per release (including "nothing there"),
+  so the ranged reads happen once. Gated by the subsync_probe setting
+  (default on); fail-open as always.
+- sync_align: scale tie-break now prefers the identity map -- neighbouring
+  FPS ratios (23.976/24=0.999) could tie with 1.0 inside the histogram bin
+  tolerance and accumulate seconds of drift by the end of a long movie.
+- Offline test suite for the probe: synthetic Matroska builder + a real
+  Range-supporting HTTP server + the full probe->verify->retime->CONFIRMED
+  loop, plus an end-to-end simulation of the exact ColdFilm field scenario.
+
+v0.2.346
+- "Last watched" source now actually stays at the TOP of the source list.
+  source_capture.reorder moved it to the top and badged it, but the
+  quality/size re-sort injected by pov_source_quality_patcher (0.1.373) runs
+  AFTER the reorder inside make_items and pushed it back down (seen in the
+  field at position 80/212, badge intact). The re-sort has always exempted
+  rows flagged '_pin_top' -- but nothing ever set that flag; reorder now pins
+  the remembered source, so it keeps the top spot and is also exempt from the
+  filter-drop.
+- SubSync diagnostics: when no timing oracle is found, the log now lists the
+  5 closest candidates with their score/tier plus the addon version, so field
+  logs distinguish "genuinely no matching release" from a scorer gap or a
+  stale interpreter.
+
+v0.2.345
+- SubSync field fix: releases with an UNTAGGED source (e.g. Russian groups
+  like ColdFilm that ship no WEB/BluRay token in the name) could never
+  anchor a timing oracle -- a real device hit "no oracle for
+  From.S04E10.1080p.ColdFilm (88 foreign candidates)" and skipped the
+  auto-retime. Two scorer upgrades:
+  * same release GROUP now reaches the trusted GROUP tier even when the
+    source tag is missing on one/both sides (contradicting sources still cap
+    LOW as before);
+  * a normalized release name fully CONTAINED in the other (provider
+    decorations like a trailing ".rus") now scores 96/GROUP -- after the
+    edition/source/PROPER contradiction guards, which containment never
+    bypasses.
+  Regression tests added for the exact field case. No other behaviour
+  changes.
+
+v0.2.344
+- SubSync S2: automatic subtitle re-timing. When a delivered Hebrew subtitle
+  (engine human pick or community-pool entry) belongs to a DIFFERENT release
+  than the one playing, it is now verified against a timing oracle -- a
+  release-matched subtitle in any language from the engine's cached search --
+  and, when a confident linear map exists (offset and/or FPS drift), a
+  RETIMED copy is delivered instead, with a single toast
+  ("הכתובית סונכרנה אוטומטית"). New modules:
+  * sync_align.py -- language-agnostic aligner generalized from
+    arabic_gender.py's production estimator: voting-histogram offset search,
+    FPS-ratio scale candidates, overlap-rate confidence gate, SRT retiming,
+    credit/watermark filtering, oracle selection.
+  * subsync.py -- delivery orchestration: release tier-check (matching
+    releases are trusted and untouched), per-device verdict cache keyed
+    (subtitle content, playing release) so each pair is computed once,
+    fail-open at every step (any problem delivers the file exactly as
+    before), gated by the subsync_verify setting (default on).
+  Recuts/extended cuts are detected and REFUSED rather than mangled. Pool
+  links now carry their source release name for the tier check. No pool /
+  worker / translation-engine changes.
+
+v0.2.343
+- SubSync S1: honest sync percentages everywhere. A new structured release
+  scorer (release_match.py) replaces the three divergent token-similarity
+  scorers behind the subtitle picker %, the source-screen HEB badge and the
+  engine's result ordering -- all three now show the SAME number, and the
+  number reflects sync likelihood instead of raw text overlap:
+  * identical release -> 100%; same release group + source -> ~90%+;
+  * same source class (e.g. two different WEB rips) -> mid range;
+  * contradicting source (WEB vs BluRay), edition (Extended vs Theatrical)
+    or PROPER state -> capped LOW (the old scorer gave such pairs a
+    misleading 60-75% on token overlap alone);
+  * synthesized player filenames are recognized and never treated as a real
+    release identity.
+  Badge look/format unchanged -- same colors, same position; only the number
+  is now truthful. Also sidesteps a legacy scoring bug where the video's
+  token arrays were mutated across iterations, skewing later results. Each
+  wiring point keeps the old scorer as an import-failure fallback. No
+  pool/translation behaviour changes.
+
+v0.2.342
+- User customizations now survive updates and restarts. An audit of every
+  startup patcher found four mechanisms that silently reverted a user's own
+  changes -- the classic "every update resets my home screen / settings"
+  complaint -- and all four now seed their defaults ONCE per device and then
+  leave the user's choice alone:
+  * AF3 home layout (HomeSwitcher modes/vertical) and the CustomRating rows
+    were re-forced on every quickfix rebuild, resetting a customised Arctic
+    Fuse 3 home to Standard after each update. Now seeded once (same pattern
+    as the spotlight seed); only infra settings (TMDbHelper etc.) stay forced.
+  * Audio language (English), keyboard layouts and the two FENtastic home
+    settings (favourites button, choose-OSD-player) were re-forced on EVERY
+    Kodi start, reverting users who changed them. Now a one-time seed.
+  * FENtastic Movies/TV-Shows page widgets: a widget row the user deleted in
+    the skin's widget editor was force-re-inserted on every start. Inserts are
+    now a one-time seed; the old->new URL migrations (which only match our own
+    baselines) still self-heal every start.
+  * POV scraper tune (prerelease/3D/piratebay) now remembers the value it
+    wrote per key, so a future re-tune never overrides a key the user changed
+    deliberately.
+  No pool/translation/subtitle behaviour changes in this release. Existing
+  devices apply each seed once more after this update (their markers don't
+  exist yet), then never again.
+
+v0.2.341
+- Corrected the "My Movies / My Series" home tiles for the current POV build.
+  The previous version misdiagnosed the empty tiles: the merged-list actions
+  (tmdb_my_tvshows / trakt_my_tvshows and the movie equivalents) ARE valid on
+  the current POV -- they are the UNION lists we inject into POV's menu
+  (TMDB favorites+watchlist; Trakt collection+watchlist+favorites). The tiles
+  looked empty only because that injection had not gone live in POV's warm
+  interpreter yet. So the tiles now point back at the merged actions (adding an
+  item to EITHER underlying list makes it show in the tile), the POV tile uses
+  POV's real "favorites" spelling, and the startup patcher now cycles POV once
+  after injecting the merged menu so the tiles fill in the same session instead
+  of after the next restart. Devices that took the previous version are repaired
+  in place -- name-anchored, so only these tiles change and any tile you
+  customised or deleted is left alone; no duplicates. Seed fixture corrected too.
+
+v0.2.340
+- Fixed empty "My Movies / My Series" home tiles (TMDB / Trakt / POV). The
+  tiles invoked POV plugin actions that POV doesn't have (trakt_my_tvshows,
+  tmdb_my_tvshows, favorites_tvshows, and the movie equivalents), so they opened
+  EMPTY while POV's own menu was full. Corrected to POV's real actions
+  (trakt->trakt_collection, TMDB->tmdb_favorite, POV->favourites_tvshows/
+  favourites_movies), for both movies and shows. The patcher now also REPAIRS an
+  already-broken tile in place (previous versions treated the wrong action as
+  "present" and never fixed it); correct and user-customised tiles are left
+  untouched, and no duplicate tiles are created. The seed fixture was corrected
+  too so fresh restores are right.
+
+v0.2.339
+- Fixed a crash when adding a search result to a list (TMDB/Trakt/MDBList/
+  favourites). The add-refresh introduced earlier re-ran the OPEN container
+  after an add; when that container was a search-results list, re-fetching it
+  crashed the screen ("Error getting plugin://"). The refresh now skips search
+  containers (a refresh there wouldn't show the added item anyway) and still
+  refreshes normal browse lists on add. Most visible on Arctic Fuse 3, whose
+  search feeds a browsable results list. The guard is applied to both the
+  unified list manager and the local favourites path, and upgrades installs
+  that already carried the un-guarded refresh.
+
+v0.2.338
+- Sources flagged to always stay at the top (a truthy '_pin_top' flag on the
+  source, e.g. built-in-language sources) are now kept at the top and exempt
+  from the quality upgrade, the resolution-filter drop, and the quality/size
+  re-sort added in 0.2.333-335. Previously the re-sort reordered such sources
+  by quality/size like any other; now they keep their position at the top.
+
+v0.2.337
+- Auto-on-play subtitle search now honors the one-shot 'skip_autosub' marker
+  (set when the item being played is already in the target language), matching
+  the subtitle-search path. Previously only the search path checked it, so the
+  service-side auto-on-play player could still run for flagged content.
+
+v0.2.336
+- Estuary home no longer jumps to the first tile after an update (real fix).
+  Root cause found: on a post-update boot, three patchers freshly patch
+  Estuary's player-OSD XML (VideoOSD.xml) and each called ReloadSkin(), which
+  rebuilds every window -- and Estuary/FENtastic's home menu is a fixedlist
+  (defaultcontrol 9000, focusposition=0) that then snaps focus to the first
+  tile. None of those reload paths preserved focus (the earlier pov_reload
+  focus-restore was correct but on a different code path, so it couldn't help).
+  ReloadSkin() is now skipped whenever the home screen is showing: the OSD XML
+  is re-read by Kodi on the next OSD open anyway, so nothing is lost and the
+  focus jump is gone. (Applies to Estuary, FENtastic and NOX reload paths.)
+
+v0.2.335
+- Quality fix is now filter-aware (fixes "I hid 4K but 4K still shows"). The
+  0.2.333/334 fix relabelled SD rows to their true resolution AFTER POV's own
+  resolution filter had already run, so a source really 4K but mislabelled SD
+  (which slipped past the filter) reappeared as 4K once we corrected its badge.
+  Now the patcher reads your quality filter (results_quality_movie/episode):
+  if the corrected resolution is one you allow it upgrades the badge; if it is a
+  resolution you filtered OUT it DROPS the row entirely. Net result: 1080p is
+  still shown correctly (not as SD), AND hiding a resolution actually hides it,
+  even for rows POV had mislabelled. Never downgrades; genuine SD stays SD.
+
+v0.2.334
+- Quality fix now also keeps the ORDER correct. Because POV sorts the source
+  list by its stored quality (upstream), a row we upgrade from SD to 1080p would
+  otherwise stay stuck in the SD region (a "1080P" badge sitting below an "SD"
+  row). The patcher now, once per window, upgrades the mislabelled rows AND
+  re-orders the whole list by quality high->low then size (GB) high->low --
+  matching the default "Quality, Size" order -- so 4K first, then 1080p (GB
+  descending), 720p, then SD, with no SD stranded among the 1080p rows and no
+  720p above 1080p.
+
+v0.2.333
+- Quality badge fix: a source whose NAME clearly reads 1080p/2160p/720p is no
+  longer shown with an SD badge. POV derives the badge from a scraper-supplied
+  name_info field (or the URL), not from the release name on the row, so a
+  well-named release could still land on SD. A new patcher re-checks the visible
+  name with POV's own get_release_quality and upgrades the row ONLY to a real
+  resolution (4K/1080p/720p) -- upgrade-only, it can never downgrade a row or
+  invent a quality the name doesn't contain. Same source-results window as the
+  Hebrew-match badge, compile-checked so it can't break POV.
+
+v0.2.332
+- Estuary home no longer jumps to the FIRST tile after the startup refresh.
+  Root cause: the focus-restore captured the on-screen SLOT via
+  Container(id).Position, which on Estuary's home is a fixedlist pinned to
+  slot 0 -- so it always reported "0" and restored focus to the first tile.
+  It now captures the ABSOLUTE selected index (Container(id).CurrentItem) and
+  restores with SetFocus(...,absolute), which round-trips correctly on
+  Estuary's fixedlist as well as regular lists/panels on FENtastic/NOX.
+
+v0.2.331
+- Reverted the 0.2.330 change per request: "Include Pre-Release Results"
+  (CAM/SCR/TELE) and "Include 3D Results" are restored to ON. The default-ON
+  "piratebay" provider stays ON (more sources). This does NOT touch the
+  separate "1080p-named source shown as SD" report, which is a display issue
+  tracked on its own.
+
+v0.2.330
+- Source list now matches a clean POV: the build shipped POV with
+  "Include Pre-Release Results" (CAM/SCR/TELE) and "Include 3D Results" turned
+  ON, which flooded the results with low-quality rows a clean POV hides -- this
+  is the "lots of SD in our build vs clean POV" report. Both are now turned OFF,
+  and the default-ON "piratebay" provider (which the build had left off,
+  reducing source counts) is turned back ON. Applied once, only where the value
+  still differs, so any manual change you make afterwards is kept. The foreign/
+  single-audio filter is deliberately left off so Hebrew-audio releases are not
+  dropped. The 4K/1080p/720p labels themselves were never wrong -- POV derives
+  them by regex from the release name, identical code on a clean POV and here.
+
+v0.2.329
+- Built-in Hebrew badge now matches reliably: a source's built-in flag is stored
+  at play from the file's 'name', but the source row is scored by its 'URLName'
+  (POV makes those differ), so a just-played release could drop to "HEB NN%"
+  instead of "HEB BUILT-IN 101%". The badge now scores the row against BOTH
+  identifiers and takes the best, so it lights up whichever field matched.
+- Home screen no longer jumps back to the FIRST tile after the startup refresh:
+  applying POV patches cycles POV (disable/enable), which rebuilds the home tiles
+  and lost your focused tile. Your focused tile is now captured before the cycle
+  and restored after it.
+
+v0.2.328
+- Fixed POV getting STUCK when you press BACK on the "Resume / Play from
+  beginning" prompt (all skins - NOX/Estuary/FENtastic/AF3). Picking a source
+  for a mid-watched title opens a modal resolving window; POV's player showed
+  the resume prompt over it, and pressing BACK ('cancel') returned WITHOUT
+  closing that window - so the UI froze and needed a full Kodi restart. The
+  cancel path now closes the dialog(s) first (self-healing POV patcher).
+
+v0.2.327
+- Diagnostics for the built-in Hebrew badge: logs the exact cached built-in list
+  the source screen reads (embedded_names), what merge_embedded writes at play,
+  and the match score per candidate row (built-in check) -- to pinpoint the one
+  source that still isn't flagged despite correct detection.
+
+v0.2.326
+- Built-in Hebrew badge no longer gets wiped by a background refresh: a source's
+  built-in-Hebrew flag detected at play was written to the local cache, but the
+  next availability warm overwrote the whole cache entry with the pool's list --
+  which didn't have that release yet -- erasing the just-detected flag (so the
+  source you played kept showing a % instead of BUILT-IN). The warm now UNIONS
+  the built-in list with what's already cached instead of replacing it, since a
+  built-in track is a permanent fact. Added media-id fields to the diagnostic log.
+
+v0.2.325
+- No more recurring "הורדה נכשלה (ktuvit)" popup during playback. When Ktuvit
+  "refuses" a single background/secondary download (its rate-limit "request not
+  found" response), the subtitle you actually picked still loads -- but the
+  failure was still popping a notification every time. It's now logged only (the
+  exact reason stays in the log). Same for the rare "unsupported source" popup.
+
+v0.2.324
+- Built-in Hebrew badge: wider detection + diagnostics. Embedded tracks labelled
+  with a descriptive name ("Hebrew SDH", "Forced Hebrew") or Hebrew script
+  ("עברית") -- which a language-code lookup missed -- are now recognised. Added a
+  one-line "embedded-report" log at play (Hebrew detected? which release was
+  stored, from which field) so any remaining source that isn't flagged can be
+  diagnosed precisely instead of guessed at.
+
+v0.2.323
+- Built-in Hebrew badge FINALLY works (root cause fixed): the embedded-Hebrew
+  track WAS being detected at playback, but the release name a debrid stream
+  carries in ListItem.FileNameAndPath (li_filename) was invisible to
+  _release_from(), so both the pool report and the local write-through got an
+  empty release and silently did nothing -- the source screen never learned the
+  release had built-in Hebrew, locally OR from the shared pool. _release_from()
+  now consults li_filename (basename, debrid-token-guarded) like _release_ready()
+  already did, so playing a built-in-Hebrew source now flags it BUILT-IN for you
+  immediately and for everyone via the pool.
+
+v0.2.322
+- Home tiles no longer come back after you delete them: the "one-time" forced
+  restores of favourites tiles (service / personal / full-build) were gated on
+  XML comment markers that Kodi strips whenever favourites are edited, so they
+  re-fired on every update and re-added deleted tiles. They now persist their
+  "already restored once" flag in the JSON sidecar Kodi never touches, so each
+  forced restore fires exactly once ever and deletions are respected forever.
+
+v0.2.321
+- Built-in Hebrew badge: when a source's embedded Hebrew track is detected at
+  play, its release is now written through to the local availability cache
+  immediately (merge_embedded), so the source screen flags it "HEB BUILT-IN
+  101%" the moment you go back -- instead of only after the next background
+  warm re-read the pool. The pool report still propagates it to everyone else.
+
+v0.2.320
+- Maintenance and stability improvements.
+- Hebrew-availability %: fixed the two real causes the first-entry % was still
+  missing (and the source window felt slow):
+  (1) the background availability worker now starts at the very beginning of
+      Kodi startup, so it is already running when you play something right after
+      an update/restart -- before it started too late and the first title's check
+      sat waiting several seconds;
+  (2) the check now stores its fast result (pool + Wizdom + OpenSubtitles) right
+      away and does the slow כתובית/Ktuvit lookup in the background, so the source
+      window is no longer held up by it. The % is ready on the first entry and
+      the window opens promptly.
+
+v0.2.319
+- Maintenance and stability improvements.
+- Hebrew-availability %: the source window now briefly waits (up to ~3s) for the
+  availability answer before showing the list, so the % is reliably there on the
+  FIRST entry -- including titles whose Hebrew lives only on OpenSubtitles/כתובית
+  (previously those showed only on the 2nd/3rd entry). Titles already known to the
+  community pool still show instantly with no wait.
+
+v0.2.318
+- Maintenance and stability improvements.
+- Hebrew-availability %: preload the lookup engine when the service starts (so
+  the first check of a session isn't slowed by a one-time cold start), poll the
+  warm queue more frequently, and add precise timing diagnostics to the log so
+  the first-entry timing can be measured exactly.
+
+v0.2.317
+- Maintenance and stability improvements.
+- Hebrew-availability %: made the first-entry check reliably ready in time. The
+  availability warm now runs inside the already-running background service
+  (started via a tiny on-disk hand-off) instead of booting a fresh helper
+  process each time -- the old helper took a few seconds just to start up, which
+  was slower than the source scrape, so the % often only appeared on the 2nd/3rd
+  entry. The warm also queries the sources concurrently now. No extra lookups.
+
+v0.2.316
+- Maintenance and stability improvements.
+- Hebrew-availability %: now shows on the FIRST entry for titles whose subs are
+  on OpenSubtitles/Ktuvit too -- the availability check now starts together with
+  the source scrape (running in parallel), instead of only when the source list
+  opens, so it's ready in time. No extra lookups.
+
+v0.2.315
+- Maintenance and stability improvements.
+- Fixed the recurring "received file is not a valid subtitle (ktuvit)" popup
+  during playback: a single failed background/secondary download no longer shows
+  a notification (the subtitle you picked still loads) -- it's logged only.
+- Restored the gold "last watched" badge on the remembered source (its colour
+  code was invalid, so the text rendered invisibly).
+- Hebrew-availability %: widened the first-entry lookup a bit more so it shows
+  even sooner on the first entry.
+
+v0.2.314
+- Maintenance and stability improvements.
+- Hebrew-availability %: the shared % now shows on the FIRST entry to a title far
+  more often (the first-entry lookup was timing out too early). Same single
+  lookup per title -- no extra network load.
+
+v0.2.313
+- Maintenance and stability improvements.
+- Build: fixed the release-name feed used for Hebrew subtitle matching, which
+  broke when the base build refactored how it plays a source. Re-anchored to the
+  new play path so the subtitle search matches against the real release name.
+
+v0.2.312
+- Maintenance and stability improvements.
+- Build (NOX): the player-OSD "next episode" button no longer errors -- the
+  base build changed how it plays the next episode, so the button now opens the
+  working "Next Episode" list instead.
+
+v0.2.311
+- Maintenance and stability improvements.
+- Build: restore the "Movies by genre" / "Series by genre" home widgets when a
+  base-build self-update had emptied their menu data. Restored once, only when
+  missing/empty, so a curated list is left untouched.
+
 v0.2.310
 - Maintenance and stability improvements.
 - Build: stronger fix for the view reverting to a plain list while paging. The

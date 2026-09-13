@@ -7,7 +7,7 @@
 # (name, AuthClass) pairs in modules.myservices.authorize() -- there
 # is no public registration API for adding new services. To get our
 # entries in there we patch the file on disk and re-inject on every
-# Kodi startup, same pattern as darksubs_patcher.
+# Kodi startup, same pattern as darksubs_patcher and wizard_patcher.
 #
 # The injected service classes are dead simple: they read the
 # matching key (api_key for Gemini, wyzie_api_key for Wyzie) from
@@ -37,7 +37,7 @@ ICON_SRC_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'icons')
 ICON_FILENAMES = ('gemini.png',)
 
-INJECT_VERSION = 11
+INJECT_VERSION = 12
 MARKER = '# AI_SUBS_MYSERVICES_INJECT_v{0}'.format(INJECT_VERSION)
 END_MARKER = '# END AI_SUBS_MYSERVICES_INJECT_v{0}'.format(INJECT_VERSION)
 TUPLE_MARKER = "# AI_SUBS_MYSERVICES_TUPLE_v{0}".format(INJECT_VERSION)
@@ -66,35 +66,26 @@ TUPLE_MARKER = "# AI_SUBS_MYSERVICES_TUPLE_v{0}".format(INJECT_VERSION)
 #     "Connect Services" menu died. The wrapper now resolves each
 #     candidate class through globals() at call time and silently
 #     skips names the installed POV doesn't define.
-#   v8 (addon v0.2.269): wrapped the whole body in try/except with a
-#     fallback to POV's untouched authorize() so reconstruction drift
-#     could never leave the menu empty.
-#   v9 (addon v0.2.270): hardened the empty-list case to fall back to
-#     POV's native menu.
-#   v10 (addon v0.2.271): per-ITEM guards. Building a service row
-#     instantiates each POV provider (api().token for its auth label);
-#     under v8/v9 a single provider whose __init__/.token/.icon drifted
-#     threw inside the eager list build and aborted the ENTIRE
-#     reconstruction to the native menu -- silently dropping Gemini.
-#     Now each row is built defensively (a bad provider is rendered
-#     without its auth label, or skipped) and we only fall back when
-#     NOT ONE row could be built, so Gemini reliably appears.
-#   v11 (addon v0.2.272): STOP replacing authorize() entirely. Verified
-#     against POV 6.06.10's real modules/myservices.py: authorize()
-#     builds a LOCAL `services` tuple
-#       icon_path, services = kodi_utils.media_path(), (
-#           ('trakt', Trakt), ..., ('easynews', EasyNews))
-#     and the wrapper approach re-implemented that render path -- every
-#     drift in make_listitem/dialog/provider __init__ risked an empty or
-#     broken dialog, exactly the failure the user still hit from inside
-#     the addon. v11 no longer wraps: it (a) appends only the Gemini
-#     class and (b) splices ('gemini-ai', Gemini) straight into POV's own
-#     `services` tuple via a stable regex anchor, so POV's NATIVE
-#     authorize() renders the list (its real classes, its real dialog)
-#     with Gemini as one more entry. Fail-safe: if the anchor does not
-#     match (POV refactors), nothing is spliced -> POV's menu still works
-#     untouched, Gemini is simply absent. No try/except masking, no
-#     reconstruction, no empty-menu failure mode.
+#   v10 (addon v0.2.474): the debrid / Trakt rows now authorise through
+#     Account Manager Lite (script.module.acctmgr) instead of POV
+#     alone, so one click lands the account in EVERY add-on AM
+#     supports -- POV and Umbrella among them -- not in POV only.
+#     Same screen, same one-click feel, same number of rows: each
+#     AM-backed row REPLACES the POV-native one it covers rather than
+#     sitting beside it, because two rows both labelled "real-debrid"
+#     is exactly the confusion this set out to avoid. POV's own class
+#     stays as the fallback wherever AM is missing, and one clearly
+#     marked row at the bottom still reaches the untouched POV-only
+#     menu. Screen is in Hebrew from this version on.
+#   v11 (addon v0.2.481): MDBList now subclasses POV's own native
+#     MDBList instead of forwarding to our API-key pairing, so one
+#     OAuth device authorisation covers POV and Umbrella both, and
+#     the token is mirrored to Umbrella straight afterwards.
+#   v12 (addon v0.2.483): the MDBList row reads POV's token before AND
+#     after POV's own set(), so the mirror can be told a human really
+#     authorised the service rather than declined a confirmation. It is
+#     the only place with both sides of one click; every attempt to infer
+#     it from outside reverted somebody's settings.
 # Each bump triggers a one-time re-patch on the next Kodi startup;
 # OLD_MARKERS lists every prior version's marker so the legacy
 # blocks get stripped cleanly before the new one is injected.
@@ -109,13 +100,13 @@ OLD_MARKERS = [
     '# AI_SUBS_MYSERVICES_INJECT_v8',
     '# AI_SUBS_MYSERVICES_INJECT_v9',
     '# AI_SUBS_MYSERVICES_INJECT_v10',
+    '# AI_SUBS_MYSERVICES_INJECT_v11',
 ]
 
-# Appended at the END of POV's myservices.py: defines ONLY the Gemini
-# service class (plus a tiny addon-handle helper). It does NOT touch
-# authorize() -- the Gemini entry is added to POV's own `services` tuple
-# by a separate, fail-safe regex splice (see TUPLE_ANCHOR / ensure_patched),
-# so POV's native authorize() renders the whole menu.
+# Two service classes plus a hook that monkey-patches authorize()
+# to include them. We do NOT edit the authorize() function source --
+# instead we wrap it after definition. Cleaner + survives most
+# refactors of the inline tuple.
 CLASS_BLOCK = '''\
 
 {marker}
@@ -123,12 +114,50 @@ CLASS_BLOCK = '''\
 
 import xbmcaddon as _ai_xbmcaddon
 
+_AI_AM_ID = 'script.module.acctmgr'
+
+# Screen strings. Short on purpose -- this is the one place in the build a
+# newcomer has to understand without being told, so every row says what it is
+# and what a click will do, and nothing else.
+_AI_TITLE = 'חיבור שירותים'
+_AI_ON_ALL = 'מחובר ✓ · מסונכרן לכל התוספים'
+_AI_OFF_ALL = 'לא מחובר · לחץ לחיבור בכל התוספים'
+_AI_ON_POV_ONLY = 'מחובר ל-POV בלבד · לחץ לחיבור בכל התוספים'
+_AI_ON_POV = 'מחובר ✓ · לחץ לניהול'
+_AI_OFF_POV = 'לא מחובר · לחץ לחיבור'
+_AI_ADVANCED = 'חיבור ל-POV בלבד (מתקדם)'
+_AI_ADVANCED2 = 'התפריט המקורי של POV, ללא סנכרון לשאר התוספים'
+
 
 def _ai_get_addon():
     try:
         return _ai_xbmcaddon.Addon('service.subtitles.kodipovilai')
     except Exception:
         return None
+
+
+def _ai_am_addon():
+    """Account Manager Lite's handle, or None when it is not installed.
+    Instantiating the Addon is the only honest test -- System.HasAddon stays
+    true for an add-on that is present but disabled."""
+    try:
+        return _ai_xbmcaddon.Addon(_AI_AM_ID)
+    except Exception:
+        return None
+
+
+def _ai_am_run(action):
+    """Hand off to Account Manager. Its auth actions already run the sync
+    themselves (auth -> push to every installed add-on -> enable the startup
+    re-sync), so we deliberately do NOT chain a ReSync after an Auth: that
+    would sync the same account twice and show the user two progress runs."""
+    try:
+        import xbmc as _aix
+        _aix.executebuiltin('RunScript(%s,action=%s)' % (_AI_AM_ID, action))
+        return True
+    except Exception as e:
+        notification('Account Manager failed to start: %s' % str(e)[:60])
+        return False
 
 
 class Gemini:
@@ -168,6 +197,333 @@ class Gemini:
         # handled (not as a failure). The actual save/notify
         # happens in our default.py process.
         return True
+
+
+def _ai_make_mdblist():
+    """Build the MDBList row on top of POV's OWN MDBList class, or return
+    None if this POV has not got one.
+
+    Resolved through globals() at call time rather than written as
+    `class _AiMDBList(MDBList)` at module level. That spelling is evaluated
+    the moment this block is imported, so a POV release that renames or drops
+    MDBList would raise NameError while the module was still loading and take
+    the WHOLE Connect Services screen down -- every row, not just this one.
+    That is the failure v7 of this patcher was written to end, when POV
+    renamed TMDbList to TMDBList and dropped EasyDebrid; re-introducing it
+    for MDBList would undo that lesson.
+
+    What the class adds to POV's own is a single step. MDBList used to need
+    connecting twice -- an API key here, a device code inside Umbrella --
+    because when this row was first written POV's MDBList service was a bare
+    keyboard prompt with no QR. POV 6.08 replaced that with the OAuth device
+    flow, which is the SAME flow Umbrella uses and yields the same kind of
+    token, so the separate pairing had no reason left to exist. POV's QR,
+    polling, watched-indicator wiring and revoke path are all its own code,
+    untouched; we only hand the resulting token on to Umbrella afterwards.
+    """
+    _base = globals().get('MDBList')
+    if _base is None:
+        return None
+
+    class _AiMDBList(_base):
+        icon = 'mdblist.png'  # POV's own MDBList icon (native service)
+
+        def set(self):
+            # Read POV's token on BOTH sides of the call.
+            #
+            # This is the only place in the build that sees a before and an
+            # after for the SAME click, and that is what turns "a human just
+            # authorised this" from a guess into a measurement. Three
+            # attempts to infer it from outside failed, each silently
+            # reverting a setting somebody had chosen: an empty Umbrella
+            # token (Umbrella empties its own), "POV is connected right now"
+            # (this row fires whatever the outcome, so a declined
+            # confirmation counted), and "POV's token changed" (POV rotates
+            # it on its own timer). Here none of those apply: a declined
+            # confirmation leaves the token identical, a revoke leaves it
+            # empty, and only a real authorisation replaces it with a new
+            # non-empty value inside the few seconds of the click.
+            #
+            # get_setting is taken from POV's own module globals through
+            # globals(), not imported: if a POV release ever renames it we
+            # simply cannot tell, `fresh` stays False, and the behaviour is
+            # exactly what it was before this existed. Nothing here may raise
+            # -- this runs inside the Connect Services screen, where an
+            # exception takes every row down, not just this one.
+            _ai_gs = globals().get('get_setting')
+
+            def _ai_tok():
+                if _ai_gs is None:
+                    return None
+                try:
+                    return (_ai_gs('mdblist.token') or '').strip()
+                except Exception:
+                    return None
+
+            _ai_before = _ai_tok()
+            result = _base.set(self)
+            _ai_after = _ai_tok()
+            # BEFORE MUST BE EMPTY, not merely different. POV's own set()
+            # is `if self.token: <revoke> else: <connect>`, so an
+            # authorisation can only ever begin from an empty token. Without
+            # that clause the window spans the whole time the revoke
+            # confirmation sits open, and a background token rotation landing
+            # while the user thinks about it read as a fresh authorisation.
+            _ai_fresh = bool(_ai_after and _ai_before == ''
+                             and _ai_after != _ai_before)
+            # Fired whatever the outcome: the revoke path returns early too,
+            # and after a revoke POV's token is empty -- which the mirror
+            # reads as "nothing to hand over" and leaves Umbrella's own
+            # authorisation alone rather than tearing it down for POV.
+            try:
+                import xbmc as _aix
+                _aix.executebuiltin(
+                    'RunScript(service.subtitles.kodipovilai,'
+                    'action=mdblist_mirror_umbrella%s)'
+                    % (',connected=1' if _ai_fresh else ''))
+            except Exception:
+                pass
+            return result
+
+    # POV's watch_indicators decorator puts instance.__class__.__name__ into
+    # the dialog it shows ("watched status will be set to <name>"), so without
+    # this the user is told about "_AiMDBList". It is the same service; it
+    # should say so.
+    try:
+        _AiMDBList.__name__ = _base.__name__
+        _AiMDBList.__qualname__ = _base.__name__
+    except Exception:
+        pass
+    return _AiMDBList
+
+
+def _ai_am_service(prefix, icon_name, keys, title, pov_names):
+    """Build a POV-shaped service class (class attribute `icon`, instance
+    attribute `token`, method `set()`) that authorises through Account
+    Manager instead of through POV alone.
+
+    Why the indirection: POV's own classes write POV's settings and nothing
+    else, so a user who connects Real-Debrid here still has to connect it
+    again inside Umbrella, Fen, and every other add-on. AM writes all of them
+    -- POV included -- from one authorisation. The row looks and behaves the
+    same; only its reach changes.
+
+    `pov_names` is used for DISPLAY only: when AM has no token but POV does,
+    the row says so, instead of claiming "not connected" at somebody who
+    connected POV natively last month."""
+    class _AiAmService(object):
+        icon = icon_name
+        _prefix = prefix
+        _keys = keys
+        _title = title
+        _pov_names = pov_names
+
+        def __init__(self):
+            self.token = ''
+            self.pov_token = ''
+            am = _ai_am_addon()
+            if am is not None:
+                try:
+                    vals = [(am.getSetting(k) or '').strip()
+                            for k in self._keys]
+                except Exception:
+                    vals = []
+                # EVERY key must be set: Easynews needs user AND password,
+                # and a half-filled pair is not a working account.
+                if vals and all(vals):
+                    self.token = ''.join(vals)
+            if not self.token:
+                self.pov_token = _ai_pov_token(self._pov_names)
+
+        def label2(self):
+            if self.token:
+                return _AI_ON_ALL
+            if self.pov_token:
+                return _AI_ON_POV_ONLY
+            return _AI_OFF_ALL
+
+        def set(self):
+            if _ai_am_addon() is None:
+                notification('Account Manager is not installed')
+                return
+            if not self.token:
+                return _ai_am_run(self._prefix + 'Auth')
+            choice = kodi_utils.dialog.select(self._title, [
+                'סנכרון החשבון לכל התוספים',
+                'ניתוק החשבון מכל התוספים'])
+            if choice < 0:
+                return
+            return _ai_am_run(
+                self._prefix + ('ReSync' if choice == 0 else 'Revoke'))
+    return _AiAmService
+
+
+def _ai_pov_cls(names):
+    """POV's own service class by name, newest spelling first, or None.
+    Never name POV's classes directly: upstream renames and removes them
+    between releases (5.x TMDbList + EasyDebrid, 6.x TMDBList and no
+    EasyDebrid) and a hardcoded name used to take the whole menu down with
+    NameError the moment Kodi auto-updated POV."""
+    g = globals()
+    for n in (names or ()):
+        if n in g:
+            return g[n]
+    return None
+
+
+def _ai_pov_token(names):
+    cls = _ai_pov_cls(names)
+    if cls is None:
+        return ''
+    try:
+        return cls().token or ''
+    except Exception:
+        return ''
+
+
+class _AiPovOnly:
+    """Bottom row: POV's untouched original menu. It exists so that a failure
+    anywhere in the Account Manager flow can never leave somebody unable to
+    connect POV at all -- which, for this build, would be the worst outcome
+    of the whole change. One clearly marked row is the price."""
+    icon = 'settings.png'
+
+    def __init__(self):
+        self.token = ''
+
+    def set(self):
+        return _ai_orig_authorize()
+
+
+# Replace authorize() with a wrapper that routes the debrid / Trakt rows
+# through Account Manager and adds our own two services. We can't reliably
+# regex-edit the inline tuple because the formatting might shift in upstream
+# updates, so we wrap the function instead.
+_ai_orig_authorize = authorize
+def authorize():
+    # One row per service, in the order they appear on screen. Columns:
+    #   name        the label, upper-cased by the builder
+    #   kind        'am'   -- Account Manager when installed, POV as fallback
+    #               'pov'  -- POV's own class only (AM has no usable one)
+    #               'ours' -- one of the two forwarders injected above
+    #   icon        filename inside POV's own media folder
+    #   prefix      AM's action prefix: <prefix>Auth / ReSync / Revoke
+    #   keys        AM settings that hold the account; ALL must be non-empty
+    #   pov         POV class names, newest spelling first
+    #
+    # THREE rows stay POV-only on purpose, each for its own reason:
+    #
+    #   trakt      -- AM 1.1.5a's traktAuth AND traktReSync both end in
+    #                 os._exit(1): they FORCE-CLOSE KODI, after a 3-second
+    #                 "Force Closing Kodi!" toast. That alone is why this row
+    #                 stays POV-only -- POV's native Trakt connect does none
+    #                 of it, and a build's main connect screen cannot kill
+    #                 Kodi. Trakt-everywhere is still available to anyone who
+    #                 wants it, from inside Account Manager, where the
+    #                 force-close is at least in the add-on that causes it.
+    #
+    #                 The other two objections raised with AM's author were
+    #                 answered, and the answers check out against 1.1.5a:
+    #                   * the force-close is deliberate. AM rewrites the Trakt
+    #                     handling inside the add-ons it supports and bypasses
+    #                     their own authorisation, so they have to be restarted
+    #                     to rebuild their Trakt databases, and a dialog could
+    #                     be dismissed or stolen while a hard exit cannot.
+    #                   * control.updates_off() is NOT permanent, which is what
+    #                     an earlier version of this comment claimed. It parks
+    #                     Kodi's add-on updates only until AM's own startup
+    #                     work is done: startup.py run_addon_updates() calls
+    #                     autoupdate_on() and then UpdateAddonRepos(), so the
+    #                     setting comes back on the next start. Verified in the
+    #                     shipped code, not taken on trust.
+    #                 Answering "no" to its "create your sync list now?"
+    #                 question falling off the end of the branch is a real bug
+    #                 and its author has fixed it for the next release.
+    #   easydebrid -- AM writes `easydebrid.token` but never DECLARES it in
+    #                 its settings.xml, so the write is a silent no-op and its
+    #                 EasyDebrid rows are absent from its own settings screen.
+    #                 Routing it through AM would connect nothing.
+    #   tmdblist   -- AM has no TMDb service at all.
+    _ai_table = (
+        ('trakt',        'pov',  'trakt.png',      None, (), ('Trakt',)),
+        ('mdblist',      'ours', 'mdblist.png',    None, (), None),
+        ('tmdblist',     'pov',  'tmdb.png',       None, (),
+         ('TMDBList', 'TMDbList')),
+        ('real-debrid',  'am',   'realdebrid.png', 'realdebrid',
+         ('realdebrid.token',),                       ('RealDebrid',)),
+        ('premiumize.me', 'am',  'premiumize.png', 'premiumize',
+         ('premiumize.token',),                       ('Premiumize',)),
+        ('alldebrid',    'am',   'alldebrid.png',  'alldebrid',
+         ('alldebrid.token',),                        ('AllDebrid',)),
+        ('torbox',       'am',   'torbox.png',     'torbox',
+         ('torbox.token',),                           ('TorBox',)),
+        ('offcloud',     'am',   'offcloud.png',   'offcloud',
+         ('offcloud.token',),                         ('Offcloud',)),
+        ('easydebrid',   'pov',  'easydebrid.png', None, (), ('EasyDebrid',)),
+        ('easynews',     'am',   'easynews.png',   'easynews',
+         ('easynews.username', 'easynews.password'),  ('EasyNews',)),
+        ('gemini-ai',    'ours', 'gemini.png',     None, (), None),
+    )
+    # Built at call time; None when this POV has no MDBList class, in which
+    # case the row is simply left out rather than crashing the screen.
+    _ai_mdblist_cls = _ai_make_mdblist()
+    _ai_ours = {'gemini-ai': Gemini}
+    if _ai_mdblist_cls is not None:
+        _ai_ours['mdblist'] = _ai_mdblist_cls
+    _ai_am_ok = _ai_am_addon() is not None
+
+    _ai_services = []
+    for _ai_name, _ai_kind, _ai_icon, _ai_pfx, _ai_keys, _ai_pov in _ai_table:
+        if _ai_kind == 'ours':
+            _ai_cls_ours = _ai_ours.get(_ai_name)
+            if _ai_cls_ours is not None:
+                _ai_services.append((_ai_name, _ai_cls_ours))
+            continue
+        if _ai_kind == 'am' and _ai_am_ok:
+            _ai_services.append((_ai_name, _ai_am_service(
+                _ai_pfx, _ai_icon, _ai_keys, _ai_name.upper(), _ai_pov)))
+            continue
+        # 'pov', or 'am' with no Account Manager installed
+        _ai_cls = _ai_pov_cls(_ai_pov)
+        if _ai_cls is not None:
+            _ai_services.append((_ai_name, _ai_cls))
+    if _ai_am_ok:
+        _ai_services.append((_AI_ADVANCED, _AiPovOnly))
+
+    def _builder():
+        for name, api in services:
+            item = kodi_utils.make_listitem()
+            # No [B]..[/B] of our own. The select dialog's focused row is
+            # already emphasised by the skin, which wraps the label in its
+            # own bold tag -- and a bold tag inside a bold tag came back
+            # from the field rendering the leftover "[/B]" as literal text
+            # on whichever row happened to be focused.
+            item.setLabel(name.upper())
+            try:
+                inst = api()
+            except Exception:
+                inst = None
+            if inst is None:
+                sub = ''
+            elif api is _AiPovOnly:
+                sub = _AI_ADVANCED2
+            elif hasattr(inst, 'label2'):
+                sub = inst.label2()
+            else:
+                sub = _AI_ON_POV if inst.token else _AI_OFF_POV
+            item.setLabel2(sub)
+            item.setArt({'icon': '%s%s' % (icon_path, api.icon)})
+            yield(item)
+
+    icon_path = kodi_utils.media_path()
+    services = tuple(_ai_services)
+    service = kodi_utils.dialog.select(
+        _AI_TITLE, list(_builder()), useDetails=True)
+    if service < 0: return
+    try: success = services[service][1]().set()
+    except Exception as e: kodi_utils.logger('myservices error', str(e))
+    else: return success
+    return notification(32574)
 {end_marker}
 '''
 # Replace the marker placeholders without using .format() -- the
@@ -176,41 +532,6 @@ class Gemini:
 # to interpret those too and crash with IndexError.
 CLASS_BLOCK = CLASS_BLOCK.replace('{marker}', MARKER) \
                          .replace('{end_marker}', END_MARKER)
-
-
-# Fail-safe splice of our Gemini entry into POV's OWN `services` tuple inside
-# modules.myservices.authorize(). Verified against POV 6.06.10:
-#     icon_path, services = kodi_utils.media_path(), (
-#         ('trakt', Trakt), ('mdblist', MDBList), ... ('easynews', EasyNews))
-# We anchor on `services = kodi_utils.media_path(), (` (POV's exact, stable
-# construction) and insert ('gemini-ai', Gemini) as the FIRST tuple element, so
-# POV's native authorize() builds + renders the menu with its REAL classes and
-# its REAL dialog -- Gemini is just one more row. If POV ever refactors this
-# line so the anchor misses, nothing is spliced and POV's menu still works
-# (Gemini merely absent) -- no empty/broken dialog is ever produced.
-TUPLE_ANCHOR = re.compile(r'(services\s*=\s*kodi_utils\.media_path\(\)\s*,\s*\()')
-TUPLE_INSERT = "('gemini-ai', Gemini), "
-TUPLE_MARK = "('gemini-ai', Gemini)"
-
-
-def _inject_services_tuple(content):
-    """Return content with ('gemini-ai', Gemini) spliced into POV's services
-    tuple. Idempotent (skips if already present) and fail-safe (returns content
-    unchanged if the anchor is not found)."""
-    if TUPLE_MARK in content:
-        return content
-    new_content, n = TUPLE_ANCHOR.subn(
-        lambda m: m.group(1) + TUPLE_INSERT, content, count=1)
-    if n:
-        kodi_utils.log(
-            'pov_services_patcher: spliced Gemini into POV services tuple',
-            level='INFO')
-        return new_content
-    kodi_utils.log(
-        'pov_services_patcher: services tuple anchor not found -- leaving POV '
-        'authorize() untouched (Gemini absent, native menu intact)',
-        level='WARNING')
-    return content
 
 
 def _myservices_path():
@@ -294,7 +615,7 @@ def ensure_patched():
     try:
         with open(p, 'r', encoding='utf-8') as f:
             content = f.read()
-    except OSError as e:
+    except Exception as e:
         kodi_utils.log(
             'pov_services_patcher: read failed: {0}'.format(e),
             level='WARNING')
@@ -324,11 +645,6 @@ def ensure_patched():
             re.MULTILINE | re.DOTALL,
         )
         content = pattern.sub('', content)
-
-    # Splice ('gemini-ai', Gemini) into POV's OWN services tuple so its native
-    # authorize() renders Gemini alongside its real providers. Fail-safe: a
-    # missed anchor leaves POV's menu untouched.
-    content = _inject_services_tuple(content)
 
     if not content.endswith('\n'):
         content += '\n'

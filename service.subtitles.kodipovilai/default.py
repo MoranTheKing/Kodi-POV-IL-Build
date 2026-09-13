@@ -102,9 +102,15 @@ def _handle_search(handle, params):
     # well catches the case where DarkSubs was installed (or
     # updated) AFTER Kodi started -- the patch goes in immediately,
     # without needing a reboot. Idempotent.
+    # SKIPPED when the built-in engine is on: DarkSubs is deliberately
+    # DISABLED then, and touching it here made Kodi log
+    # "EXCEPTION: Unknown addon id 'service.subtitles.All_Subs'" on
+    # every search (field log, standalone install).
     try:
-        from resources.lib import dark_subs_integration
-        dark_subs_integration.maybe_patch_darksubs()
+        from resources.lib import subs_engine_bridge as _seb_gate
+        if not _seb_gate.enabled():
+            from resources.lib import dark_subs_integration
+            dark_subs_integration.maybe_patch_darksubs()
     except Exception as e:
         _safe_log('darksubs patch skipped: {0}'.format(e),
                   level='DEBUG')
@@ -202,7 +208,12 @@ def _handle_download(handle, params):
     if _p and _p.get('type') == 'engine' and _p.get('embedded'):
         try:
             from resources.lib import subs_engine_bridge
-            if subs_engine_bridge.select_embedded(_p.get('stream_index')):
+            # Pass the picked language through. It was being dropped here and
+            # only here, which left the out-of-range fallback inside
+            # select_embedded re-finding a HEBREW stream for a '[מובנה] EN'
+            # pick.
+            if subs_engine_bridge.select_embedded(_p.get('stream_index'),
+                                                  lang=_p.get('lang')):
                 kodi_utils.notify('כתובית עברית מובנה הופעלה', time_ms=3000)
         except Exception as _e:
             _safe_log('embedded select failed: {0}'.format(_e), level='WARNING')
@@ -240,6 +251,50 @@ def _handle_download(handle, params):
                               time_ms=4000)
             xbmcplugin.endOfDirectory(handle)
             return
+
+    if _p and _p.get('type') == 'embedded_ai':
+        # Extraction of a scattered debrid remux takes minutes, so run the WHOLE
+        # embedded->Hebrew job in the BACKGROUND (like an 'ai' pick) instead of
+        # freezing Kodi's download dialog: close the dialog now and fire
+        # bg_translate_picker with the embedded_ai link -- its resolve() extracts
+        # (showing a corner progress bar) THEN translates, swapping the Hebrew in
+        # when ready. No pre-extracted source id yet, so pass an empty one (the
+        # bg handler adopts the id resolve() computes). Fail-open: if extraction
+        # yields nothing the bg job just delivers nothing (external path remains).
+        # Show the embedded SOURCE track now (native, instant + already synced to
+        # the video) so the user sees it while the Hebrew cooks -- instead of
+        # leaving the stale sub they picked embedded to replace. Best-effort.
+        try:
+            from resources.lib import subs_engine_bridge as _seb
+            _si = _p.get('stream_index')
+            if _si is not None:
+                _seb.select_embedded(_si, lang=_p.get('src_lang') or 'en')
+        except Exception:
+            pass
+        try:
+            import base64 as _b64m
+            _lk = _b64m.b64encode(link.encode('utf-8')).decode('ascii')
+            _sd = _b64m.b64encode(b'').decode('ascii')
+            xbmc.executebuiltin(
+                'RunScript(service.subtitles.kodipovilai,'
+                'action=bg_translate_picker,link_b64={0},source_id_b64={1})'
+                .format(_lk, _sd))
+            kodi_utils.notify('AI: מחלץ ומתרגם תרגום מובנה ברקע', time_ms=3500)
+        except Exception as _e:
+            _safe_log('embedded_ai bg fire failed: {0}'.format(_e),
+                      level='WARNING')
+        try:
+            xbmc.executebuiltin('Dialog.Close(all,true)')
+            xbmcplugin.addDirectoryItems(handle, [], 0)
+            xbmc.sleep(100)
+            xbmcplugin.endOfDirectory(handle, updateListing=True,
+                                      cacheToDisc=True)
+        except Exception:
+            try:
+                xbmcplugin.endOfDirectory(handle)
+            except Exception:
+                pass
+        return
 
     # Opt-in fast path for the NATIVE Kodi subtitle picker. Mirrors
     # the DarkSubs fast_first_chunk flow in _handle_translate_file:
@@ -425,6 +480,17 @@ def _sanitise_sub_name(name):
     return cleaned
 
 
+def _playing_now():
+    """True when Kodi still has a video player. Used to decide whether a failed
+    canonical swap is dangerous. With a player up, deleting the progressive
+    slots can strand the viewer on a removed file; with no player there is
+    nothing pointing at them and the cleanup should proceed."""
+    try:
+        return bool(xbmc.Player().isPlayingVideo())
+    except Exception:
+        return False
+
+
 def _progressive_slot_path(cache_dir, source_id, slot, release=''):
     """Path for a transient progressive-translation slot file. Kodi
     turns the basename into the subtitle label shown in the picker, so
@@ -465,8 +531,15 @@ def _progressive_cleanup_patterns(source_id, release=''):
     except Exception:
         rel = ''
     if rel:
-        pats.append('{0}.a.he.srt'.format(rel))
-        pats.append('{0}.b.he.srt'.format(rel))
+        # safe_release_filename deliberately KEEPS brackets, and glob reads
+        # '[YTS.MX]' as a character class -- so the literal slot file for a
+        # bracketed release matched nothing and was never deleted. Escaping
+        # makes the release part literal; the '*' in the hash-named patterns
+        # above is ours and stays a wildcard.
+        import glob as _g
+        rel_lit = _g.escape(rel)
+        pats.append('{0}.a.he.srt'.format(rel_lit))
+        pats.append('{0}.b.he.srt'.format(rel_lit))
     return pats
 
 
@@ -711,6 +784,25 @@ def _try_fast_download(handle, link, info):
     # zero AI work.
     if source_id:
         try:
+            # DELIBERATELY tier-pinned, and deliberately allowed to miss.
+            # This branch hands a file straight to Kodi without any of the
+            # checks resolve() applies on a cache hit -- the _is_mostly_hebrew
+            # self-heal that deletes an empty/source-echoed file, the mtime
+            # refresh that keeps a file in use from ageing out, the RTL
+            # re-apply, and the one-shot pool backfill. Making it find a
+            # translation it used to miss would turn a rare shortcut into the
+            # normal path and skip all four.
+            #
+            # A MISS HERE IS NOT FREE, and nothing downstream rescues it:
+            # resolve()'s early cache return fires before the first
+            # progressive_cb, and the picker handler reads the return only to
+            # decide whether to toast a failure. So a cached translation this
+            # lookup misses is found by resolve() and then delivered to
+            # nobody. That is the "a second entry does not load it
+            # automatically" report, and it is NOT fixed -- fixing it means
+            # wiring those early returns to progressive_cb, which is its own
+            # change. Widening THIS lookup is not the fix; it was tried and
+            # reverted, because a hit here skips the four guards above.
             cached = _cache.translated_path(
                 imdb_id, season, episode, source_lang,
                 source_id=source_id)
@@ -860,8 +952,50 @@ def _handle_bg_translate_picker(params):
 
     _ver = {'n': 0}
 
+    # Corner progress bar for the (long) embedded-extraction phase. Created
+    # lazily on the first extract-progress tick and closed when translation
+    # starts or resolve() returns. DialogProgressBG is non-modal -- it shows in
+    # the corner and never blocks playback or input. A normal 'ai' pick has no
+    # extraction phase, so the bar simply never appears for it.
+    _ebar = {'d': None}
+
+    def _extract_progress(done, total, label=None):
+        # `label` (optional) lets the resolve-side phases narrate what's
+        # happening -- the align path reports "reading timing / finding source /
+        # syncing", the full-text extract omits it and keeps the default. Two-arg
+        # callers (embedded_extract.extract_srt) still work unchanged.
+        try:
+            msg = label or 'מכין תרגום מובנה...'
+            if _ebar['d'] is None:
+                _ebar['d'] = xbmcgui.DialogProgressBG()
+                _ebar['d'].create('MoranSubs', msg)
+            pct = int(done * 100 / total) if total else 0
+            _ebar['d'].update(pct, 'MoranSubs', '{0} {1}%'.format(msg, pct))
+        except Exception:
+            pass
+
+    def _close_ebar():
+        try:
+            if _ebar['d'] is not None:
+                _ebar['d'].close()
+                _ebar['d'] = None
+        except Exception:
+            pass
+
     def on_phase(phase, payload):
         try:
+            # embedded_ai: we fired bg WITHOUT a pre-extracted source id, so
+            # adopt the id resolve() computed (the first phase that carries one)
+            # -- setting the live prop makes the chunk_ready gate below match, so
+            # the progressive line-by-line swap works for embedded picks too.
+            if (not xbmcgui.Window(10000).getProperty(
+                    'ai_subs.live_translate_source')
+                    and payload.get('source_id')):
+                xbmcgui.Window(10000).setProperty(
+                    'ai_subs.live_translate_source', payload['source_id'])
+            # Any translation phase means extraction has finished -> drop the bar.
+            if phase in ('first_ready', 'chunk_ready', 'done'):
+                _close_ebar()
             # We tolerate first_ready -- it's a no-op here, the
             # fallback is already on Kodi. We just guard against
             # an unexpected source_id mismatch (sanity check, should
@@ -920,13 +1054,26 @@ def _handle_bg_translate_picker(params):
                 _canonical_swap_succeeded = False
                 if payload.get('success'):
                     try:
-                        from resources.lib import cache as _cache
-                        canonical = _cache.translated_path(
-                            (info.get('imdb_id') or '').strip(),
-                            info.get('season') or '',
-                            info.get('episode') or '',
-                            'en',
-                            source_id=payload['source_id'])
+                        # USE THE PATH resolve() REPORTS. Recomputing it here
+                        # was wrong twice over: translated_path() was called
+                        # without tier=, while resolve() writes with tier='ar'
+                        # whenever a gender reference was found (the default,
+                        # and force-enabled by migration), and the source
+                        # language was hardcoded 'en'. So this file did not
+                        # exist on most jobs, the swap below was skipped, and
+                        # the viewer kept the last progressive SLOT file --
+                        # partly source text if the translation was
+                        # interrupted. The recompute stays only as a fallback
+                        # for a payload from an older resolve().
+                        canonical = payload.get('path') or ''
+                        if not canonical:
+                            from resources.lib import cache as _cache
+                            canonical = _cache.translated_path(
+                                (info.get('imdb_id') or '').strip(),
+                                info.get('season') or '',
+                                info.get('episode') or '',
+                                'en',
+                                source_id=payload['source_id'])
                         if os.path.isfile(canonical):
                             # Name the delivered file after the source RELEASE so
                             # Kodi shows the full release name (not a hash); fall
@@ -955,24 +1102,65 @@ def _handle_bg_translate_picker(params):
                             if _final_path:
                                 try:
                                     p = xbmc.Player()
+                                    # setSubtitles() POSTS to the
+                                    # VideoPlayer thread and returns
+                                    # before the stream is registered,
+                                    # so "it did not raise" is not
+                                    # evidence anything happened. The
+                                    # stream list read on the next line
+                                    # was the PRE-add list, so picking
+                                    # its last entry selected the last
+                                    # progressive SLOT -- which the
+                                    # cleanup below then deleted,
+                                    # pinning the viewer to a stream
+                                    # whose file is gone. Count first,
+                                    # wait for it to grow, then claim.
+                                    try:
+                                        _before = len(
+                                            p.getAvailableSubtitleStreams() or [])
+                                    except Exception:
+                                        _before = -1
                                     p.setSubtitles(_final_path)
                                     p.showSubtitles(True)
-                                    # Force-pick our newly-added
-                                    # stream so Kodi doesn't auto-
-                                    # revert to a pre-existing
-                                    # Hebrew subtitle (user-reported
-                                    # "jumps back to Hebrew" bug
-                                    # when an existing he-SRT was
-                                    # already loaded before picking
-                                    # English for AI translation).
-                                    try:
-                                        _streams = p.getAvailableSubtitleStreams()
-                                        if _streams:
-                                            p.setSubtitleStream(
-                                                len(_streams) - 1)
-                                    except Exception:
-                                        pass
-                                    _canonical_swap_succeeded = True
+                                    _grew = False
+                                    if _before >= 0:
+                                        for _ in range(20):      # <= 1s
+                                            xbmc.sleep(50)
+                                            try:
+                                                _streams = (
+                                                    p.getAvailableSubtitleStreams()
+                                                    or [])
+                                            except Exception:
+                                                break
+                                            if len(_streams) > _before:
+                                                _grew = True
+                                                # Pin our stream so Kodi
+                                                # does not auto-revert to
+                                                # a pre-existing Hebrew
+                                                # SRT.
+                                                try:
+                                                    p.setSubtitleStream(
+                                                        len(_streams) - 1)
+                                                except Exception:
+                                                    pass
+                                                break
+                                    if not _grew and not _playing_now():
+                                        # Nobody to strand: with no player
+                                        # there is no stream pointing at a
+                                        # slot file, so deleting is safe --
+                                        # and is the outcome we want, or the
+                                        # slots pile up on every job that
+                                        # outlives playback.
+                                        _grew = True
+                                    elif not _grew:
+                                        _safe_log(
+                                            'bg_translate_picker: Kodi did not '
+                                            'register the final subtitle '
+                                            'stream -- keeping the progressive '
+                                            'slots rather than deleting a file '
+                                            'the player may still be on',
+                                            level='WARNING')
+                                    _canonical_swap_succeeded = _grew
                                 except Exception as _se:
                                     _safe_log(
                                         'bg_translate_picker done '
@@ -1015,8 +1203,10 @@ def _handle_bg_translate_picker(params):
                 'bg_translate_picker on_phase({0}) raised: '
                 '{1}'.format(phase, _e), level='WARNING')
 
+    _resolved = None
     try:
-        translate.resolve(link, info, progressive_cb=on_phase)
+        _resolved = translate.resolve(link, info, progressive_cb=on_phase,
+                                      extract_progress_cb=_extract_progress)
     except Exception as e:
         _safe_log(
             'bg_translate_picker resolve crashed: {0}'.format(e),
@@ -1025,12 +1215,48 @@ def _handle_bg_translate_picker(params):
         # Belt-and-suspenders -- the done phase clears these too,
         # but on a resolve() crash before done we still want the
         # active flag cleared so a follow-up pick isn't gated by
-        # a stale source_id.
+        # a stale source_id. Also drop the extraction bar if it's
+        # still up (e.g. extraction failed -> no translation phase fired).
+        _close_ebar()
         try:
             xbmcgui.Window(10000).clearProperty(
                 'ai_subs.live_translate_active')
             xbmcgui.Window(10000).clearProperty(
                 'ai_subs.live_translate_source')
+        except Exception:
+            pass
+    # The picker/chooser already closed, so a failed background job would
+    # otherwise be SILENT -- the user explicitly picked this sub and must know it
+    # didn't land (and to try another). resolve() returns a path only on success;
+    # a falsy result means extraction/translation deferred or failed.
+    if not _resolved:
+        try:
+            # An extraction that STOPPED PART-WAY is not a failure -- it banked
+            # its progress and the next pick continues from there, and it has
+            # already told the user exactly that. Following it with "try another
+            # subtitle" would contradict it and send the user away from a job
+            # that is most of the way done (field report, 0.2.446).
+            _partial = ''
+            try:
+                _raw = xbmcgui.Window(10000).getProperty(
+                    'povil.embedded_partial') or ''
+                xbmcgui.Window(10000).clearProperty('povil.embedded_partial')
+                # Honour it only if it belongs to THIS attempt. The flag is a
+                # window property, so a value left behind by an earlier run
+                # would otherwise suppress a genuine failure toast much later,
+                # for an unrelated video. A real one is written seconds ago.
+                if '@' in _raw:
+                    import time as _t
+                    if _t.time() - float(_raw.rsplit('@', 1)[1]) <= 120:
+                        _partial = _raw
+            except Exception:
+                _partial = ''
+            if not _partial:
+                _pl = translate._decode_link(link) or {}
+                _msg = ('AI: לא ניתן היה לחלץ תרגום מובנה — נסו כתובית אחרת'
+                        if _pl.get('type') == 'embedded_ai'
+                        else 'AI: לא ניתן היה לתרגם — נסו כתובית אחרת')
+                kodi_utils.notify(_msg, time_ms=4500)
         except Exception:
             pass
 
@@ -1135,7 +1361,7 @@ def _show_gemini_usage():
     """Render the daily quota status in a Dialog().ok(). Used by
     the 'ניצול היום' menu entry and the runscript action."""
     try:
-        from resources.lib import gemini_quota
+        from resources.lib import gemini_quota, kodi_utils
     except Exception as e:
         try:
             xbmcgui.Dialog().ok('Kodi POV IL',
@@ -1144,7 +1370,19 @@ def _show_gemini_usage():
             pass
         return
     try:
-        body = gemini_quota.format_status_long()
+        # Report against the CURRENTLY selected model (not just the last one
+        # translated), and short-circuit in paid mode where the free daily cap
+        # doesn't apply (otherwise a paid user on regular Flash could see an
+        # alarming "147/20" against a limit that isn't theirs).
+        paid = kodi_utils.get_bool('ai_paid_mode', False)
+        model = (kodi_utils.get_setting('model', 'gemini-3.5-flash-lite')
+                 or 'gemini-3.5-flash-lite')
+        if paid:
+            body = ('מצב מהיר (למשתמשי Gemini API בתשלום) פעיל.\n'
+                    'הגבלות המכסה החינמית אינן חלות, ולכן אין ספירת ניצול יומי.\n\n'
+                    'מודל נוכחי: {0}').format(model)
+        else:
+            body = gemini_quota.format_status_long(model)
     except Exception as e:
         body = 'שגיאה בקריאת הנתונים: {0}'.format(e)
     try:
@@ -1198,7 +1436,8 @@ class _PairWindow(xbmcgui.WindowDialog):
         self.cancelled = False
         self._countdown_lbl = None
 
-    def setup(self, qr_url, url_lines, instructions_header):
+    def setup(self, qr_url, url_lines, instructions_header,
+              title_text='Gemini AI - התאמה מטלפון'):
         # WindowDialog coordinate space is 1280x720 by default.
         # Layout:
         #   y=0-720    full-screen semi-opaque dark background
@@ -1214,10 +1453,13 @@ class _PairWindow(xbmcgui.WindowDialog):
                                   colorDiffuse='EE000000', aspectRatio=2)
         self.addControl(bg)
 
-        # Title bar
+        # Title bar. Passed in, because this window is shared by the Gemini and
+        # MDBList pair flows and used to say "Gemini AI" in both -- so someone
+        # connecting MDBList scanned a QR headed Gemini, opened a page headed
+        # MDBList, and reasonably concluded one of the two was wrong.
         title = xbmcgui.ControlLabel(
             340, 30, 600, 60,
-            '[B][COLOR=ffd166]Gemini AI - התאמה מטלפון[/COLOR][/B]',
+            '[B][COLOR=FFFFD166]' + title_text + '[/COLOR][/B]',
             alignment=2 | 4, font='font30')
         self.addControl(title)
 
@@ -1245,17 +1487,17 @@ class _PairWindow(xbmcgui.WindowDialog):
         self.addControl(instr)
         text = '[B]סרוק את ה-QR עם המצלמה של הטלפון[/B] '
         text += '(אפליקציית מצלמה רגילה — לא צריך אפליקציה מיוחדת).\n\n'
-        text += ('[B][COLOR=bf7f7f]' + instructions_header
+        text += ('[B][COLOR=FFBF7F7F]' + instructions_header
                  + ':[/COLOR][/B]\n')
         for line in url_lines:
             text += '   • ' + line + '\n'
-        text += ('\n[B][COLOR=ffd166]ה-Chrome של אנדרואיד '
+        text += ('\n[B][COLOR=FFFFD166]ה-Chrome של אנדרואיד '
                  'לא נפתח?[/COLOR][/B] כבה ב-Chrome: '
                  'Settings → Privacy → "Always use secure '
                  'connections", או נסה דפדפן אחר (Firefox/Brave/'
                  'Samsung Internet). או חזור ל-Kodi ובחר "הזנה '
                  'ידנית".\n')
-        text += ('[B][COLOR=ffd166]באייפון קיבלת 400?[/COLOR][/B] '
+        text += ('[B][COLOR=FFFFD166]באייפון קיבלת 400?[/COLOR][/B] '
                  'הסתכל ב-fingerprint בעמוד "ה-key נשלח" וודא '
                  'שתואם בדיוק למפתח שהעתקת מ-AI Studio. אם תואם '
                  'אבל עדיין נדחה — המפתח עצמו לא תקין; צור חדש.')
@@ -1273,7 +1515,7 @@ class _PairWindow(xbmcgui.WindowDialog):
         try:
             mm, ss = divmod(int(max(0, seconds_left)), 60)
             self._countdown_lbl.setLabel(
-                '[COLOR=b7c4cf]ממתין לקבלת ה-key... '
+                '[COLOR=FFB7C4CF]ממתין לקבלת ה-key... '
                 '({0:02d}:{1:02d} עד פג תוקף)  •  '
                 'לביטול: Back[/COLOR]'.format(mm, ss))
         except Exception:
@@ -1289,19 +1531,12 @@ class _PairWindow(xbmcgui.WindowDialog):
             self.close()
 
 
-def _gemini_pair_flow(kodi_utils, gemini, gemini_pair):
-    """Spin up the local pair server, show a scannable QR image in
-    a custom window, poll for the submitted key, validate."""
+def _run_pair_qr(ps, title_text='Gemini AI - התאמה מטלפון'):
+    """Show a scannable QR + URL fallback for an ALREADY-CREATED PairServer,
+    poll for the submitted key until it arrives / the user cancels / a 5-min
+    deadline, then shut the server down. Returns the submitted key (or '').
+    Shared verbatim by the Gemini and MDBList pair flows."""
     import time as _time
-    try:
-        ps = gemini_pair.PairServer()
-    except Exception as e:
-        xbmcgui.Dialog().ok(
-            'Kodi POV IL',
-            'נכשלה הפעלת שרת התאמה: {0}\n\n'
-            'אפשר לחזור לתפריט ולבחור "הזנה ידנית" במקום.'
-            .format(str(e)[:80]))
-        return
 
     # Primary URL: prefer LAN IP (works for other devices on the
     # same WiFi AND on the same device's browser via localhost
@@ -1326,7 +1561,11 @@ def _gemini_pair_flow(kodi_utils, gemini, gemini_pair):
         if url.count(':') < 2:
             return url
         host_part, port_part = url.rsplit(':', 1)
-        return '{0}[COLOR=ffd166]:{1}[/COLOR]'.format(host_part, port_part)
+        # 8-digit AARRGGBB with FF alpha -- the old 6-digit form (ffd166) was
+        # parsed by Kodi as 0x00ffd166 (alpha 00 = fully TRANSPARENT), which
+        # made the port render invisible; the URL then looked portless. Bold
+        # too, so the port stays visible even if a skin mangles the colour.
+        return '{0}[B][COLOR=FFFFD166]:{1}[/COLOR][/B]'.format(host_part, port_part)
 
     # Show EVERY detected LAN IP. On devices with multiple network
     # interfaces (Android TV with WiFi+Ethernet, laptop with VPN+WiFi)
@@ -1363,7 +1602,7 @@ def _gemini_pair_flow(kodi_utils, gemini, gemini_pair):
     window = None
     try:
         window = _PairWindow()
-        window.setup(qr_url, url_lines, instructions_header)
+        window.setup(qr_url, url_lines, instructions_header, title_text)
         window.show()
 
         while _time.time() < deadline:
@@ -1383,7 +1622,22 @@ def _gemini_pair_flow(kodi_utils, gemini, gemini_pair):
             pass
         ps.shutdown()
 
-    key = ps.received_key()
+    return ps.received_key()
+
+
+def _gemini_pair_flow(kodi_utils, gemini, gemini_pair):
+    """Spin up the local pair server, show a scannable QR image in
+    a custom window, poll for the submitted key, validate."""
+    try:
+        ps = gemini_pair.PairServer()
+    except Exception as e:
+        xbmcgui.Dialog().ok(
+            'Kodi POV IL',
+            'נכשלה הפעלת שרת התאמה: {0}\n\n'
+            'אפשר לחזור לתפריט ולבחור "הזנה ידנית" במקום.'
+            .format(str(e)[:80]))
+        return
+    key = _run_pair_qr(ps)
     if not key:
         return  # user cancelled or timeout
     _test_save_or_retry(kodi_utils, gemini, key, retry_cb=None)
@@ -1411,6 +1665,507 @@ def _gemini_type_flow(kodi_utils, gemini):
                                   retry_cb='loop')
         if ok != 'retry':
             return
+
+
+# --- MDBList API-key pairing (mirror of the Gemini flow) --------------------
+# MDBList's key lives in POV's OWN `mdblist.token` setting (POV is the consumer),
+# so we read/write it cross-addon. The phone form validates against MDBList
+# before submit; _test_save_mdblist re-checks Kodi-side and stores it.
+def _mdblist_pov_addon():
+    try:
+        import xbmcaddon as _mx
+        return _mx.Addon('plugin.video.pov')
+    except Exception:
+        return None
+
+
+def _handle_search_provider(_params):
+    """RunScript action=search_provider -- pick which add-on the home search
+    button searches, POV or Umbrella, on every skin the build ships.
+
+    One screen, two rows, the current one ticked. Choosing rewrites all four
+    skins' search wiring and reloads the skin the user is looking at, so the
+    change is visible immediately rather than after a restart."""
+    try:
+        from resources.lib import search_provider
+    except Exception as e:
+        try:
+            xbmcgui.Dialog().ok('Kodi POV IL', 'Internal error: {0}'.format(e))
+        except Exception:
+            pass
+        return
+
+    now = search_provider.current()
+    have_umbrella = search_provider.umbrella_available()
+    if not have_umbrella:
+        xbmcgui.Dialog().ok(
+            'מנוע החיפוש',
+            'החיפוש עובד כרגע דרך POV.\n\n'
+            'כדי לחפש דרך Umbrella צריך קודם להתקין אותו: '
+            'תוספים ← Kodi POV IL Wizard ← התקן Umbrella.')
+        return
+
+    options = []
+    order = (search_provider.POV, search_provider.UMBRELLA)
+    for key in order:
+        mark = '✓ ' if key == now else '   '
+        options.append('{0}{1}'.format(mark, search_provider.DISPLAY[key]))
+    try:
+        choice = xbmcgui.Dialog().select(
+            'מנוע החיפוש - במה לחפש?', options)
+    except Exception:
+        choice = -1
+    if choice < 0:
+        return
+    picked = order[choice]
+    if picked == now:
+        return
+
+    search_provider.set_provider(picked)
+    _statuses, reloaded = search_provider.apply_to_skins()
+    name = search_provider.DISPLAY[picked]
+    if reloaded:
+        # The skin reload already IS the feedback; a dialog on top of it would
+        # land on a screen that is still rebuilding.
+        try:
+            from resources.lib import kodi_utils
+            kodi_utils.notify('החיפוש עובר ל-{0}'.format(name), time_ms=4000)
+        except Exception:
+            pass
+        return
+    xbmcgui.Dialog().ok(
+        'מנוע החיפוש',
+        'החיפוש יעבוד מעכשיו דרך {0}.\n\n'
+        'בסקין שאתם נמצאים בו כרגע השינוי ייכנס לתוקף לאחר הפעלה מחדש '
+        'של Kodi.'.format(name))
+
+
+ACCTMGR_ADDON_ID = 'script.module.acctmgr'
+
+
+def _mdblist_push_to_acctmgr(key, username):
+    """Hand a freshly paired MDBList key to Account Manager so it lands in
+    every add-on AM supports (Umbrella, Coalition, TMDb Helper, POV...) rather
+    than in POV alone.
+
+    We keep our own QR pairing rather than AM's -- AM's MDBList authorisation
+    is a bare keyboard prompt for the API key, with no phone pairing at all --
+    and only hand it the finished, validated key afterwards.
+
+    Best-effort by design: a failure here costs the user nothing they had
+    before, so it must never turn a successful POV connect into a visible
+    error. Returns True only when AM was updated AND its sync was started.
+
+    Deliberately NOT mirrored on disconnect: AM's mdblist_auth() pushes
+    whatever key it holds and, for POV, also sets watched_indicators=2 with
+    mdbl_indicators_active=true. Running it with a BLANK key would point POV's
+    watched-status provider at MDBList with no key -- precisely the
+    inconsistent state _mdblist_apply_connect goes out of its way to prevent.
+    So disconnect clears AM's own two settings and stops there; the other
+    add-ons keep their key until an explicit revoke inside Account Manager."""
+    if not (key or '').strip():
+        return False
+    try:
+        import xbmcaddon as _mx
+        _mx.Addon(ACCTMGR_ADDON_ID)
+    except Exception:
+        return False                      # AM not installed -- nothing to do
+    try:
+        from resources.lib import addon_settings_safe
+        _changed, _restored, failed = addon_settings_safe.apply(
+            ACCTMGR_ADDON_ID,
+            (('mdblist.apikey', key.strip()),
+             ('mdblist.username', username or '')))
+    except Exception as e:
+        _safe_log('mdblist -> acctmgr write failed: {0}'.format(e),
+                  level='WARNING')
+        return False
+    if failed:
+        _safe_log('mdblist -> acctmgr did not stick: {0}'.format(failed),
+                  level='WARNING')
+        return False
+    return True
+
+
+def _mdblist_acctmgr_resync():
+    """Start Account Manager's own MDBList sync.
+
+    Fired LAST, after every dialog of ours has closed, and never before.
+    AM's mdblistReSync branch ends with `xbmc.sleep(3000)` then
+    `control.openSettings()` -- so roughly six seconds after it is spawned it
+    puts its own settings window on screen, over whatever is there. Spawning
+    it before our dialogs meant AM's settings jumped on top of the Umbrella
+    question while the user was still reading it, which is exactly what was
+    reported: the question appeared and was gone before it could be answered.
+    We cannot stop AM opening its settings -- that is its code -- but we can
+    make sure nothing of ours is still on screen when it does."""
+    try:
+        import xbmc as _mxbmc
+        _mxbmc.executebuiltin(
+            'RunScript({0},action=mdblistReSync)'.format(ACCTMGR_ADDON_ID))
+        return True
+    except Exception as e:
+        _safe_log('mdblist acctmgr resync failed to start: {0}'.format(e),
+                  level='WARNING')
+        return False
+
+
+def _mdblist_clear_acctmgr():
+    """Blank Account Manager's own MDBList settings on disconnect, so AM stops
+    reporting a connection it no longer has. See the note in
+    _mdblist_push_to_acctmgr for why no AM sync is run here."""
+    try:
+        import xbmcaddon as _mx
+        _mx.Addon(ACCTMGR_ADDON_ID)
+    except Exception:
+        return False
+    try:
+        from resources.lib import addon_settings_safe
+        _changed, _restored, failed = addon_settings_safe.apply(
+            ACCTMGR_ADDON_ID,
+            (('mdblist.apikey', ''), ('mdblist.username', '')))
+        return not failed
+    except Exception as e:
+        _safe_log('mdblist acctmgr clear failed: {0}'.format(e),
+                  level='WARNING')
+        return False
+
+
+def _mdblist_get_token():
+    a = _mdblist_pov_addon()
+    if not a:
+        return ''
+    try:
+        return (a.getSetting('mdblist.token') or '').strip()
+    except Exception:
+        return ''
+
+
+POV_ADDON_ID = 'plugin.video.pov'
+
+
+def _mdblist_pov_write(pairs):
+    """Write (key, value) pairs into POV's settings THROUGH addon_settings_safe.
+
+    These four writes are the last bare `xbmcaddon.Addon(other).setSetting()`
+    calls left in the add-on, and they predate the wrapper. Kodi's setSetting
+    is not a targeted write: it re-serialises the WHOLE of POV's settings.xml
+    around every call, and any stored value that no longer satisfies its
+    definition's constraints comes back as the DEFAULT. So connecting MDBList
+    could silently reset a POV setting nobody named -- which is the same class
+    of bug as the "the update reset my settings" report that produced the
+    wrapper in the first place. Rare (it only fires on connect/disconnect) and
+    silent, which is exactly why it is worth closing rather than leaving.
+
+    Returns the list of keys that did NOT land, so callers can gate on it the
+    way they gated on the old hard read-back."""
+    try:
+        from resources.lib import addon_settings_safe
+        _changed, _restored, failed = addon_settings_safe.apply(
+            POV_ADDON_ID, tuple(pairs))
+        return list(failed)
+    except Exception as e:
+        _safe_log('mdblist POV write failed: {0}'.format(e), level='WARNING')
+        return [k for k, _v in pairs]
+
+
+def _mdblist_apply_connect(key, username):
+    """Replicate POV's native MDBList.set() connect side-effects cross-addon:
+    store the account name + token, activate the MDBList watched-indicator, and
+    make MDBList the watched-status/progress provider -- exactly the four
+    settings POV writes itself. Returns True iff the token stuck.
+
+    ORDER MATTERS: we write + hard-verify the token FIRST and gate the other
+    three writes on that success. If the token write fails, writing the aux
+    flags anyway would leave POV's watched-status pointing at MDBList
+    (watched_indicators='2', mdbl_indicators_active='true') with an empty token
+    -- an inconsistent state a Kodi restart would NOT undo, and the exact
+    'provider set, no key' breakage this whole change set out to prevent.
+    (The disconnect path can write its aux flags unconditionally because those
+    fail toward *deactivating* MDBList -- the safe direction; connect's fail
+    toward the unsafe one, so they must be gated.)
+
+    NB: POV's native set() also calls clear_cache('mdblist'). We deliberately do
+    NOT import POV's cache module cross-addon -- doing so would pull POV internals
+    into this add-on's interpreter and risk sys.modules bleed in the shared Kodi
+    process. The stale MDBList cache is inert once the indicator flags change and
+    POV refreshes it on its own schedule / next restart, so skipping it is safe.
+    POV still renders settings from an in-memory cache, so a live POV session may
+    need a restart before it reflects these writes (documented POV trap).
+
+    TWO calls into addon_settings_safe rather than one, precisely to keep the
+    gating above: a single apply() would write all four keys before telling us
+    the token had failed, which is the inconsistent state this docstring is
+    about. The wrapper already reads each key back, so its `failed` list is the
+    same hard verification the old code did by hand."""
+    if _mdblist_pov_addon() is None:
+        return False
+    if _mdblist_pov_write((('mdblist.token', (key or '').strip()),)):
+        return False                       # leave every aux setting untouched
+    _mdblist_pov_write((('mdblist_user', username or ''),
+                        ('mdbl_indicators_active', 'true'),
+                        ('watched_indicators', '2')))
+    return True
+
+
+def _mdblist_apply_disconnect():
+    """Reverse of _mdblist_apply_connect -- mirror POV's native MDBList
+    disconnect: blank the account name + token, deactivate the MDBList
+    watched-indicator, and hand the watched-status provider back to POV (0).
+    Returns True iff the token was cleared (hard-verified); the rest best-effort.
+    This is the fix for the 'Remove leaves indicators pointing at MDBList with no
+    key' inconsistency.
+
+    ONE call here, unlike connect: every one of these four writes fails toward
+    DEACTIVATING MDBList, which is the safe direction, so there is nothing to
+    gate and no reason to pay for two settings round trips."""
+    if _mdblist_pov_addon() is None:
+        return False
+    failed = _mdblist_pov_write((('mdblist_user', ''),
+                                 ('mdblist.token', ''),
+                                 ('mdbl_indicators_active', 'false'),
+                                 ('watched_indicators', '0')))
+    return 'mdblist.token' not in failed
+
+
+def _handle_connect_mdblist(_params):
+    """MDBList API-key setup, from POV's My Services (injected forwarder) or
+    RunScript action=connect_mdblist. Pair from a phone (QR) or type the key;
+    validate against MDBList; store into POV's `mdblist.token`."""
+    try:
+        from resources.lib import kodi_utils, gemini_pair, mdblist_pair
+    except Exception as e:
+        try:
+            xbmcgui.Dialog().ok('Kodi POV IL', 'Internal error: {0}'.format(e))
+        except Exception:
+            pass
+        return
+    if _mdblist_get_token():
+        _mdblist_menu_existing(kodi_utils, gemini_pair, mdblist_pair)
+    else:
+        _mdblist_menu_new(kodi_utils, gemini_pair, mdblist_pair)
+
+
+def _mdblist_menu_existing(kodi_utils, gemini_pair, mdblist_pair):
+    options = [
+        '🔍 בדוק חיבור (Test connection)',
+        '🔄 החלף key (Replace)',
+        '❌ נתק (Remove)',
+    ]
+    try:
+        choice = xbmcgui.Dialog().select('MDBList - מה לעשות?', options)
+    except Exception:
+        choice = -1
+    if choice < 0:
+        return
+    if choice == 0:
+        _mdblist_test_show(mdblist_pair)
+        return
+    if choice == 1:
+        # Replace: like Gemini, don't clear the working key up front -- the new
+        # one only overwrites once it validates + saves in _test_save_mdblist.
+        _mdblist_menu_new(kodi_utils, gemini_pair, mdblist_pair)
+        return
+    if choice == 2:
+        if xbmcgui.Dialog().yesno('Kodi POV IL', 'לנתק את MDBList?'):
+            if _mdblist_apply_disconnect():
+                try:
+                    _mdblist_clear_acctmgr()
+                except Exception as e:
+                    _safe_log('mdblist acctmgr clear failed: {0}'.format(e),
+                              level='WARNING')
+                kodi_utils.notify('MDBList נותק', time_ms=3000)
+            else:
+                xbmcgui.Dialog().ok(
+                    'MDBList - ניתוק נכשל',
+                    'לא הצלחנו לעדכן את הגדרות POV.\n\n'
+                    'ודא שהתוסף POV (plugin.video.pov) מותקן, נסה לסגור את '
+                    'Kodi לחלוטין ולהפעיל מחדש, ואז לחזור לכאן.')
+
+
+def _mdblist_test_show(mdblist_pair):
+    ok = mdblist_pair.validate_key(_mdblist_get_token())
+    if ok is True:
+        body = '✓ החיבור תקין. MDBList מחובר.'
+    elif ok is False:
+        body = 'המפתח נדחה ע"י MDBList. כדאי להחליף אותו.'
+    else:
+        body = 'לא ניתן לאמת כרגע (בעיית רשת?). נסה שוב מאוחר יותר.'
+    try:
+        xbmcgui.Dialog().ok('MDBList - בדיקת חיבור', body)
+    except Exception:
+        pass
+
+
+def _mdblist_menu_new(kodi_utils, gemini_pair, mdblist_pair):
+    options = [
+        '📱 התאמה מטלפון / מכשיר אחר (QR + URL)',
+        '⌨️ הזנת ה-key ידנית כאן',
+    ]
+    try:
+        choice = xbmcgui.Dialog().select('MDBList - איך להתחבר?', options)
+    except Exception:
+        choice = -1
+    if choice < 0:
+        return
+    if choice == 0:
+        _mdblist_pair_flow(kodi_utils, gemini_pair, mdblist_pair)
+        return
+    if choice == 1:
+        _mdblist_type_flow(kodi_utils, mdblist_pair)
+
+
+def _mdblist_pair_flow(kodi_utils, gemini_pair, mdblist_pair):
+    """Shared pair server with the MDBList form: show the QR, poll, validate,
+    save."""
+    try:
+        ps = gemini_pair.PairServer(html_form=mdblist_pair.MDBLIST_FORM)
+    except Exception as e:
+        xbmcgui.Dialog().ok(
+            'Kodi POV IL',
+            'נכשלה הפעלת שרת התאמה: {0}\n\n'
+            'אפשר לחזור לתפריט ולבחור "הזנה ידנית" במקום.'
+            .format(str(e)[:80]))
+        return
+    key = _run_pair_qr(ps, 'MDBList - התאמה מטלפון')
+    if not key:
+        return
+    _test_save_mdblist(kodi_utils, mdblist_pair, key)
+
+
+def _mdblist_type_flow(kodi_utils, mdblist_pair):
+    """Typed-input flow: like Gemini's, validate before save with a retry loop.
+    Manual entry has no phone-side pre-validation, so (unlike the QR flow) an
+    unverified key is never stored -- retry=True makes _test_save_mdblist offer
+    a retry instead of saving on a bad/ambiguous result."""
+    xbmcgui.Dialog().ok(
+        'MDBList - איך משיגים API key',
+        'פתח בדפדפן (במחשב/טלפון):\n'
+        '   https://mdblist.com/preferences\n\n'
+        'העתק את ה-API key והדבק במסך הבא.')
+    while True:
+        try:
+            key = (xbmcgui.Dialog().input('MDBList API Key:') or '').strip()
+        except Exception:
+            key = ''
+        if not key:
+            return
+        res = _test_save_mdblist(kodi_utils, mdblist_pair, key, retry=True)
+        if res != 'retry':
+            return
+
+
+def _mdblist_reject(reason, retry):
+    """Bad/unverifiable key: don't save. When retry is True (manual entry) offer
+    a retry loop and return 'retry'/'cancel'; otherwise just report and 'cancel'."""
+    if retry:
+        again = xbmcgui.Dialog().yesno(
+            'MDBList - בדיקה נכשלה',
+            reason + '\n\nלנסות שוב?',
+            nolabel='ביטול', yeslabel='נסה שוב')
+        return 'retry' if again else 'cancel'
+    xbmcgui.Dialog().ok(
+        'MDBList - בדיקה נכשלה',
+        reason + '\n\nהעתק אותו שוב במלואו מ-mdblist.com/preferences ונסה שוב.')
+    return 'cancel'
+
+
+def _mdblist_surface_lists():
+    """Add the MDBList "My Movies / My Series" home tiles and POV personal-area
+    rows the moment MDBList is connected, instead of on some later boot.
+
+    Both patchers are gated on POV holding an mdblist.token, so until now the
+    earliest they could fire was the next Kodi start -- and because Kodi caches
+    favourites.xml in memory at profile load and never re-reads it, that start
+    only wrote the tiles; a SECOND one was needed to show them. Users reported
+    exactly that as "I connected MDBList, ran a quick update, and the lists
+    still aren't on the home screen". Running them here, with the key already
+    stored, collapses that to zero restarts: the tile patcher pushes the new
+    tiles into the running favourites list itself.
+
+    Entirely best-effort -- a failure just restores the old behaviour of the
+    tiles arriving on a later boot, so nothing here may raise into the connect
+    flow that has already succeeded."""
+    try:
+        from resources.lib import favourites_personal_tiles_patcher
+        favourites_personal_tiles_patcher.ensure_patched()
+    except Exception as e:
+        _safe_log('mdblist tiles after connect failed: {0}'.format(e),
+                  level='WARNING')
+    try:
+        from resources.lib import pov_navigator_patcher
+        pov_navigator_patcher.maybe_fix_personal_area_lists()
+    except Exception as e:
+        _safe_log('mdblist personal-area row after connect failed: '
+                  '{0}'.format(e), level='WARNING')
+
+
+def _test_save_mdblist(kodi_utils, mdblist_pair, key, retry=False):
+    """Validate the key against MDBList, then store it with the SAME side-effects
+    POV's native MDBList connect applies (account name, token, watched-indicator
+    active, watched-status provider). Returns 'ok' / 'cancel' / 'retry'.
+
+      status True  -> save + success                                   -> 'ok'
+      status False -> reject (never saved)                             -> retry/'cancel'
+      status None  -> transient. From the QR flow (retry=False) the phone
+                      already validated the key, so save anyway with a soft
+                      note ('ok'); from manual entry (retry=True) there was no
+                      pre-validation, so don't save -- offer a retry.
+    """
+    kodi_utils.notify('MDBList: בודק...', time_ms=2000)
+    status, username = mdblist_pair.validate_key_full(key)
+
+    if status is False:
+        return _mdblist_reject('המפתח נדחה ע"י MDBList.', retry)
+    if status is None and retry:
+        return _mdblist_reject(
+            'לא הצלחנו לאמת את המפתח מול MDBList (בעיית רשת?).', retry)
+
+    # status is True, or (status is None from the already-phone-validated QR
+    # flow) -> commit POV's native connect settings.
+    if not _mdblist_apply_connect(key, username):
+        xbmcgui.Dialog().ok(
+            'MDBList - שמירה נכשלה',
+            'המפתח אומת, אבל לא הצלחנו לשמור אותו בהגדרות POV.\n\n'
+            'ודא שהתוסף POV (plugin.video.pov) מותקן, נסה לסגור את Kodi '
+            'לחלוטין ולהפעיל מחדש, ואז לחזור לכאן.')
+        return 'cancel'
+
+    # Belt and braces: the connect has already succeeded and been persisted at
+    # this point, so nothing cosmetic below it may be able to turn that into a
+    # failure the user sees.
+    try:
+        _mdblist_surface_lists()
+    except Exception as e:
+        _safe_log('mdblist surfacing after connect failed: {0}'.format(e),
+                  level='WARNING')
+    spread = False
+    try:
+        spread = _mdblist_push_to_acctmgr(key, username)
+    except Exception as e:
+        _safe_log('mdblist -> acctmgr push failed: {0}'.format(e),
+                  level='WARNING')
+
+    if status is None:
+        xbmcgui.Dialog().ok(
+            'MDBList',
+            'המפתח נשמר. לא הצלחנו לאמת אותו כרגע מול MDBList (רשת?), '
+            'אבל הוא ייבדק בשימוש.\n\n'
+            'סטטוס הצפייה וההמשך-צפייה יסופקו כעת ע"י MDBList '
+            '(ניתן לשנות ב-POV: Features / Watched Indicators).')
+    else:
+        xbmcgui.Dialog().ok(
+            'MDBList',
+            '✓ החיבור הצליח. MDBList מחובר.\n\n'
+            'סטטוס הצפייה וההמשך-צפייה יסופקו כעת ע"י MDBList '
+            '(ניתן לשנות ב-POV: Features / Watched Indicators).'
+            + ('\n\nהמפתח מסונכרן כעת גם לשאר התוספים.' if spread else '')
+            + '\n\nאם הרשימות לא מופיעות מיד, ייתכן שיהיה צורך להפעיל מחדש '
+              'את POV.')
+    # Last of all -- see _mdblist_acctmgr_resync for why the order matters.
+    if spread:
+        _mdblist_acctmgr_resync()
+    return 'ok'
 
 
 def _test_save_or_retry(kodi_utils, gemini, api_key, retry_cb):
@@ -1505,8 +2260,8 @@ def _handle_test_connection(_params):
         return
 
     api_key = kodi_utils.get_setting('api_key', '')
-    model   = kodi_utils.get_setting('model', 'gemini-3.1-flash-lite') \
-              or 'gemini-3.1-flash-lite'
+    model   = kodi_utils.get_setting('model', 'gemini-3.5-flash-lite') \
+              or 'gemini-3.5-flash-lite'
 
     if not api_key:
         xbmcgui.Dialog().ok('Kodi POV IL', kodi_utils.localised(33002))
@@ -1517,9 +2272,12 @@ def _handle_test_connection(_params):
         # Test-connection is the canonical "I've adopted this addon"
         # moment; make sure DarkSubs's hook is in place right now so
         # the next subtitle pick already routes through our AI.
+        # Skipped when the engine is on (DarkSubs deliberately disabled).
         try:
-            from resources.lib import dark_subs_integration
-            dark_subs_integration.maybe_patch_darksubs()
+            from resources.lib import subs_engine_bridge as _seb_gate
+            if not _seb_gate.enabled():
+                from resources.lib import dark_subs_integration
+                dark_subs_integration.maybe_patch_darksubs()
         except Exception:
             pass
         xbmcgui.Dialog().ok('Kodi POV IL',
@@ -1938,14 +2696,26 @@ def _handle_translate_file(params):
             with open(translated_path, 'r', encoding='utf-8',
                       errors='replace') as f:
                 hebrew = f.read()
-            # Belt-and-suspenders: re-apply the RTL punctuation fix
-            # right before delivery. resolve() does this on cache hits
-            # too, but applying it again here catches the case where
-            # the cache file slipped through (e.g., a write race or a
-            # file the migration hasn't reached yet).
+            # Belt-and-suspenders: re-apply the display AND timing repairs
+            # right before delivery. resolve() does this on cache hits too, but
+            # applying it again here catches the case where the cache file
+            # slipped through (e.g., a write race or a file the migration hasn't
+            # reached yet) -- which is precisely when an unrepaired runaway cue
+            # would reach the player, so the timing bound belongs here as much
+            # as the punctuation one.
             try:
                 from resources.lib import srt as _srt
-                hebrew = _srt.fix_rtl_punctuation(hebrew)
+                # One provenance answer, used by both text-DELETING repairs:
+                # the Arabic strip and the source-echo strip. The glyph fold is
+                # not gated -- it rewrites a character as itself -- but it must
+                # run before fix_rtl_punctuation, which re-adds the RLE/PDF it
+                # removes.
+                _ai = _srt.may_carry_arabic_leak(translated_path)
+                _hb = _srt.strip_leaked_arabic(hebrew) if _ai else hebrew
+                if _ai:
+                    _hb = _srt.strip_source_echo(_hb)
+                hebrew = _srt.clamp_cue_durations(
+                    _srt.fix_rtl_punctuation(_srt.normalize_glyphs(_hb)))
             except Exception:
                 pass
             # Write atomically: temp file in same dir, then rename. This
@@ -2092,13 +2862,26 @@ def _handle_translate_file(params):
                 _canonical_swap_succeeded = False
                 if payload.get('success'):
                     try:
-                        from resources.lib import cache as _cache
-                        canonical = _cache.translated_path(
-                            (info.get('imdb_id') or '').strip(),
-                            info.get('season') or '',
-                            info.get('episode') or '',
-                            'en',
-                            source_id=payload['source_id'])
+                        # USE THE PATH resolve() REPORTS. Recomputing it here
+                        # was wrong twice over: translated_path() was called
+                        # without tier=, while resolve() writes with tier='ar'
+                        # whenever a gender reference was found (the default,
+                        # and force-enabled by migration), and the source
+                        # language was hardcoded 'en'. So this file did not
+                        # exist on most jobs, the swap below was skipped, and
+                        # the viewer kept the last progressive SLOT file --
+                        # partly source text if the translation was
+                        # interrupted. The recompute stays only as a fallback
+                        # for a payload from an older resolve().
+                        canonical = payload.get('path') or ''
+                        if not canonical:
+                            from resources.lib import cache as _cache
+                            canonical = _cache.translated_path(
+                                (info.get('imdb_id') or '').strip(),
+                                info.get('season') or '',
+                                info.get('episode') or '',
+                                'en',
+                                source_id=payload['source_id'])
                         if os.path.isfile(canonical):
                             # Name the delivered file after the source RELEASE so
                             # Kodi shows the full release name (not a hash); fall
@@ -2128,10 +2911,28 @@ def _handle_translate_file(params):
                                 # NOT gated on isPlayingVideo -- if
                                 # the user paused mid-translation,
                                 # setSubtitles is still useful for
-                                # the resume. try/except is the only
-                                # guard we need.
+                                # the resume.
+                                #
+                                # try/except is NOT the only guard we
+                                # need, which is what this comment used
+                                # to claim. setSubtitles() posts to the
+                                # VideoPlayer thread and returns before
+                                # the stream is registered, so it not
+                                # raising proves nothing -- and reading
+                                # the stream list on the next line
+                                # returned the PRE-add list, so the
+                                # "most-recently-added stream" picked
+                                # below was really the last progressive
+                                # SLOT, which the cleanup then deleted.
+                                # Count before, wait for the count to
+                                # grow, and only then claim success.
                                 try:
                                     p = xbmc.Player()
+                                    try:
+                                        _before = len(
+                                            p.getAvailableSubtitleStreams() or [])
+                                    except Exception:
+                                        _before = -1
                                     p.setSubtitles(_final_path)
                                     p.showSubtitles(True)
                                     # Explicit stream selection: when
@@ -2146,14 +2947,41 @@ def _handle_translate_file(params):
                                     # (always ours) pins the active
                                     # selection to the translation we
                                     # just produced.
-                                    try:
-                                        _streams = p.getAvailableSubtitleStreams()
-                                        if _streams:
-                                            p.setSubtitleStream(
-                                                len(_streams) - 1)
-                                    except Exception:
-                                        pass
-                                    _canonical_swap_succeeded = True
+                                    _grew = False
+                                    if _before >= 0:
+                                        for _ in range(20):      # <= 1s
+                                            xbmc.sleep(50)
+                                            try:
+                                                _streams = (
+                                                    p.getAvailableSubtitleStreams()
+                                                    or [])
+                                            except Exception:
+                                                break
+                                            if len(_streams) > _before:
+                                                _grew = True
+                                                try:
+                                                    p.setSubtitleStream(
+                                                        len(_streams) - 1)
+                                                except Exception:
+                                                    pass
+                                                break
+                                    if not _grew and not _playing_now():
+                                        # Nobody to strand: with no player
+                                        # there is no stream pointing at a
+                                        # slot file, so deleting is safe --
+                                        # and is the outcome we want, or the
+                                        # slots pile up on every job that
+                                        # outlives playback.
+                                        _grew = True
+                                    elif not _grew:
+                                        _safe_log(
+                                            'translate_file: Kodi did not '
+                                            'register the final subtitle '
+                                            'stream -- keeping the progressive '
+                                            'slots rather than deleting a file '
+                                            'the player may still be on',
+                                            level='WARNING')
+                                    _canonical_swap_succeeded = _grew
                                 except Exception as _se:
                                     _safe_log(
                                         'translate_file fast done '
@@ -2234,7 +3062,15 @@ def _handle_translate_file(params):
                         _content = _f.read()
                     try:
                         from resources.lib import srt as _srt
-                        _content = _srt.fix_rtl_punctuation(_content)
+                        # Same shape as the delivery repair above, same reasons.
+                        _ai = _srt.may_carry_arabic_leak(translated_path)
+                        _cb = (_srt.strip_leaked_arabic(_content)
+                               if _ai else _content)
+                        if _ai:
+                            _cb = _srt.strip_source_echo(_cb)
+                        _content = _srt.clamp_cue_durations(
+                            _srt.fix_rtl_punctuation(
+                                _srt.normalize_glyphs(_cb)))
                     except Exception:
                         pass
                     _tmp_out = out_path + '.aitmp'
@@ -2592,42 +3428,17 @@ def _handle_logout_telegram(_params):
         pass
 
 
-HE_AVAIL_CACHE = ('special://profile/addon_data/service.subtitles.kodipovilai/'
-                  'he_avail_cache.json')
-
-
-def _he_avail_store(mk, names, embedded=None, ttl=0):
-    """Merge {mk: {ts, names, embedded, ttl}} into the shared he_avail cache that
-    POV's source window reads (he_sub_match._cache_entry). `ttl` is the chosen
-    re-warm interval for this title (short while it's still gaining Hebrew / has
-    none, long once stable). Atomic + size-bounded."""
-    if xbmcvfs is None:
-        return
-    try:
-        import json as _json
-        import time as _time
-        path = xbmcvfs.translatePath(HE_AVAIL_CACHE)
-        data = {}
-        if os.path.isfile(path):
-            try:
-                with open(path, 'r', encoding='utf-8') as f:
-                    data = _json.load(f) or {}
-            except Exception:
-                data = {}
-        data[mk] = {'ts': _time.time(), 'names': list(names),
-                    'embedded': list(embedded or []), 'ttl': float(ttl or 0)}
-        # Keep the newest ~400 titles so the file can't grow without bound.
-        if len(data) > 400:
-            newest = sorted(data.items(), key=lambda kv: kv[1].get('ts', 0),
-                            reverse=True)[:400]
-            data = dict(newest)
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        tmp = path + '.tmp'
-        with open(tmp, 'w', encoding='utf-8') as f:
-            _json.dump(data, f, ensure_ascii=False)
-        os.replace(tmp, path)
-    except Exception as e:
-        _safe_log('he_avail store failed: {0}'.format(e), level='WARNING')
+# _he_avail_store AND ITS HE_AVAIL_CACHE PATH USED TO LIVE HERE. Both were
+# dead -- nothing called the function, nothing read the constant, and the only
+# thing that named either was a comment in he_sub_match pointing here as the
+# other writer of that cache.
+#
+# NOT HARMLESS DEAD CODE. It wrote `names` and `embedded` with no bound, and
+# OVERWROTE the embedded list instead of unioning it: the two bugs the live
+# warm path had to be fixed for, the second of which wiped a built-in-Hebrew
+# flag the device had just detected itself. Anyone reviving it, or copying
+# from it because it looked like the shorter version of the same job, would
+# have brought both back. he_sub_match._store_avail is the one writer.
 
 
 def _handle_he_avail(params):
@@ -2653,146 +3464,12 @@ def _handle_he_avail(params):
         if not blob:
             return
         info = _json.loads(base64.b64decode(blob).decode('utf-8'))
-        mk = (info.get('mk') or '').strip()
-        if not mk:
-            return
-        is_ep = (info.get('type') == 'episode')
-
-        def _merge(dst, seen, items):
-            for rel in items or []:
-                low = (rel or '').strip().lower()
-                if low and low not in seen:
-                    seen.add(low)
-                    dst.append(rel)
-
-        names, seen = [], set()
-        embedded = []
-        kt_pool_names, kt_checked, kt_changed = [], 0.0, 0.0
-
-        # 1) Community pool + Wizdom (+ embedded flags + shared Ktuvit registry).
-        try:
-            from resources.lib import he_sub_match as _hsm
-            _p = {
-                'tmdb': info.get('tmdb', ''), 'imdb': info.get('imdb', ''),
-                'type': 'episode' if is_ep else 'movie',
-                'season': info.get('season', '0') if is_ep else '0',
-                'episode': info.get('episode', '0') if is_ep else '0',
-                'lang': 'he',
-            }
-            av = _hsm.availability(_p)
-            embedded = av.get('embedded') or []
-            kt_pool_names = av.get('ktuvit') or []
-            kt_checked = av.get('ktuvit_checked') or 0.0
-            kt_changed = av.get('ktuvit_changed') or 0.0
-            _merge(names, seen, av.get('names') or [])
-        except Exception as e:
-            _safe_log('he_avail pool/wizdom failed: {0}'.format(e),
-                      level='WARNING')
-
-        bridge_info = {
-            'imdb_id': info.get('imdb', ''),
-            'tmdb_id': info.get('tmdb', ''),
-            'title': info.get('title', ''),
-            'tvshow': info.get('tvshow', ''),
-            'year': info.get('year', ''),
-            'season': info.get('season', '') if is_ep else '',
-            'episode': info.get('episode', '') if is_ep else '',
-            'is_episode': is_ep,
-        }
-        from resources.lib import subs_engine_bridge as bridge
-        bridge.ensure_engine_settings()
-        vd = bridge.build_video_data(bridge_info)
-
-        # 2) OpenSubtitles (rotating keys -- safe to hit on browse).
-        try:
-            from resources.lib.subs_engine.sources import opensubtitles
-            opensubtitles.global_var = []
-            opensubtitles.get_subs(vd, True)  # all languages; we keep Hebrew
-            os_names = []
-            for d in (opensubtitles.global_var or []):
-                lang = (d.get('label') or '').strip().lower()
-                code = (d.get('thumbnailImage') or '').strip().lower()
-                if lang == 'hebrew' or code in ('he', 'heb', 'iw'):
-                    fn = (d.get('filename') or '').strip()
-                    if fn:
-                        os_names.append(fn)
-            _merge(names, seen, os_names)
-        except Exception as e:
-            _safe_log('he_avail opensubtitles failed: {0}'.format(e),
-                      level='WARNING')
-
-        # 3) Ktuvit via the SHARED registry. We hit the rate-limited shared
-        #    Ktuvit account at most ~once per title GLOBALLY: if the pool already
-        #    has a fresh Ktuvit result, just use it (no Ktuvit call); only when
-        #    it's missing/stale does THIS client check Ktuvit once and publish
-        #    the result back for everyone. Gated by `he_match_ktuvit`.
-        try:
-            from resources.lib import kodi_utils as _ku
-            ktuvit_ok = _ku.get_setting('he_match_ktuvit', 'true') != 'false'
-        except Exception:
-            ktuvit_ok = True
-        import time as _time
-        _now = _time.time()
-        # Re-check Ktuvit OFTEN while a title is still GAINING Hebrew (a new
-        # release gets 1 sub today, 3 more tomorrow...), and only back off once
-        # the list has been STABLE for a while. 'changed' = when the shared
-        # registry last grew; a title is "active" until it's been unchanged for
-        # _KT_STABILIZE. So new content is re-checked every few hours and catches
-        # subs as they trickle in; mature content settles to a long interval.
-        # Still ~one Ktuvit call per title globally per window.
-        _KT_SHORT = 8 * 3600.0            # 8 hours while still active
-        _KT_LONG = 30 * 24 * 3600.0       # 30 days once stable
-        _KT_STABILIZE = 14 * 24 * 3600.0  # "active" window since last growth
-        kt_active = (not kt_changed) or ((_now - float(kt_changed)) < _KT_STABILIZE)
-        if ktuvit_ok:
-            _kt_ttl = _KT_SHORT if kt_active else _KT_LONG
-            fresh = kt_checked and (_now - float(kt_checked)) < _kt_ttl
-            if fresh:
-                _merge(names, seen, kt_pool_names)   # shared cache hit -- no call
-            else:
-                try:
-                    from resources.lib.subs_engine.sources import ktuvit as _kt
-                    _kt.global_var = []
-                    _kt.get_subs(vd)
-                    kt_names = []
-                    for d in (_kt.global_var or []):
-                        fn = (d.get('filename') or '').strip()
-                        if fn:
-                            kt_names.append(fn)
-                    _merge(names, seen, kt_names)
-                    # Publish to the shared registry so nobody else has to ask
-                    # Ktuvit (even an empty result records "checked").
-                    try:
-                        from resources.lib import pool as _pool
-                        _pool.report_ktuvit({
-                            'tmdb_id': info.get('tmdb', ''),
-                            'imdb_id': info.get('imdb', ''),
-                            'is_episode': is_ep,
-                            'season': info.get('season', '0') if is_ep else '0',
-                            'episode': info.get('episode', '0') if is_ep else '0',
-                        }, kt_names)
-                    except Exception:
-                        pass
-                except Exception as e:
-                    _safe_log('he_avail ktuvit check failed: {0}'.format(e),
-                              level='WARNING')
-
-        # Pick how soon POV's window should re-warm this title: often while it's
-        # still in flux (no human Hebrew yet, or Ktuvit still gaining subs), and
-        # rarely once it's stable -- so new releases refresh fast for everyone
-        # without re-warming mature titles needlessly.
-        _LOCAL_SHORT = 8 * 3600.0
-        _LOCAL_LONG = 7 * 24 * 3600.0
-        if not names:
-            local_ttl = _LOCAL_SHORT          # nothing yet -- keep looking
-        elif ktuvit_ok and kt_active:
-            local_ttl = _LOCAL_SHORT          # still gaining Ktuvit subs
-        else:
-            local_ttl = _LOCAL_LONG           # stable
-        _he_avail_store(mk, names, embedded, local_ttl)
-        _safe_log('he_avail: stored {0} Hebrew release names ({1} embedded) '
-                  'for {2} (ttl={3}h)'.format(
-                      len(names), len(embedded), mk, int(local_ttl / 3600)))
+        # Delegate to the shared, parallelized warm in he_sub_match so the
+        # RunScript fallback path and the in-service queue drainer run IDENTICAL
+        # logic (pool+Wizdom fetched concurrently with OpenSubtitles, Ktuvit as a
+        # gated shared-registry fallback, then written to the badge cache).
+        from resources.lib import he_sub_match as _hsm
+        _hsm.run_warm(info)
     except Exception as e:
         _safe_log('he_avail crashed: {0}'.format(e), level='WARNING')
 
@@ -2984,6 +3661,31 @@ def main():
             _handle_test_connection(params)
         elif action == 'connect_gemini':
             _handle_connect_gemini(params)
+        elif action == 'mdblist_mirror_umbrella':
+            # POV has just finished its own MDBList authorisation (or revoked
+            # it). Hand the access token to Umbrella so one authorisation
+            # covers both.
+            #
+            # `connected=1` is set by the Connect Services row itself, and
+            # ONLY when POV's token actually changed across POV's own set() --
+            # so it means a human authorised the service, not that they
+            # declined a confirmation and not that POV rotated the token on
+            # its own timer. Both of those were tried as signals from out here
+            # and both silently reverted settings people had chosen; this one
+            # is measured at the click rather than inferred after it. Nothing
+            # else in the build may pass it.
+            connected = params.get('connected') == '1'
+            try:
+                from resources.lib import mdblist_umbrella_mirror
+                _safe_log('mdblist mirror: '
+                          + mdblist_umbrella_mirror.mirror(reclaim=connected))
+            except Exception as e:
+                _safe_log('mdblist mirror failed: {0}'.format(e),
+                          level='WARNING')
+        elif action == 'connect_mdblist':
+            _handle_connect_mdblist(params)
+        elif action == 'search_provider':
+            _handle_search_provider(params)
         elif action == 'show_gemini_usage':
             _handle_show_gemini_usage(params)
         elif action == 'open_tmdb_notice':
