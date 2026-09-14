@@ -283,200 +283,67 @@ def save_menu():
     
     on = '[COLOR springgreen]ON[/COLOR]'
     off = '[COLOR red]OFF[/COLOR]'
-    
-    # github_custom_save_data_config = 'true' if CONFIG.USE_GITHUB_CUSTOM_SAVE_DATA_CONFIG == 'true' else 'false'
-    trakt = 'true' if CONFIG.KEEPTRAKT == 'true' else 'false'
-    debrid = 'true' if CONFIG.KEEPDEBRID == 'true' else 'false'
-    login = 'true' if CONFIG.KEEPLOGIN == 'true' else 'false'
-    fendata = 'true' if CONFIG.KEEPFENDATA == 'true' else 'false'
-    twilightdata = 'true' if CONFIG.KEEPTWILIGHTDATA == 'true' else 'false'
-    fentasticdata = 'true' if CONFIG.KEEPFENTASTICDATA == 'true' else 'false'
-    favourites = 'true' if CONFIG.KEEPFAVS == 'true' else 'false'
-    sources = 'true' if CONFIG.KEEPSOURCES == 'true' else 'false'
-    advanced = 'true' if CONFIG.KEEPADVANCED == 'true' else 'false'
-    profiles = 'true' if CONFIG.KEEPPROFILES == 'true' else 'false'
-    playercore = 'true' if CONFIG.KEEPPLAYERCORE == 'true' else 'false'
-    guisettings = 'true' if CONFIG.KEEPGUISETTINGS == 'true' else 'false'
-    repos = 'true' if CONFIG.KEEPREPOS == 'true' else 'false'
-    super = 'true' if CONFIG.KEEPSUPER == 'true' else 'false'
-    whitelist = 'true' if CONFIG.KEEPWHITELIST == 'true' else 'false'
-    addons33db = 'true' if CONFIG.KEEPADDONS33DB == 'true' else 'false'
-        
-    directory.add_dir('שמורים Trakt נתוני', {'mode': 'trakt'}, icon=CONFIG.ICONTRAKT, themeit=CONFIG.THEME1)
-    directory.add_dir('שמורים Debrid נתוני', {'mode': 'realdebrid'}, icon=CONFIG.ICONDEBRID, themeit=CONFIG.THEME1)
+
+    # Check new config keys (defaulting to false if not set yet)
+    acctmgrdata = 'true' if getattr(CONFIG, 'KEEPACCTMGR', 'false') == 'true' else 'false'
+    povdata = 'true' if getattr(CONFIG, 'KEEPPOVDATA', 'false') == 'true' else 'false'
+    umbrelladata = 'true' if getattr(CONFIG, 'KEEPUMBRELLADATA', 'false') == 'true' else 'false'
+
+    fentasticdata = 'true' if getattr(CONFIG, 'KEEPFENTASTICDATA', 'false') == 'true' else 'false'
+    favourites = 'true' if getattr(CONFIG, 'KEEPFAVS', 'false') == 'true' else 'false'
+    sources = 'true' if getattr(CONFIG, 'KEEPSOURCES', 'false') == 'true' else 'false'
+    guisettings = 'true' if getattr(CONFIG, 'KEEPGUISETTINGS', 'false') == 'true' else 'false'
+    repos = 'true' if getattr(CONFIG, 'KEEPREPOS', 'false') == 'true' else 'false'
+    whitelist = 'true' if getattr(CONFIG, 'KEEPWHITELIST', 'false') == 'true' else 'false'
+    addons33db = 'true' if getattr(CONFIG, 'KEEPADDONS33DB', 'false') == 'true' else 'false'
+
+    directory.add_dir('חיבור שירותים (Account Manager)', {'mode': 'run_acctmgr'}, icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME1)
+
     directory.add_file('- לחץ להפעלה או ביטול של ההגדרה -', themeit=CONFIG.THEME3)
-    # directory.add_file('GitHub-קבל הגדרות שמירת נתונים מ: {0}'.format(github_custom_save_data_config.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'use_github_custom_save_data_config'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
-    directory.add_file('Trakt שמירת חשבון: {0}'.format(trakt.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'keeptrakt'}, icon=CONFIG.ICONTRAKT, themeit=CONFIG.THEME1)
-    directory.add_file('Debrid שמירת חשבון: {0}'.format(debrid.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'keepdebrid'}, icon=CONFIG.ICONDEBRID, themeit=CONFIG.THEME1)
-    directory.add_file('Twilight שמירת נתוני: {0}'.format(twilightdata.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'keeptwilightdata'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
+
+    # New Targeted Backup Toggles
+    directory.add_file('Account Manager Lite שמירת נתוני: {0}'.format(acctmgrdata.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'keepacctmgr'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
+    directory.add_file('POV שמירת נתוני: {0}'.format(povdata.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'keeppovdata'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
+    directory.add_file('Umbrella שמירת נתוני: {0}'.format(umbrelladata.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'keepumbrelladata'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
+
+    # Core Backup Toggles
     directory.add_file('FENtastic שמירת עיצוב סקין: {0}'.format(fentasticdata.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'keepfentasticdata'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
     directory.add_file('שמירת הגדרות קודי פנימיות: {0}'.format(guisettings.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'keepguisettings'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
     directory.add_file('Favourites.xml שמירת מועדפים קודי: {0}'.format(favourites.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'keepfavourites'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
     directory.add_file('Sources.xml שמירת: {0}'.format(sources.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'keepsources'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
     directory.add_file('שמירת מאגרי הרחבות: {0}'.format(repos.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'keeprepos'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
     directory.add_file('שמירת הרחבות מותקנות: {0}'.format(whitelist.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'keepwhitelist'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
+
     if whitelist == 'true':
         directory.add_file('עריכת רשימת הרחבות לשמירה', {'mode': 'whitelist', 'name': 'edit'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
         directory.add_file('צפיה ברשימת הרחבות שמורות', {'mode': 'whitelist', 'name': 'view'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
         directory.add_file('ניקוי רשימת הרחבות שמורות', {'mode': 'whitelist', 'name': 'clear'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
         directory.add_file('ייבוא רשימת הרחבות לשמירה', {'mode': 'whitelist', 'name': 'import'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
         directory.add_file('ייצוא רשימת הרחבות שמורות', {'mode': 'whitelist', 'name': 'export'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
-    directory.add_file('(הסרטים/הסדרות שלי) Fen שמירת מועדפי: {0}'.format(fendata.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'keepfendata'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
+
     directory.add_file('Addons33.db שמירת: {0}'.format(addons33db.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'keepaddons33db'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
-    #directory.add_file('ייבוא נתונים שמורים', {'mode': 'managedata', 'name': 'import'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
-    #directory.add_file('ייצוא נתונים שמורים', {'mode': 'managedata', 'name': 'export'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
-    #directory.add_dir('Keep Login Info', {'mode': 'login'}, icon=CONFIG.ICONLOGIN, themeit=CONFIG.THEME1)
-    #directory.add_file('Save Login Info: {0}'.format(login.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'keeplogin'}, icon=CONFIG.ICONLOGIN, themeit=CONFIG.THEME1)
-    #directory.add_file('Profiles.xml שמירת': {0}'.format(profiles.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'keepprofiles'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
-    #directory.add_file('playercorefactory.xml שמירת': {0}'.format(playercore.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'keepplayercore'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
-    #directory.add_file('Advancedsettings.xml שמירת: {0}'.format(advanced.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'keepadvanced'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
-    #directory.add_file('Keep Super Favourites: {0}'.format(super.replace('true', on).replace('false', off)), {'mode': 'togglesetting', 'name': 'keepsuper'}, icon=CONFIG.ICONSAVE, themeit=CONFIG.THEME1)
 
+def acctmgr_menu():
+    """Generates a dedicated Account Manager submenu."""
+    directory.add_file('[B]הפעלת (Account Manager)[/B]', {'mode': 'run_acctmgr'}, icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME1)
+    directory.add_separator()
 
-def trakt_menu():
-    from resources.libs import traktit
-
-    keep_trakt = '[COLOR springgreen]ON[/COLOR]' if CONFIG.KEEPTRAKT == 'true' else '[COLOR red]OFF[/COLOR]'
-    last = str(CONFIG.TRAKTSAVE) if not CONFIG.TRAKTSAVE == '' else 'Trakt hasn\'t been saved yet.'
-    directory.add_file('[I]Register FREE Account at https://www.trakt.tv/[/I]', icon=CONFIG.ICONTRAKT, themeit=CONFIG.THEME3)
-    directory.add_file('Save Trakt Data: {0}'.format(keep_trakt), {'mode': 'togglesetting', 'name': 'keeptrakt'}, icon=CONFIG.ICONTRAKT, themeit=CONFIG.THEME3)
-    if CONFIG.KEEPTRAKT == 'true':
-        directory.add_file('Last Save: {0}'.format(str(last)), icon=CONFIG.ICONTRAKT, themeit=CONFIG.THEME3)
-    directory.add_separator(icon=CONFIG.ICONTRAKT, themeit=CONFIG.THEME3)
-
-    for trakt in traktit.ORDER:
-        if xbmc.getCondVisibility('System.HasAddon({0})'.format(traktit.TRAKTID[trakt]['plugin'])):
-            name = traktit.TRAKTID[trakt]['name']
-            path = traktit.TRAKTID[trakt]['path']
-            saved = traktit.TRAKTID[trakt]['saved']
-            file = traktit.TRAKTID[trakt]['file']
-            user = CONFIG.get_setting(saved)
-            auser = traktit.trakt_user(trakt)
-            icon = traktit.TRAKTID[trakt]['icon'] if os.path.exists(path) else CONFIG.ICONTRAKT
-            fanart = traktit.TRAKTID[trakt]['fanart'] if os.path.exists(path) else CONFIG.ADDON_FANART
-            menu = create_addon_data_menu('Trakt', trakt)
-            menu2 = create_save_data_menu('Trakt', trakt)
-            menu.append((CONFIG.THEME2.format('{0} Settings'.format(name)), 'RunPlugin(plugin://{0}/?mode=opensettings&name={1}&url=trakt)'.format(CONFIG.ADDON_ID, trakt)))
-
-            directory.add_file('[+]-> {0}'.format(name), icon=icon, fanart=fanart, themeit=CONFIG.THEME3)
-            if not os.path.exists(path):
-                directory.add_file('[COLOR red]Addon Data: Not Installed[/COLOR]', icon=icon, fanart=fanart, menu=menu)
-            elif not auser:
-                directory.add_file('[COLOR red]Addon Data: Not Registered[/COLOR]', {'mode': 'authtrakt', 'name': trakt}, icon=icon, fanart=fanart, menu=menu)
-            else:
-                directory.add_file('[COLOR springgreen]Addon Data: {0}[/COLOR]'.format(auser), {'mode': 'authtrakt', 'name': trakt}, icon=icon, fanart=fanart, menu=menu)
-            if user == "":
-                if os.path.exists(file):
-                    directory.add_file('[COLOR red]Saved Data: Save File Found(Import Data)[/COLOR]', {'mode': 'importtrakt', 'name': trakt}, icon=icon, fanart=fanart, menu=menu2)
-                else:
-                    directory.add_file('[COLOR red]Saved Data: Not Saved[/COLOR]', {'mode': 'savetrakt', 'name': trakt}, icon=icon, fanart=fanart, menu=menu2)
-            else:
-                directory.add_file('[COLOR springgreen]Saved Data: {0}[/COLOR]'.format(user), icon=icon, fanart=fanart, menu=menu2)
+    # Authorize
+    directory.add_file('Authorize Trakt', {'mode': 'run_acctmgr', 'action': 'traktAuth'}, icon=CONFIG.ICONTRAKT, themeit=CONFIG.THEME1)
+    directory.add_file('Authorize Real-Debrid', {'mode': 'run_acctmgr', 'action': 'realdebridAuth'}, icon=CONFIG.ICONDEBRID, themeit=CONFIG.THEME1)
+    directory.add_file('Authorize TorBox', {'mode': 'run_acctmgr', 'action': 'torboxAuth'}, icon=CONFIG.ICONDEBRID, themeit=CONFIG.THEME1)
+    directory.add_file('Authorize All-Debrid', {'mode': 'run_acctmgr', 'action': 'alldebridAuth'}, icon=CONFIG.ICONDEBRID, themeit=CONFIG.THEME1)
 
     directory.add_separator()
-    directory.add_file('Save All Trakt Data', {'mode': 'savetrakt', 'name': 'all'}, icon=CONFIG.ICONTRAKT, themeit=CONFIG.THEME3)
-    directory.add_file('Recover All Saved Trakt Data', {'mode': 'restoretrakt', 'name': 'all'}, icon=CONFIG.ICONTRAKT, themeit=CONFIG.THEME3)
-    directory.add_file('Import Trakt Data', {'mode': 'importtrakt', 'name': 'all'}, icon=CONFIG.ICONTRAKT, themeit=CONFIG.THEME3)
-    directory.add_file('Clear All Addon Trakt Data', {'mode': 'addontrakt', 'name': 'all'}, icon=CONFIG.ICONTRAKT, themeit=CONFIG.THEME3)
-    directory.add_file('Clear All Saved Trakt Data', {'mode': 'cleartrakt', 'name': 'all'}, icon=CONFIG.ICONTRAKT, themeit=CONFIG.THEME3)
 
+    # ReSync
+    directory.add_file('ReSync Trakt', {'mode': 'run_acctmgr', 'action': 'traktReSync'}, icon=CONFIG.ICONTRAKT, themeit=CONFIG.THEME1)
+    directory.add_file('ReSync TorBox', {'mode': 'run_acctmgr', 'action': 'torboxReSync'}, icon=CONFIG.ICONDEBRID, themeit=CONFIG.THEME1)
 
-def debrid_menu():
-    from resources.libs import debridit
+    directory.add_separator()
 
-    keep_debrid = '[COLOR springgreen]ON[/COLOR]' if CONFIG.KEEPDEBRID == 'true' else '[COLOR red]OFF[/COLOR]'
-    last = str(CONFIG.DEBRIDSAVE) if not CONFIG.DEBRIDSAVE == '' else 'Debrid authorizations haven\'t been saved yet.'
-    directory.add_file('[I]https://www.real-debrid.com/ is a PAID service.[/I]', icon=CONFIG.ICONDEBRID, themeit=CONFIG.THEME3)
-    directory.add_file('[I]https://www.premiumize.me/ is a PAID service.[/I]', icon=CONFIG.ICONDEBRID, themeit=CONFIG.THEME3)
-    directory.add_file('Save Debrid Data: {0}'.format(keep_debrid), {'mode': 'togglesetting', 'name': 'keepdebrid'}, icon=CONFIG.ICONDEBRID, themeit=CONFIG.THEME3)
-    if CONFIG.KEEPDEBRID == 'true':
-        directory.add_file('Last Save: {0}'.format(str(last)), icon=CONFIG.ICONDEBRID, themeit=CONFIG.THEME3)
-    directory.add_separator(icon=CONFIG.ICONDEBRID, themeit=CONFIG.THEME3)
-
-    for debrid in debridit.ORDER:
-        if xbmc.getCondVisibility('System.HasAddon({0})'.format(debridit.DEBRIDID[debrid]['plugin'])):
-            name = debridit.DEBRIDID[debrid]['name']
-            path = debridit.DEBRIDID[debrid]['path']
-            saved = debridit.DEBRIDID[debrid]['saved']
-            file = debridit.DEBRIDID[debrid]['file']
-            user = CONFIG.get_setting(saved)
-            auser = debridit.debrid_user(debrid)
-            icon = debridit.DEBRIDID[debrid]['icon'] if os.path.exists(path) else CONFIG.ICONDEBRID
-            fanart = debridit.DEBRIDID[debrid]['fanart'] if os.path.exists(path) else CONFIG.ADDON_FANART
-            menu = create_addon_data_menu('Debrid', debrid)
-            menu2 = create_save_data_menu('Debrid', debrid)
-            menu.append((CONFIG.THEME2.format('{0} Settings'.format(name)), 'RunPlugin(plugin://{0}/?mode=opensettings&name={1}&url=debrid)'.format(CONFIG.ADDON_ID, debrid)))
-
-            directory.add_file('[+]-> {0}'.format(name), icon=icon, fanart=fanart, themeit=CONFIG.THEME3)
-            if not os.path.exists(path):
-                directory.add_file('[COLOR red]Addon Data: Not Installed[/COLOR]', icon=icon, fanart=fanart, menu=menu)
-            elif not auser:
-                directory.add_file('[COLOR red]Addon Data: Not Registered[/COLOR]', {'mode': 'authdebrid', 'name': debrid}, icon=icon, fanart=fanart, menu=menu)
-            else:
-                directory.add_file('[COLOR springgreen]Addon Data: {0}[/COLOR]'.format(auser), {'mode': 'authdebrid', 'name': debrid}, icon=icon, fanart=fanart, menu=menu)
-            if user == "":
-                if os.path.exists(file):
-                    directory.add_file('[COLOR red]Saved Data: Save File Found (Import Data)[/COLOR]', {'mode': 'importdebrid', 'name': debrid}, icon=icon, fanart=fanart, menu=menu2)
-                else:
-                    directory.add_file('[COLOR red]Saved Data: Not Saved[/COLOR]', {'mode': 'savedebrid', 'name': debrid}, icon=icon, fanart=fanart, menu=menu2)
-            else:
-                directory.add_file('[COLOR springgreen]Saved Data: {0}[/COLOR]'.format(user), icon=icon, fanart=fanart, menu=menu2)
-
-    directory.add_separator(themeit=CONFIG.THEME3)
-    directory.add_file('Save All Debrid Data', {'mode': 'savedebrid', 'name': 'all'}, icon=CONFIG.ICONDEBRID, themeit=CONFIG.THEME3)
-    directory.add_file('Recover All Saved Debrid Data', {'mode': 'restoredebrid', 'name': 'all'}, icon=CONFIG.ICONDEBRID, themeit=CONFIG.THEME3)
-    directory.add_file('Import Debrid Data', {'mode': 'importdebrid', 'name': 'all'}, icon=CONFIG.ICONDEBRID, themeit=CONFIG.THEME3)
-    directory.add_file('Clear All Addon Debrid Data', {'mode': 'addondebrid', 'name': 'all'}, icon=CONFIG.ICONDEBRID, themeit=CONFIG.THEME3)
-    directory.add_file('Clear All Saved Debrid Data', {'mode': 'cleardebrid', 'name': 'all'}, icon=CONFIG.ICONDEBRID, themeit=CONFIG.THEME3)
-
-
-def login_menu():
-    from resources.libs import loginit
-
-    keep_login = '[COLOR springgreen]ON[/COLOR]' if CONFIG.KEEPLOGIN == 'true' else '[COLOR red]OFF[/COLOR]'
-    last = str(CONFIG.LOGINSAVE) if not CONFIG.LOGINSAVE == '' else 'Login data hasn\'t been saved yet.'
-    directory.add_file('[I]Several of these addons are PAID services.[/I]', icon=CONFIG.ICONLOGIN, themeit=CONFIG.THEME3)
-    directory.add_file('Save API Keys: {0}'.format(keep_login), {'mode': 'togglesetting', 'name': 'keeplogin'}, icon=CONFIG.ICONLOGIN, themeit=CONFIG.THEME3)
-    if CONFIG.KEEPLOGIN == 'true':
-        directory.add_file('Last Save: {0}'.format(str(last)), icon=CONFIG.ICONLOGIN, themeit=CONFIG.THEME3)
-    directory.add_separator(icon=CONFIG.ICONLOGIN, themeit=CONFIG.THEME3)
-
-    for login in loginit.ORDER:
-        if xbmc.getCondVisibility('System.HasAddon({0})'.format(loginit.LOGINID[login]['plugin'])):
-            name = loginit.LOGINID[login]['name']
-            path = loginit.LOGINID[login]['path']
-            saved = loginit.LOGINID[login]['saved']
-            file = loginit.LOGINID[login]['file']
-            user = CONFIG.get_setting(saved)
-            auser = loginit.login_user(login)
-            icon = loginit.LOGINID[login]['icon'] if os.path.exists(path) else CONFIG.ICONLOGIN
-            fanart = loginit.LOGINID[login]['fanart'] if os.path.exists(path) else CONFIG.ADDON_FANART
-            menu = create_addon_data_menu('Login', login)
-            menu2 = create_save_data_menu('Login', login)
-            menu.append((CONFIG.THEME2.format('{0} Settings'.format(name)), 'RunPlugin(plugin://{0}/?mode=opensettings&name={1}&url=login)'.format(CONFIG.ADDON_ID, login)))
-
-            directory.add_file('[+]-> {0}'.format(name), icon=icon, fanart=fanart, themeit=CONFIG.THEME3)
-            if not os.path.exists(path):
-                directory.add_file('[COLOR red]Addon Data: Not Installed[/COLOR]', icon=icon, fanart=fanart, menu=menu)
-            elif not auser:
-                directory.add_file('[COLOR red]Addon Data: Not Registered[/COLOR]', {'mode': 'authlogin', 'name': login}, icon=icon, fanart=fanart, menu=menu)
-            else:
-                directory.add_file('[COLOR springgreen]Addon Data: {0}[/COLOR]'.format(auser), {'mode': 'authlogin', 'name': login}, icon=icon, fanart=fanart, menu=menu)
-            if user == "":
-                if os.path.exists(file):
-                    directory.add_file('[COLOR red]Saved Data: Save File Found (Import Data)[/COLOR]', {'mode': 'importlogin', 'name': login}, icon=icon, fanart=fanart, menu=menu2)
-                else:
-                    directory.add_file('[COLOR red]Saved Data: Not Saved[/COLOR]', {'mode': 'savelogin', 'name': login}, icon=icon, fanart=fanart, menu=menu2)
-            else:
-                directory.add_file('[COLOR springgreen]Saved Data: {0}[/COLOR]'.format(user), icon=icon, fanart=fanart, menu=menu2)
-
-    directory.add_separator(themeit=CONFIG.THEME3)
-    directory.add_file('Save All Login Info', {'mode': 'savelogin', 'name': 'all'}, icon=CONFIG.ICONLOGIN, themeit=CONFIG.THEME3)
-    directory.add_file('Recover All Saved Login Info', {'mode': 'restorelogin', 'name': 'all'}, icon=CONFIG.ICONLOGIN, themeit=CONFIG.THEME3)
-    directory.add_file('Import Login Info', {'mode': 'importlogin', 'name': 'all'}, icon=CONFIG.ICONLOGIN, themeit=CONFIG.THEME3)
-    directory.add_file('Clear All Addon Login Info', {'mode': 'addonlogin', 'name': 'all'}, icon=CONFIG.ICONLOGIN, themeit=CONFIG.THEME3)
-    directory.add_file('Clear All Saved Login Info', {'mode': 'clearlogin', 'name': 'all'}, icon=CONFIG.ICONLOGIN, themeit=CONFIG.THEME3)
-
+    # Revoke
+    directory.add_file('[COLOR red]Revoke All Services[/COLOR]', {'mode': 'run_acctmgr', 'action': 'allRevoke'}, icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME1)
 
 def enable_addons(all=False):
     from resources.libs.common import tools
@@ -574,44 +441,3 @@ def developer():
     directory.add_file('Test Build Prompt', {'mode': 'testbuildprompt'}, themeit=CONFIG.THEME1)
     directory.add_file('Test Save Data Settings', {'mode': 'testsavedata'}, themeit=CONFIG.THEME1)
     directory.add_file('Test Binary Detection', {'mode': 'binarycheck'}, themeit=CONFIG.THEME1)
-
-
-###########################
-#      Misc Functions     #
-###########################
-
-
-def create_addon_data_menu(add='', name=''):
-    menu_items = []
-
-    add2 = quote_plus(add.lower().replace(' ', ''))
-    add3 = add.replace('Debrid', 'Real Debrid')
-    name2 = quote_plus(name.lower().replace(' ', ''))
-    name = name.replace('url', 'URL Resolver')
-    menu_items.append((CONFIG.THEME2.format(name.title()), ' '))
-    menu_items.append((CONFIG.THEME3.format('Save {0} Data'.format(add3)), 'RunPlugin(plugin://{0}/?mode=save{1}&name={2})'.format(CONFIG.ADDON_ID, add2, name2)))
-    menu_items.append((CONFIG.THEME3.format('Restore {0} Data'.format(add3)), 'RunPlugin(plugin://{0}/?mode=restore{1}&name={2})'.format(CONFIG.ADDON_ID, add2, name2)))
-    menu_items.append((CONFIG.THEME3.format('Clear {0} Data'.format(add3)), 'RunPlugin(plugin://{0}/?mode=clear{1}&name={2})'.format(CONFIG.ADDON_ID, add2, name2)))
-
-    menu_items.append((CONFIG.THEME2.format('{0} Settings'.format(CONFIG.ADDONTITLE)), 'RunPlugin(plugin://{0}/?mode=settings)'.format(CONFIG.ADDON_ID)))
-
-    return menu_items
-
-
-def create_save_data_menu(add='', name=''):
-    menu_items = []
-
-    add2 = quote_plus(add.lower().replace(' ', ''))
-    add3 = add.replace('Debrid', 'Real Debrid')
-    name2 = quote_plus(name.lower().replace(' ', ''))
-    name = name.replace('url', 'URL Resolver')
-    menu_items.append((CONFIG.THEME2.format(name.title()), ' '))
-    menu_items.append((CONFIG.THEME3.format('Register {0}'.format(add3)), 'RunPlugin(plugin://{0}/?mode=auth{1}&name={2})'.format(CONFIG.ADDON_ID, add2, name2)))
-    menu_items.append((CONFIG.THEME3.format('Save {0} Data'.format(add3)), 'RunPlugin(plugin://{0}/?mode=save{1}&name={2})'.format(CONFIG.ADDON_ID, add2, name2)))
-    menu_items.append((CONFIG.THEME3.format('Restore {0} Data'.format(add3)), 'RunPlugin(plugin://{0}/?mode=restore{1}&name={2})'.format(CONFIG.ADDON_ID, add2, name2)))
-    menu_items.append((CONFIG.THEME3.format('Import {0} Data'.format(add3)), 'RunPlugin(plugin://{0}/?mode=import{1}&name={2})'.format(CONFIG.ADDON_ID, add2, name2)))
-    menu_items.append((CONFIG.THEME3.format('Clear Addon {0} Data'.format(add3)), 'RunPlugin(plugin://{0}/?mode=addon{1}&name={2})'.format(CONFIG.ADDON_ID, add2, name2)))
-
-    menu_items.append((CONFIG.THEME2.format('{0} Settings'.format(CONFIG.ADDONTITLE)), 'RunPlugin(plugin://{0}/?mode=settings)'.format(CONFIG.ADDON_ID)))
-
-    return menu_items

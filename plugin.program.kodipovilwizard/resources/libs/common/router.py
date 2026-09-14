@@ -195,32 +195,28 @@ class Router:
         elif mode == 'build_speed_test':
             from resources.libs.wizard import speedtest_dialog
             speedtest_dialog()
-        elif mode == 'apk':  # APK Installer
-            menu.apk_menu(url)
-            self._finish(handle)
-        elif mode == 'kodiapk':  # APK Installer -> Official Kodi APK's
-            xbmc.executebuiltin('RunScript(script.kodi.android.update)')
-        elif mode == 'fmchoose':
-            from resources.libs import install
-            install.choose_file_manager()
-        elif mode == 'apkinstall':
-            from resources.libs import install
-            install.install_apk(name, url)
         elif mode == 'removeaddondata':  # Maintenance - > Addon Tools -> Remove Addon Data
             menu.remove_addon_data_menu()
             self._finish(handle)
-        elif mode == 'savedata':  # Save Data + Builds -> Save Data Menu
+
+        elif mode == 'savedata':  # Save Data Menu
             menu.save_menu()
             self._finish(handle)
-        elif mode == 'trakt':  # Save Data -> Keep Trakt Data
-            menu.trakt_menu()
+
+        # ACCOUNT MANAGER / AUTHORIZATIONS
+        elif mode == 'acctmgr':  # Account Manager Menu
+            menu.acctmgr_menu()
             self._finish(handle)
-        elif mode == 'realdebrid':  # Save Data -> Keep Debrid
-            menu.debrid_menu()
-            self._finish(handle)
-        elif mode == 'login':  # Save Data -> Keep Login Info
-            menu.login_menu()
-            self._finish(handle)
+
+        elif mode == 'run_acctmgr':
+            if not xbmc.getCondVisibility('System.HasAddon(script.module.acctmgr)'):
+                from resources.libs.wizard import install_acctmgr_pilot
+                install_acctmgr_pilot()
+            if action:
+                xbmc.executebuiltin('RunScript(script.module.acctmgr, action={})'.format(action))
+            else:
+                xbmc.executebuiltin('RunAddon(script.module.acctmgr)')
+
         elif mode == 'developer':  # Developer  Menu
             menu.developer()
             self._finish(handle)
@@ -252,12 +248,6 @@ class Router:
         elif mode == 'forceskin':  # Misc Maintenance -> Reload Skin
             xbmc.executebuiltin("ReloadSkin()")
             xbmc.executebuiltin('Container.Refresh()')
-        # elif mode == 'hidepassword':  # Addon Tools -> Hide Passwords on Keyboard Entry
-        #     from resources.libs import db
-        #     db.hide_password()
-        # elif mode == 'unhidepassword':  # Addon Tools -> Unhide Passwords on Keyboard Entry
-        #     from resources.libs import db
-        #     db.unhide_password()
         elif mode == 'checksources':  # System Tweaks -> Scan source for broken links
             from resources.libs import check
             check.check_sources()
@@ -424,81 +414,6 @@ class Router:
                 save.import_save_data()
             elif name == 'export':
                 save.export_save_data()
-
-        # TRAKT
-        elif mode == 'savetrakt':  # Save Trakt Data
-            from resources.libs import traktit
-            traktit.trakt_it('update', name)
-        elif mode == 'restoretrakt':  # Recover All Saved Trakt Data
-            from resources.libs import traktit
-            traktit.trakt_it('restore', name)
-        elif mode == 'addontrakt':  # Clear All Addon Trakt Data
-            from resources.libs import traktit
-            traktit.trakt_it('clearaddon', name)
-        elif mode == 'cleartrakt':  # Clear All Saved Trakt Data
-            from resources.libs import traktit
-            traktit.clear_saved(name)
-        elif mode == 'authtrakt':  # Authorize Trakt
-            from resources.libs import traktit
-            traktit.activate_trakt(name)
-            xbmc.executebuiltin('Container.Refresh()')
-        elif mode == 'updatetrakt':  # Update Saved Trakt Data
-            from resources.libs import traktit
-            traktit.auto_update('all')
-        elif mode == 'importtrakt':  # Import Saved Trakt Data
-            from resources.libs import traktit
-            traktit.import_list(name)
-            xbmc.executebuiltin('Container.Refresh()')
-
-        # DEBRID
-        elif mode == 'savedebrid':  # Save Debrid Data
-            from resources.libs import debridit
-            debridit.debrid_it('update', name)
-        elif mode == 'restoredebrid':  # Recover All Saved Debrid Data
-            from resources.libs import debridit
-            debridit.debrid_it('restore', name)
-        elif mode == 'addondebrid':  # Clear All Addon Debrid Data
-            from resources.libs import debridit
-            debridit.debrid_it('clearaddon', name)
-        elif mode == 'cleardebrid':  # Clear All Saved Debrid Data
-            from resources.libs import debridit
-            debridit.clear_saved(name)
-        elif mode == 'authdebrid':  # Authorize Debrid
-            from resources.libs import debridit
-            debridit.activate_debrid(name)
-            xbmc.executebuiltin('Container.Refresh()')
-        elif mode == 'updatedebrid':  # Update Saved Debrid Data
-            from resources.libs import debridit
-            debridit.auto_update('all')
-        elif mode == 'importdebrid':  # Import Saved Debrid Data
-            from resources.libs import debridit
-            debridit.import_list(name)
-            xbmc.executebuiltin('Container.Refresh()')
-
-        # LOGIN
-        elif mode == 'savelogin':  # Save Login Data
-            from resources.libs import loginit
-            loginit.login_it('update', name)
-        elif mode == 'restorelogin':  # Recover All Saved Login Data
-            from resources.libs import loginit
-            loginit.login_it('restore', name)
-        elif mode == 'addonlogin':  # Clear All Addon Login Data
-            from resources.libs import loginit
-            loginit.login_it('clearaddon', name)
-        elif mode == 'clearlogin':  # Clear All Saved Login Data
-            from resources.libs import loginit
-            loginit.clear_saved(name)
-        elif mode == 'authlogin':  # "Authorize" Login
-            from resources.libs import loginit
-            loginit.activate_login(name)
-            xbmc.executebuiltin('Container.Refresh()')
-        elif mode == 'updatelogin':  # Update Saved Login Data
-            from resources.libs import loginit
-            loginit.auto_update('all')
-        elif mode == 'importlogin':  # Import Saved Login Data
-            from resources.libs import loginit
-            loginit.import_list(name)
-            xbmc.executebuiltin('Container.Refresh()')
 
         # DEVELOPER MENU
         elif mode == 'testnotify':  # Developer Menu -> Test Notify

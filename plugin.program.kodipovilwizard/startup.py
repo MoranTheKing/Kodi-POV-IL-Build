@@ -43,73 +43,6 @@ from resources.libs import skin
 from resources.libs import update
 
 
-def auto_install_repo():
-    if not os.path.exists(os.path.join(CONFIG.ADDONS, CONFIG.REPOID)):
-        response = tools.open_url(CONFIG.REPOADDONXML)
-
-        if response:
-            from xml.etree import ElementTree
-            
-            root = ElementTree.fromstring(response.text)
-            repoaddon = root.findall('addon')
-            repoversion = [tag.get('version') for tag in repoaddon if tag.get('id') == CONFIG.REPOID]
-            
-            if repoversion:
-                installzip = '{0}-{1}.zip'.format(CONFIG.REPOID, repoversion[0])
-                url = CONFIG.REPOZIPURL + installzip
-                repo_response = tools.open_url(url, check=True)
-
-                if repo_response:
-                    progress_dialog = xbmcgui.DialogProgress()
-                    
-                    progress_dialog.create(CONFIG.ADDONTITLE, 'Downloading Repo...' + '\n' + 'Please Wait')
-                    tools.ensure_folders(CONFIG.PACKAGES)
-                    lib = os.path.join(CONFIG.PACKAGES, installzip)
-
-                    # Remove the old zip if there is one
-                    tools.remove_file(lib)
-
-                    from resources.libs.downloader import Downloader
-                    from resources.libs import extract
-                    Downloader().download(url, lib)
-                    extract.all(lib, CONFIG.ADDONS)
-
-                    try:
-                        repoxml = os.path.join(CONFIG.ADDONS, CONFIG.REPOID, 'addon.xml')
-                        root = ElementTree.parse(repoxml).getroot()
-                        reponame = root.get('name')
-                        
-                        logging.log_notify("{1}".format(CONFIG.COLOR1, reponame),
-                                           "[COLOR {0}]Add-on updated[/COLOR]".format(CONFIG.COLOR2),
-                                           icon=os.path.join(CONFIG.ADDONS, CONFIG.REPOID, 'icon.png'))
-                                           
-                    except Exception as e:
-                        logging.log(str(e), level=xbmc.LOGERROR)
-
-                    # Add wizard to add-on database
-                    db.addon_database(CONFIG.REPOID, 1)
-
-                    progress_dialog.close()
-                    xbmc.sleep(500)
-
-                    logging.log("[Auto Install Repo] Successfully Installed", level=xbmc.LOGINFO)
-                else:
-                    logging.log_notify("[COLOR {0}]Repo Install Error[/COLOR]".format(CONFIG.COLOR1),
-                                       "[COLOR {0}]Invalid URL for zip![/COLOR]".format(CONFIG.COLOR2))
-                    logging.log("[Auto Install Repo] Was unable to create a working URL for repository. {0}".format(
-                        url), level=xbmc.LOGERROR)
-            else:
-                logging.log("Invalid URL for Repo zip", level=xbmc.LOGERROR)
-        else:
-            logging.log_notify("[COLOR {0}]Repo Install Error[/COLOR]".format(CONFIG.COLOR1),
-                               "[COLOR {0}]Invalid addon.xml file![/COLOR]".format(CONFIG.COLOR2))
-            logging.log("[Auto Install Repo] Unable to read the addon.xml file.", level=xbmc.LOGERROR)
-    elif not CONFIG.AUTOINSTALL == 'Yes':
-        logging.log("[Auto Install Repo] Not Enabled", level=xbmc.LOGINFO)
-    elif os.path.exists(os.path.join(CONFIG.ADDONS, CONFIG.REPOID)):
-        logging.log("[Auto Install Repo] Repository already installed")
-
-
 def show_notification():
     note_id, msg = window.split_notify(CONFIG.NOTIFICATION)
     
@@ -129,12 +62,6 @@ def show_notification():
         logging.log('[Notifications] Notifications file at {0} not formatted correctly.'
                     .format(CONFIG.NOTIFICATION),
                     level=xbmc.LOGINFO)
-
-
-# KODI-POV-IL - The legacy auto_quick_update() loop (polled the old
-# quick_update.txt notification feed and triggered the monolithic-zip
-# quick_update) has been DELETED. It was dead code, fully superseded by the
-# modular OTA block further down (manifest.json driven).
 
 
 # Polite Hebrew wait message shown for the whole provisioning run.
@@ -496,98 +423,7 @@ def installed_build_check():
         logging.log('[Build Installed Check] Install seems to be completed correctly', level=xbmc.LOGINFO)
         
     if CONFIG.get_setting('installed') == 'true':
-        if CONFIG.get_setting('keeptrakt') == 'true':
-            from resources.libs import traktit
-            logging.log('[Build Installed Check] Restoring Trakt Data', level=xbmc.LOGINFO)
-            traktit.trakt_it('restore', 'all')
-        if CONFIG.get_setting('keepdebrid') == 'true':
-            from resources.libs import debridit
-            logging.log('[Build Installed Check] Restoring Real Debrid Data', level=xbmc.LOGINFO)
-            debridit.debrid_it('restore', 'all')
-        if CONFIG.get_setting('keeplogin') == 'true':
-            from resources.libs import loginit
-            logging.log('[Build Installed Check] Restoring Login Data', level=xbmc.LOGINFO)
-            loginit.login_it('restore', 'all')
-
         CONFIG.clear_setting('install')
-
-
-def save_trakt():
-    current_time = time.mktime(time.strptime(tools.get_date(formatted=True), "%Y-%m-%d %H:%M:%S"))
-    next_save = time.mktime(time.strptime(CONFIG.get_setting('traktnextsave'), "%Y-%m-%d %H:%M:%S"))
-    
-    if next_save <= current_time:
-        from resources.libs import traktit
-        logging.log("[Trakt Data] Saving all Data", level=xbmc.LOGINFO)
-        traktit.auto_update('all')
-        CONFIG.set_setting('traktnextsave', tools.get_date(days=3, formatted=True))
-    else:
-        logging.log("[Trakt Data] Next Auto Save isn't until: {0} / TODAY is: {1}".format(CONFIG.get_setting('traktnextsave'),
-                                                                                          tools.get_date(formatted=True)),
-                    level=xbmc.LOGINFO)
-
-
-def save_debrid():
-    current_time = time.mktime(time.strptime(tools.get_date(formatted=True), "%Y-%m-%d %H:%M:%S"))
-    next_save = time.mktime(time.strptime(CONFIG.get_setting('debridnextsave'), "%Y-%m-%d %H:%M:%S"))
-    
-    if next_save <= current_time:
-        from resources.libs import debridit
-        logging.log("[Debrid Data] Saving all Data", level=xbmc.LOGINFO)
-        debridit.auto_update('all')
-        CONFIG.set_setting('debridnextsave', tools.get_date(days=3, formatted=True))
-    else:
-        logging.log("[Debrid Data] Next Auto Save isn't until: {0} / TODAY is: {1}".format(CONFIG.get_setting('debridnextsave'),
-                                                                                           tools.get_date(formatted=True)),
-                    level=xbmc.LOGINFO)
-
-
-def save_login():
-    current_time = time.mktime(time.strptime(tools.get_date(formatted=True), "%Y-%m-%d %H:%M:%S"))
-    next_save = time.mktime(time.strptime(CONFIG.get_setting('loginnextsave'), "%Y-%m-%d %H:%M:%S"))
-    
-    if next_save <= current_time:
-        from resources.libs import loginit
-        logging.log("[Login Info] Saving all Data", level=xbmc.LOGINFO)
-        loginit.auto_update('all')
-        CONFIG.set_setting('loginnextsave', tools.get_date(days=3, formatted=True))
-    else:
-        logging.log("[Login Info] Next Auto Save isn't until: {0} / TODAY is: {1}".format(CONFIG.get_setting('loginnextsave'),
-                                                                                          tools.get_date(formatted=True)),
-                    level=xbmc.LOGINFO)
-
-
-def auto_clean():
-    service = False
-    days = [tools.get_date(formatted=True), tools.get_date(days=1, formatted=True), tools.get_date(days=3, formatted=True), tools.get_date(days=7, formatted=True),
-            tools.get_date(days=30, formatted=True)]
-
-    freq = int(CONFIG.AUTOFREQ)
-    next_cleanup = time.mktime(time.strptime(CONFIG.NEXTCLEANDATE, "%Y-%m-%d %H:%M:%S"))
-
-    if next_cleanup <= tools.get_date() or freq == 0:
-        service = True
-        next_run = days[freq]
-        CONFIG.set_setting('nextautocleanup', next_run)
-    else:
-        logging.log("[Auto Clean Up] Next Clean Up {0}".format(CONFIG.NEXTCLEANDATE),
-                    level=xbmc.LOGINFO)
-    if service:
-        if CONFIG.AUTOCACHE == 'true':
-            logging.log('[Auto Clean Up] Cache: On', level=xbmc.LOGINFO)
-            clear.clear_cache(True)
-        else:
-            logging.log('[Auto Clean Up] Cache: Off', level=xbmc.LOGINFO)
-        if CONFIG.AUTOTHUMBS == 'true':
-            logging.log('[Auto Clean Up] Old Thumbs: On', level=xbmc.LOGINFO)
-            clear.old_thumbs()
-        else:
-            logging.log('[Auto Clean Up] Old Thumbs: Off', level=xbmc.LOGINFO)
-        if CONFIG.AUTOPACKAGES == 'true':
-            logging.log('[Auto Clean Up] Packages: On', level=xbmc.LOGINFO)
-            clear.clear_packages_startup()
-        else:
-            logging.log('[Auto Clean Up] Packages: Off', level=xbmc.LOGINFO)
 
 
 def stop_if_duplicate():
@@ -653,9 +489,7 @@ def wait_for_gui_ready(timeout=90):
 check_for_video()
 # Ensure that any needed folders are created
 tools.ensure_folders()
-# Stop this script if it's been run more than once
-# if CONFIG.KODIV < 18:
-    # stop_if_duplicate()
+
 # Ensure that the wizard's name matches its folder
 check.check_paths()
     
@@ -667,7 +501,8 @@ else:
     logging.log("[Auto Update Wizard] Not Enabled", level=xbmc.LOGINFO)
 
 # KODI-RD-IL - Auto force addon updates on Kodi startup
-if CONFIG.FORCEUPDATEFAST_ONSTARTUP == "true": db.forceUpdate()
+if getattr(CONFIG, 'FORCEUPDATEFAST_ONSTARTUP', 'false') == "true":
+    db.forceUpdate()
 
 # KODI-POV-IL - Clean APK/IPK/Windows/wizard first launch hydration.
 # This is intentionally before notifications and quick_update: a clean profile
@@ -800,19 +635,10 @@ if CONFIG.get_setting('buildname'):
 ######################################
     
 # KOD-RD-IL - New Kodi ANDROID/WINDOWS version check on startup
-# xbmc.executebuiltin(f"RunPlugin(plugin://{CONFIG.ADDON_ID}/?mode=install&action=kodi_version_update_check&kodi_version_update_check_manual=false)")
 if tools.platform() in ['android', 'windows'] and CONFIG.get_setting('buildname'):
     from resources.libs.wizard import kodi_version_update_check
     kodi_version_update_check()
 ######################################
-
-# KODI-POV-IL - The legacy "BUILD UPDATE CHECK" (build.txt full-build version
-# diff) and "BUILD INSTALL ON STARTUP" (open the Builds menu when build.txt is
-# reachable and the build is not installed) blocks have been REMOVED. Both were
-# driven by the retired build.txt. Fresh install / interrupted-setup resume is
-# now handled by fresh_build_auto_install_if_needed() (marker-gated, above) and
-# ongoing updates + missing-addon healing by the modular OTA block above.
-
 
 # INSTALLED BUILD CHECK
 if CONFIG.get_setting('installed') == 'true':
@@ -833,85 +659,3 @@ try:
 except Exception as _skin_upd_err:
     logging.log("[Skin Auto Update] startup hook failed: {0}".format(_skin_upd_err),
                 level=xbmc.LOGERROR)
-
-# SAVE TRAKT
-if CONFIG.get_setting('keeptrakt') == 'true':
-    logging.log("[Trakt Data] Started", level=xbmc.LOGINFO)
-    save_trakt()
-else:
-    logging.log("[Trakt Data] Not Enabled", level=xbmc.LOGINFO)
-
-# SAVE DEBRID
-if CONFIG.get_setting('keepdebrid') == 'true':
-    logging.log("[Debrid Data] Started", level=xbmc.LOGINFO)
-    save_debrid()
-else:
-    logging.log("[Debrid Data] Not Enabled", level=xbmc.LOGINFO)
-###############################
-###################UNUSED####################
-
-######################################
-# KODI-RD-IL - COMMENTED - NOT NEEDED:
-# FIRST RUN SETTINGS
-# if CONFIG.get_setting('first_install') == 'true':
-    # logging.log("[First Run] Showing Save Data Settings", level=xbmc.LOGINFO)
-    # window.show_save_data_settings()
-# else:
-    # logging.log("[First Run] Skipping Save Data Settings", level=xbmc.LOGINFO)
-######################################
-
-# KODI-RD-IL - COMMENTED - NOT NEEDED:
-# BUILD INSTALL PROMPT
-# if tools.open_url(CONFIG.BUILDFILE, check=True) and CONFIG.get_setting('installed') == 'false':
-    # logging.log("[Current Build Check] Build Not Installed", level=xbmc.LOGINFO)
-    # window.show_build_prompt()
-# else:
-    # logging.log("[Current Build Check] Build Installed: {0}".format(CONFIG.BUILDNAME), level=xbmc.LOGINFO)
-######################################
-    
-# SAVE LOGIN
-# if CONFIG.get_setting('keeplogin') == 'true':
-    # logging.log("[Login Info] Started", level=xbmc.LOGINFO)
-    # save_login()
-# else:
-    # logging.log("[Login Info] Not Enabled", level=xbmc.LOGINFO)
-
-# AUTO INSTALL REPO
-# if CONFIG.AUTOINSTALL == 'Yes':
-    # logging.log("[Auto Install Repo] Started", level=xbmc.LOGINFO)
-    # auto_install_repo()
-# else:
-    # logging.log("[Auto Install Repo] Not Enabled", level=xbmc.LOGINFO)
-
-# ENABLE ALL ADDONS AFTER INSTALL
-# if CONFIG.get_setting('enable_all') == 'true':
-    # logging.log("[Post Install] Enabling all Add-ons", level=xbmc.LOGINFO)
-    # from resources.libs.gui import menu
-    # menu.enable_addons(all=True)
-    # if os.path.exists(os.path.join(CONFIG.USERDATA, '.enableall')):
-        # logging.log("[Post Install] .enableall file found in userdata. Deleting..", level=xbmc.LOGINFO)
-        # import xbmcvfs
-        # xbmcvfs.delete(os.path.join(CONFIG.USERDATA, '.enableall'))
-    # xbmc.executebuiltin('UpdateLocalAddons')
-    # xbmc.executebuiltin('UpdateAddonRepos')
-    # db.force_check_updates(auto=True)
-    # CONFIG.set_setting('enable_all', 'false')
-    # xbmc.executebuiltin("ReloadSkin()")
-    # tools.reload_profile(xbmc.getInfoLabel('System.ProfileName'))
-
-# REINSTALL ELIGIBLE BINARIES
-# binarytxt = os.path.join(CONFIG.USERDATA, 'build_binaries.txt')
-# if os.path.exists(binarytxt):
-    # logging.log("[Binary Detection] Reinstalling Eligible Binary Addons", level=xbmc.LOGINFO)
-    # from resources.libs import restore
-    # restore.restore('binaries')
-# else:
-    # logging.log("[Binary Detection] Eligible Binary Addons to Reinstall", level=xbmc.LOGINFO)
-
-# AUTO CLEAN
-# if CONFIG.get_setting('autoclean') == 'true':
-    # logging.log("[Auto Clean Up] Started", level=xbmc.LOGINFO)
-    # auto_clean()
-# else:
-    # logging.log('[Auto Clean Up] Not Enabled', level=xbmc.LOGINFO)
-    
