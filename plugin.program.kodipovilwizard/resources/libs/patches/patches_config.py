@@ -44,7 +44,9 @@ PATCH_CONFIG = [
         "action": "prepend_before",
         "hook": (
             "\t\t\t# WIZARD: Loop bypass to inject distinct genre icon\n"
-            "\t\t\tself._add_item({'mode': mode, 'action': action, 'genre_id': value[0], 'name': genre}, 'genres/%s' % value[1], list_name=list_name)\n"
+            "\t\t\tfrom xbmcvfs import translatePath\n"
+            "\t\t\t_icon_path = translatePath('special://home/media/povil_icons/%s' % value[1])\n"
+            "\t\t\tself._add_item({'mode': mode, 'action': action, 'genre_id': value[0], 'name': genre}, _icon_path, list_name=list_name)\n"
             "\t\t\tcontinue\n"
         )
     },

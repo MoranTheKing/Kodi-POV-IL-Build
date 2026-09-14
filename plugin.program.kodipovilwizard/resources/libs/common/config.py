@@ -163,7 +163,7 @@ class Config:
                               'Textures13.db', 'Thumbs.db']
         self.XMLS = ['advancedsettings.xml', 'sources.xml', 'favourites.xml',
                      'profiles.xml', 'playercorefactory.xml', 'guisettings.xml']
-        ]
+
         self.DEPENDENCIES = [
             'script.module.bottle', 'script.module.certifi',
                              'script.module.chardet', 'script.module.idna',

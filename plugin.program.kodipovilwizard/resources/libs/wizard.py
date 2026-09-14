@@ -1499,15 +1499,6 @@ def kodi_version_update_check(kodi_version_update_check_manual="false"):
     os_type_label = tools.platform().capitalize()
     dialog = xbmcgui.Dialog()
 
-    # Android APK
-    if tools.platform() == 'android':
-        ###### KODI ANDROID APK INSTALLED CHECK ###########
-        if not any(check_if_running_custom_kodi(pkg) for pkg in CONFIG.APK_PACKAGE_IDS):
-            if kodi_version_update_check_manual:
-                dialog.ok(f"{CONFIG.ADDONTITLE} ({os_type_label})",'[B]אינך עם האפליקצייה הייעודית שלנו![/B]')
-            return
-        kodi_apk_update_check(kodi_version_update_check_manual, os_type_label)
-
     # Windows Software
     elif tools.platform() == 'windows':
         ###### KODI WINDOWS SOFTWARE INSTALLED CHECK ###########
