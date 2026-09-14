@@ -3,7 +3,7 @@
   "name": "Kodi POV IL Build",
   "repo": "MoranTheKing/Kodi-POV-IL-Build",
   "release_tag": "addons-latest",
-  "generated": "2026-09-14T19:26:28Z",
+  "generated": "2026-09-14T21:51:10Z",
   "manifest_url": "https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL-Build/main/manifest.json",
   "config": {
     "config_version": "2.0.6",
@@ -32,9 +32,9 @@
       "type": "plugin",
       "filename": "plugin.program.kodipovilwizard-0.3.0.zip",
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.kodipovilwizard-0.3.0.zip",
-      "size": 2145715,
-      "sha256": "1d051145f8dbc62b4b8c90d1eae0097ac3f849725138ac8ab5bb54167760e472",
-      "updated": "2026-09-14T19:26:28Z"
+      "size": 2129516,
+      "sha256": "19f0fcbd42aaea8b688d4d66d766ea46959b34fe7d3be27910cd417dc28256cc",
+      "updated": "2026-09-14T21:51:10Z"
     },
     "plugin.program.orderfavourites-hebrew": {
       "id": "plugin.program.orderfavourites-hebrew",
@@ -43,9 +43,9 @@
       "type": "plugin",
       "filename": "plugin.program.orderfavourites-hebrew-1.4.1.zip",
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.orderfavourites-hebrew-1.4.1.zip",
-      "size": 12998344,
-      "sha256": "781ef11d61659ce8fd0115e07da55ada0fa40201552bf57547ac8f18a0b8ffef",
-      "updated": "2026-09-13T18:05:24Z"
+      "size": 12999148,
+      "sha256": "35cb6f594a722713d8c9e5953c17b83df80c6cb8dab76092bf7a9a0f28e05684",
+      "updated": "2026-09-14T21:51:10Z"
     },
     "repository.Fishenzon": {
       "id": "repository.Fishenzon",
