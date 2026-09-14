@@ -95,11 +95,10 @@ PATCH_CONFIG = [
         "hook": (
             "\t\t\t# WIZARD: Bypass cache persistence and purge poisoned DB rows\n"
             "\t\t\timport sys, xbmcvfs;\n"
-            "\t\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/modules/');\n"
+            "\t\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/');\n"
             "\t\t\tsys.path.append(p) if p not in sys.path else None;\n"
             "\t\t\timport pov_meta_handler;\n"
             "\t\t\tpov_meta_handler.clear_blank_meta();\n"
-            "\t\t\treturn meta\n"
         )
     },
     {
@@ -112,11 +111,23 @@ PATCH_CONFIG = [
         "hook": (
             "\t\t\t# WIZARD: Bypass cache persistence and purge poisoned DB rows\n"
             "\t\t\timport sys, xbmcvfs;\n"
-            "\t\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/modules/');\n"
+            "\t\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/');\n"
             "\t\t\tsys.path.append(p) if p not in sys.path else None;\n"
             "\t\t\timport pov_meta_handler;\n"
             "\t\t\tpov_meta_handler.clear_blank_meta();\n"
-            "\t\t\treturn meta\n"
+        )
+    },
+    {
+        "id": "pov_movie_networks_providers_fix",
+        "name": "POV Movie Networks Providers Fix",
+        "target_file": "resources/lib/indexers/tmdb_api.py",
+        "marker": "# WIZARD_POV_MOVIE_NETWORKS_v3",
+        "anchor": "def tmdb_movies_networks(network_id, page):",
+        "action": "prepend_before",
+        "hook": (
+            "# WIZARD: Dynamically override tmdb_movies_networks for Watch Providers query\n"
+            "import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/'); "
+            "sys.path.append(p) if p not in sys.path else None; import pov_networks_hook; pov_networks_hook.apply_monkey_patch(globals())\n"
         )
     },
     {
@@ -165,10 +176,10 @@ PATCH_CONFIG = [
     {
         "id": "pov_trakt_empty_cache_fix",
         "name": "Trakt Empty Cache Prevention",
-        "description": "Prevents transient empty Trakt API responses from being permanently cached, allowing subsequent retries to succeed.",
+        "description": "Prevents transient empty Trakt API responses from being permanently cached.",
         "target_file": "resources/lib/caches/trakt_cache.py",
-        "marker": "# WIZARD_POV_TRAKT_EMPTY_CACHE_v1",
-        "anchor": "dbcur.execute(TC_BASE_SET, (string, repr(result)))",
+        "marker": "# WIZARD_POV_TRAKT_EMPTY_CACHE_v2",  # Bumped marker version due to anchor change
+        "anchor": "dbcur.execute(TC_BASE_SET, (string, json.dumps(result)))",
         "action": "prepend_before",
         "hook": (
             "import sys, xbmcvfs\n"
@@ -176,6 +187,20 @@ PATCH_CONFIG = [
             "sys.path.append(p) if p not in sys.path else None\n"
             "import pov_trakt_cache\n"
             "if pov_trakt_cache.is_empty_result(result, string): return result\n"
+        )
+    },
+    {
+        "id": "pov_trakt_table_clear_guard",
+        "name": "Trakt Cache Table Creation Guard",
+        "description": "Ensures trakt_data table exists before the clear loop, preventing silent deletion failures.",
+        "target_file": "resources/lib/caches/trakt_cache.py",
+        "marker": "# WIZARD_POV_TRAKT_TABLE_CLEAR_v1",
+        "anchor": "def clear_all_trakt_cache_data():",
+        "action": "append_after",
+        "hook": (
+            "    try:\n"
+            "        TraktCache().dbcur.execute('CREATE TABLE IF NOT EXISTS trakt_data (id TEXT UNIQUE, data TEXT)')\n"
+            "    except Exception: pass\n"
         )
     },
     {

@@ -4,8 +4,9 @@ import xbmc
 
 def run(local_vars):
     """
-    Executes the list toggle logic and forces a container refresh.
+    Executes the list toggle logic and forces a container refresh (if safe).
     Returns the toggle result to properly satisfy the BaseListManager.manage() exit flow.
+    Includes a safety guard to prevent crashes when executing from a Search results container.
     """
     try:
         self_obj = local_vars.get('self')
@@ -15,7 +16,12 @@ def run(local_vars):
         # 1. Execute the original upstream toggle logic safely
         toggle_result = self_obj.execute_toggle(choice, action_add)
 
-        # 2. Force the container refresh post-toggle
+        # 2. GUARD: Do not refresh if the current container is a search result.
+        # Re-fetching a search query re-entrantly from a toggle crashes the screen.
+        folder_path = xbmc.getInfoLabel('Container.FolderPath') or ''
+
+        if 'search' not in folder_path.lower():
+            # Force the container refresh post-toggle
         from modules import kodi_utils
         kodi_utils.container_refresh()
 

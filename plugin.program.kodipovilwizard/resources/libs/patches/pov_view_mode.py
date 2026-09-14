@@ -27,6 +27,11 @@ def force_view(view_id, content):
                 # This guarantees we win the race condition against Kodi's default skin loader.
                 if _n - settled >= 20:
                     break
+            else:
+                # CRITICAL: Reset the timer if the container state flips temporarily.
+                # This prevents false-positive matches during page-forward transitions
+                # where the outgoing and incoming containers share the same content type.
+                settled = -1
 
             xbmc.sleep(50)
 

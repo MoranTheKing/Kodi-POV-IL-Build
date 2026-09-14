@@ -7,6 +7,16 @@
       "icon": "Logo_POV_IL.png",
       "action": "RunAddon(\"plugin.video.pov\")"
     },
+    "umbrella": {
+      "name": "[B][COLOR orange]Umbrella[/COLOR][/B]",
+      "icon": "special://home/addons/plugin.video.umbrella/icon.png",
+      "action": "RunAddon(\"plugin.video.umbrella\")"
+    },
+    "search_provider": {
+      "name": "[B][COLOR orange]מנוע החיפוש - POV / Umbrella[/COLOR][/B]",
+      "icon": "special://home/addons/plugin.video.pov/resources/skins/Default/media/search.png",
+      "action": "RunScript(service.subtitles.kodipovilai,action=search_provider)"
+    },
     "connect_services": {
       "_note": "Opens POV's real 'My Services' account-linking menu (Real-Debrid, Trakt, Premiumize, TorBox, ... + our injected Gemini). mode=myservices calls POV's modules.myservices.authorize(), which pops the select dialog. The previous action used mode=navigator.build_shortcut_folder_list&shortcut_folder=True -- a generic skin-shortcut browser that opens EMPTY here, which is why the popup never appeared.",
       "name": "[B][COLOR orange]חיבור שירותים להרחבת POV[/COLOR][/B]",
@@ -33,6 +43,11 @@
       "icon": "My_Shows_POV.png",
       "action": "ActivateWindow(10025,\"plugin://plugin.video.pov/?action=favorites_tvshows&iconImage=special%3a%2f%2fhome%2faddons%2fplugin.video.pov%2fresources%2fskins%2fDefault%2fmedia%2ffavorites.png&mode=build_tvshow_list&name=TV%20Show%20Favorites%20(POV)\",return)"
     },
+    "my_shows_mdblist": {
+      "name": "[B]הסדרות שלי (MDBList)[/B]",
+      "icon": "My_Shows_MDBList.png",
+      "action": "ActivateWindow(10025,\"plugin://plugin.video.pov/?action=mdblist_watchlist&iconImage=special%3a%2f%2fhome%2faddons%2fplugin.video.pov%2fresources%2fskins%2fDefault%2fmedia%2fmdblist.png&mode=build_tvshow_list&name=MDBList%20Watchlist\",return)"
+    },
     "my_movies_tmdb": {
       "name": "[B]הסרטים שלי (TMDB)[/B]",
       "icon": "My_Movies_TMDB.png",
@@ -47,6 +62,11 @@
       "name": "[B]הסרטים שלי (POV)[/B]",
       "icon": "My_Movies_POV.png",
       "action": "ActivateWindow(10025,\"plugin://plugin.video.pov/?action=favorites_movies&iconImage=special%3a%2f%2fhome%2faddons%2fplugin.video.pov%2fresources%2fskins%2fDefault%2fmedia%2ffavorites.png&mode=build_movie_list&name=Movie%20Favorites%20(POV)\",return)"
+    },
+    "my_movies_mdblist": {
+      "name": "[B]הסרטים שלי (MDBList)[/B]",
+      "icon": "My_Movies_MDBList.png",
+      "action": "ActivateWindow(10025,\"plugin://plugin.video.pov/?action=mdblist_watchlist&iconImage=special%3a%2f%2fhome%2faddons%2fplugin.video.pov%2fresources%2fskins%2fDefault%2fmedia%2fmdblist.png&mode=build_movie_list&name=MDBList%20Watchlist\",return)"
     },
     "shows_popular": {
       "name": "[B]סדרות פופולריות[/B]",
@@ -176,7 +196,7 @@
     "send_log": {
       "name": "[B]שליחת לוג[/B]",
       "icon": "twilight_send_log.png",
-      "action": "ActivateWindow(10025,\"plugin://plugin.video.pov/?iconImage=special%3a%2f%2fhome%2faddons%2fplugin.video.pov%2fresources%2fskins%2fDefault%2fmedia%2fsettings.png&mode=navigator.log_utils&name=Changelog%20%26%20Log%20Utils\",return)"
+      "action": "RunPlugin(\"plugin://plugin.program.kodipovilwizard/?mode=uploadlog\")"
     },
     "order_favourites": {
       "name": "[B]סידור מועדפים[/B]",
@@ -188,14 +208,18 @@
     "default": {
       "order": [
         "pov",
+        "umbrella",
         "connect_services",
+        "search_provider",
         "debrid_notice",
         "my_shows_tmdb",
         "my_shows_trakt",
         "my_shows_pov",
+        "my_shows_mdblist",
         "my_movies_tmdb",
         "my_movies_trakt",
         "my_movies_pov",
+        "my_movies_mdblist",
         "shows_popular",
         "movies_new",
         "movies_popular",
@@ -234,6 +258,8 @@
     "skin.arctic.fuse.3": {
       "order": [
         "pov",
+        "umbrella",
+        "search_provider",
         "connect_services",
         "rd_status",
         "torbox_status",

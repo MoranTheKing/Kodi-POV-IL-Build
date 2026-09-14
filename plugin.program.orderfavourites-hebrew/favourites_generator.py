@@ -52,6 +52,15 @@ DEFAULT_SKIN_KEY = 'default'
 _FAV_BLOCK_RE = re.compile(r'<favourite\b[^>]*>.*?</favourite>', re.DOTALL)
 _NAME_ATTR_RE = re.compile(r'\bname="([^"]*)"')
 
+# Legacy broken actions. If a user's old custom tile contains any of these,
+# we drop it entirely during the merge so the new JSON config can replace it cleanly.
+_LEGACY_BROKEN_ACTIONS = [
+    'mode=navigator.log_utils',
+    'mode=navigator.build_shortcut_folder_list',
+    'torbox.show_account_info&amp;name=Account+Info&amp;isFolder=false',
+    'torbox.show_account_info" />'
+]
+
 
 def _log(msg, error=False):
     if xbmc is None:
@@ -64,7 +73,7 @@ def _log(msg, error=False):
 
 
 # ---------------------------------------------------------------------------
-# Config
+# Config & Conditionals
 # ---------------------------------------------------------------------------
 def _config_path():
     here = os.path.dirname(os.path.abspath(__file__))
@@ -75,6 +84,36 @@ def _load_config(config_path=None):
     path = config_path or _config_path()
     with open(path, 'r', encoding='utf-8') as fh:
         return json.load(fh)
+
+
+def _check_condition(tile_def):
+    """Evaluate runtime conditions for dynamic tiles (e.g. MDBList / Umbrella).
+    If a tile definition has a 'condition' property in the JSON, it will only
+    be generated if this returns True."""
+    cond = tile_def.get('condition')
+    if not cond:
+        return True
+
+    if cond == 'umbrella':
+        if xbmc is None:
+            return False
+        return xbmc.getCondVisibility('System.HasAddon(plugin.video.umbrella)')
+
+    if cond == 'mdblist':
+        if xbmcvfs is None:
+            return False
+        try:
+            path = xbmcvfs.translatePath('special://userdata/addon_data/plugin.video.pov/settings.xml')
+            if not os.path.exists(path):
+                return False
+            # Read directly rather than using in-memory settings to avoid stale state.
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                return bool(re.search(r'<setting id="mdblist\.token"[^>]*>([^<]+)</setting>', content))
+        except Exception:
+            return False
+
+    return True
 
 
 def _resolve_skin(config, skin_id):
@@ -128,6 +167,10 @@ def _tile_xml(config, key, overrides):
     if not base:
         _log('unknown tile key "{0}" -- skipped'.format(key))
         return None
+
+    if not _check_condition(base):
+        return None
+
     name = base.get('name', '')
     icon = base.get('icon', '')
     action = base.get('action', '')
@@ -173,13 +216,18 @@ def _read_existing():
 
 def _user_custom_blocks(config, existing_xml):
     """Return the raw <favourite>...</favourite> blocks from existing_xml that
-    are NOT part of our canonical set (i.e. tiles the user added themselves), so
-    a regenerate preserves them instead of blindly overwriting."""
+    are NOT part of our canonical set (i.e. tiles the user added themselves).
+    Filters out legacy tiles with broken actions to avoid duplication with the JSON."""
     if not existing_xml:
         return []
     canon = _canonical_names(config)
     out = []
     for block in _FAV_BLOCK_RE.findall(existing_xml):
+        # 1. Filter out known legacy broken actions.
+        if any(broken_act in block for broken_act in _LEGACY_BROKEN_ACTIONS):
+            continue
+
+        # 2. Add if not in the new JSON canonical names.
         m = _NAME_ATTR_RE.search(block)
         name_raw = _html_unescape(m.group(1)) if m else ''
         if name_raw not in canon:
