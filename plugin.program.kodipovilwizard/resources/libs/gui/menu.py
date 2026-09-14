@@ -537,7 +537,7 @@ def remove_addon_data_menu():
         for folder in sorted(fold, key = lambda x: x):
             foldername = folder.replace(CONFIG.ADDON_DATA, '').replace('\\', '').replace('/', '')
             icon = os.path.join(folder.replace(CONFIG.ADDON_DATA, CONFIG.ADDONS), 'icon.png')
-            fanart = os.path.join(folder.replace(CONFIG.ADDON_DATA, CONFIG.ADDONS), 'fanart.png')
+            fanart = os.path.join(folder.replace(CONFIG.ADDON_DATA, CONFIG.ADDONS), 'fanart.jpg')
             folderdisplay = foldername
             replace = {'audio.': '[COLOR orange][AUDIO] [/COLOR]', 'metadata.': '[COLOR cyan][METADATA] [/COLOR]',
                        'module.': '[COLOR orange][MODULE] [/COLOR]', 'plugin.': '[COLOR blue][PLUGIN] [/COLOR]',
