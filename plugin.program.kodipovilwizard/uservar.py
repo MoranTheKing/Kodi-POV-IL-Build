@@ -46,11 +46,7 @@ BUILD_SKIN_SWITCH_IMAGE_URL = 'https://github.com/MoranTheKing/Kodi-POV-IL/raw/m
 # Monorepo CI pipeline. The wizard polls this on startup and updates only
 # the addons whose version moved.
 MANIFEST_URL = 'https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL-Build/main/manifest.json'
-# KODI-RD-IL - AUTO ANDROID/WINDOWS UPDATE
-# WINDOWS SOFTWARE
-LATEST_WINDOWS_VERSION_TEXT_FILE = 'https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL/main/wizard/assets/kodi_version_auto_update/windows/latest_windows_version.txt'
-WINDOWS_DOWNLOAD_URL = "https://morantheking.github.io/Kodi-POV-IL/downloads/windows/"
-WINDOWS_INSTALLATION_PATH = "C:\\Program Files\\Kodi"
+
 #########################################################
 
 ADDONFILE = 'http://'

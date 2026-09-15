@@ -1314,202 +1314,86 @@ def build_switch_skin():
         return
 
 ##########################################
-# KODI-RD-IL - WINDOWS + ANDROID
-def check_if_running_custom_kodi(kodi_custom_path):
-    import xbmcvfs
-    kodi_root_path = xbmcvfs.translatePath('special://xbmc/')
-    if kodi_custom_path in kodi_root_path:
-        return True
-    return False
+# KODI-RD-IL - UPDATE CHECK
 
-# KODI-RD-IL - ANDROID
-def check_if_app_installed(app_package_id):
-    import xbmcvfs
-    apps = xbmcvfs.listdir('androidapp://sources/apps/')[1]
-    return app_package_id in apps
+def parse_version(ver_str):
+    """Converts '21.0-Omega' or '21.0.1' into a tuple of integers like (21, 0)."""
+    import re
+    match = re.search(r'^(\d+(?:\.\d+)+)', ver_str)
+    if match:
+        return tuple(map(int, match.group(1).split('.')))
+    return (0, 0)
 
-def open_google_play_store_on_specific_app(app_package_id):
-    app      = 'com.android.vending'
-    intent   = 'android.intent.action.VIEW'
-    dataType = ''
-    dataURI  = f'https://play.google.com/store/apps/details?id={app_package_id}'
-    xbmc.executebuiltin(f'StartAndroidActivity("{app}", "{intent}", "{dataType}", "{dataURI}")')
+def get_current_kodi_version():
+    """Extracts the numeric float version (e.g., 21.0) from the running Kodi instance."""
+    import re
+    import xbmc
+    build_version = xbmc.getInfoLabel('System.BuildVersion')
+    return parse_version(build_version)
 
-# KODI-RD-IL - ANDROID
-def kodi_apk_update_check(kodi_version_update_check_manual, os_type_label):
-    dialog = xbmcgui.Dialog()
-    try:
-
-        LATEST_APK_VERSION_TEXT_FILE = float(tools.open_url(CONFIG.LATEST_APK_VERSION_TEXT_FILE).text)
-        is_new_version_available = LATEST_APK_VERSION_TEXT_FILE > CONFIG.KODIV
-
-        if is_new_version_available:
-
-            yes_pressed = dialog.yesno(f"{CONFIG.ADDONTITLE} ({os_type_label})",
-                               f'[COLOR yellow][B]קיים עדכון גרסה לאפליקציה שלנו![/B][/COLOR]\nגרסת קודי נוכחית: [B][COLOR red]{CONFIG.KODIV}[/COLOR][/B]\nגרסת קודי מעודכנת: [B][COLOR limegreen]{LATEST_APK_VERSION_TEXT_FILE}[/COLOR][/B]\nהאם ברצונך לעדכן את האפליקציה?',
-                               nolabel='[B][COLOR red]מאוחר יותר[/COLOR][/B]',
-                               yeslabel='[B][COLOR springgreen]עדכן[/COLOR][/B]')
-
-            if yes_pressed:
-                yes_pressed = dialog.yesno(f"{CONFIG.ADDONTITLE} ({os_type_label})",
-                                   f'[B]משתמש בסטרימר Android TV? בחר [COLOR orange]Downloader[/COLOR].\n\nמשתמש בסטרימר/מכשיר אנדרואיד רגיל? בחר [COLOR yellow]Google Chrome[/COLOR].[/B]',
-                                   nolabel='[B][COLOR orange]Downloader[/COLOR][/B]',
-                                   yeslabel='[B][COLOR yellow]Google Chrome[/COLOR][/B]')
-
-                if yes_pressed:
-                    google_chrome_app_packge_id = 'com.android.chrome'
-
-                    if check_if_app_installed(google_chrome_app_packge_id):
-                        # Open Google Chrome on APK_DOWNLOAD_URL.
-                        app      = google_chrome_app_packge_id
-                        intent   = 'android.intent.action.VIEW'
-                        dataType = ''
-                        dataURI  = CONFIG.APK_DOWNLOAD_URL
-                        xbmc.executebuiltin(f'StartAndroidActivity("{app}", "{intent}", "{dataType}", "{dataURI}")')
-                        return
-
-                    else:
-                        yes_pressed = dialog.yesno(f"{CONFIG.ADDONTITLE} ({os_type_label})",
-                                           '[B]אפליקציית [COLOR yellow]Google Chrome[/COLOR] אינה מותקנת.[/B]',
-                                           nolabel='[B]ביטול[/B]',
-                                           yeslabel='[B]הורד מהחנות[/B]')
-                        if yes_pressed:
-                            # Open Google Play Store on Google Chrome app.
-                            open_google_play_store_on_specific_app(google_chrome_app_packge_id)
-                            return
-                        else:
-                            return
-
-                else:
-                    downloader_app_packge_id = 'com.esaba.downloader'
-
-                    msg = f"כעת תיפתח אפליקציית Downloader. יש להזין את המספר:\n[COLOR orange]{CONFIG.APK_DOWNLOADER_CODE}[/COLOR]\nולבחור את גרסת ה-APK (32/64 ביט) המתאימה למכשיר שלכם.\n[COLOR limegreen]עכשיו זה הזמן לרשום/לצלם את המספר![/COLOR]"
-                    from resources.libs.gui import window
-                    window.show_notification_with_extra_image(msg, 999, CONFIG.APK_DOWNLOADER_CODE_IMAGE_URL)
-
-                    # Check if Downloader app installed.
-                    if check_if_app_installed(downloader_app_packge_id):
-                        xbmc.executebuiltin(f'StartAndroidActivity({downloader_app_packge_id})')
-                        return
-
-                    else:
-                        yes_pressed = dialog.yesno(f"{CONFIG.ADDONTITLE} ({os_type_label})",
-                                           '[B]אפליקציית [COLOR orange]Downloader[/COLOR] אינה מותקנת.[/B]',
-                                           nolabel='[B]ביטול[/B]',
-                                           yeslabel='[B]הורד מהחנות[/B]')
-                        if yes_pressed:
-                            # Open Google Play Store on Downloader app.
-                            open_google_play_store_on_specific_app(downloader_app_packge_id)
-                            return
-                        else:
-                            return
-
-            else:
-                return
-
-        elif kodi_version_update_check_manual:
-            dialog.ok(f"{CONFIG.ADDONTITLE} ({os_type_label})", f'[COLOR yellow][B]לא קיים עדכון לאפליקציה![/B][/COLOR]\nגרסת קודי נוכחית: [B][COLOR limegreen]{CONFIG.KODIV}[/COLOR][/B]\nגרסת קודי מעודכנת: [B][COLOR limegreen]{LATEST_APK_VERSION_TEXT_FILE}[/COLOR][/B]')
-
-    except Exception as e:
-        logging.log(f'[kodi_version_update_check] Exception: {str(e)}')
-        if kodi_version_update_check_manual:
-            dialog.ok(f"{CONFIG.ADDONTITLE} ({os_type_label})", f'התרחשה שגיאה:\n{str(e)}')
-
-
-# KODI-RD-IL - WINDOWS
-def kill_kodi_and_install_exe(exe_full_path):
-
-    import xbmcvfs
-    if not xbmcvfs.exists(exe_full_path):
-        logging.log_notify(CONFIG.ADDONTITLE,
-                            '[COLOR {0}]הקובץ לא נמצא![/COLOR]'.format(CONFIG.COLOR2))
-
-    def kill_kodi():
-        subprocess.call('taskkill /f /im kodi.exe', shell=True)
-
-    import threading,subprocess
-    kodi_killer = threading.Timer(1.0, kill_kodi)
-    kodi_killer.start()
-    subprocess.call(exe_full_path, shell=True)
-
-
-# KODI-RD-IL - WINDOWS
-def kodi_windows_update_check(kodi_version_update_check_manual, os_type_label):
-    dialog = xbmcgui.Dialog()
+def get_latest_official_kodi_version():
+    """Fetches the latest official Kodi release version from the Kodi GitHub API."""
+    import json
+    import urllib.request as urllib_req
 
     try:
-        LATEST_WINDOWS_VERSION_NUMBER = float(tools.open_url(CONFIG.LATEST_WINDOWS_VERSION_TEXT_FILE).text)
-        is_new_version_available = LATEST_WINDOWS_VERSION_NUMBER > CONFIG.KODIV
-
-        if is_new_version_available:
-
-            yes = dialog.yesno(f"{CONFIG.ADDONTITLE} ({os_type_label})",
-                               f'[COLOR yellow][B]קיים עדכון גרסה לאפליקציה שלנו![/B][/COLOR]\nגרסת קודי נוכחית: [B][COLOR red]{CONFIG.KODIV}[/COLOR][/B]\nגרסת קודי מעודכנת: [B][COLOR limegreen]{LATEST_WINDOWS_VERSION_NUMBER}[/COLOR][/B]\nהאם ברצונך לעדכן את האפליקציה?',
-                               nolabel='[B][COLOR red]מאוחר יותר[/COLOR][/B]',
-                               yeslabel='[B][COLOR springgreen]עדכן[/COLOR][/B]')
-
-            if not yes:
-                return
-
-            if yes:
-                ######## BUILD DIRECT EXE WINDOWS INSTALER URL ########
-                DIRECT_WINDOWS_DOWNLOAD_URL = f"{CONFIG.WINDOWS_DOWNLOAD_URL}/Kodi + Real Debrid Israel {LATEST_WINDOWS_VERSION_NUMBER} Setup.exe"
-                #######################################################
-
-                response = tools.open_url(DIRECT_WINDOWS_DOWNLOAD_URL, check=True)
-                if not response:
-                    logging.log_notify(f"{CONFIG.ADDONTITLE} ({os_type_label})",
-                                        '[COLOR {0}]קישור ההורדה אינו תקין![/COLOR]'.format(CONFIG.COLOR2))
-                    return
-
-                destination_path = CONFIG.PACKAGES
-                exe_file_name = os.path.basename(DIRECT_WINDOWS_DOWNLOAD_URL)
-                exe_full_path = os.path.join(destination_path, exe_file_name)
-
-                progress_dialog = xbmcgui.DialogProgress()
-                progress_dialog.create(f"{CONFIG.ADDONTITLE} ({os_type_label})",
-                              '[COLOR {0}][B]מוריד:[/B][/COLOR] [COLOR {1}]{2}[/COLOR]'.format(CONFIG.COLOR2, CONFIG.COLOR1, exe_file_name)
-                              +'\n'+''
-                              +'\n'+'נא המתן')
-
-                try:
-                    os.remove(exe_full_path)
-                except:
-                    pass
-                Downloader().download(DIRECT_WINDOWS_DOWNLOAD_URL, exe_full_path)
-                xbmc.sleep(100)
-                progress_dialog.close()
-
-                dialog.ok(f"{CONFIG.ADDONTITLE} ({os_type_label})", f"[B]ההורדה הסתיימה בהצלחה.\nלחץ אישור כדי לסגור את קודי ולהתחיל את ההתקנה.[/B]")
-                kill_kodi_and_install_exe(exe_full_path)
-
-        elif kodi_version_update_check_manual:
-            dialog.ok(f"{CONFIG.ADDONTITLE} ({os_type_label})", f'[COLOR yellow][B]לא קיים עדכון לאפליקציה![/B][/COLOR]\nגרסת קודי נוכחית: [B][COLOR limegreen]{CONFIG.KODIV}[/COLOR][/B]\nגרסת קודי מעודכנת: [B][COLOR limegreen]{LATEST_WINDOWS_VERSION_NUMBER}[/COLOR][/B]')
-
+        url = "https://api.github.com/repos/xbmc/xbmc/releases/latest"
+        req = urllib_req.Request(url, headers={'User-Agent': 'Kodi-POV-IL-Wizard'})
+        with urllib_req.urlopen(req, timeout=10) as response:
+            data = json.loads(response.read().decode('utf-8'))
+            tag_name = data.get('tag_name', '')
+            return parse_version(tag_name)
     except Exception as e:
-        logging.log(f'[kodi_version_update_check] Exception: {str(e)}')
-        if kodi_version_update_check_manual:
-            dialog.ok(f"{CONFIG.ADDONTITLE} ({os_type_label})", f'התרחשה שגיאה:\n{str(e)}')
+        from resources.libs.common import logging
+        logging.log(f"DEBUG | get_latest_official_kodi_version | Failed: {str(e)}")
 
+    return None
 
-# xbmc.executebuiltin(f"RunPlugin(plugin://{CONFIG.ADDON_ID}/?mode=install&action=kodi_version_update_check&kodi_version_update_check_manual=False)")
 def kodi_version_update_check(kodi_version_update_check_manual="false"):
-
-    kodi_version_update_check_manual = True if kodi_version_update_check_manual=="true" else False
+    kodi_version_update_check_manual = True if kodi_version_update_check_manual == "true" else False
     os_type_label = tools.platform().capitalize()
     dialog = xbmcgui.Dialog()
 
-    # Windows Software
-    elif tools.platform() == 'windows':
-        ###### KODI WINDOWS SOFTWARE INSTALLED CHECK ###########
-        if not check_if_running_custom_kodi(CONFIG.WINDOWS_INSTALLATION_PATH):
-            if kodi_version_update_check_manual:
-                dialog.ok(f"{CONFIG.ADDONTITLE} ({os_type_label})",'[B]אינך עם תוכנת הקודי הייעודית שלנו![/B]')
-            return
-        kodi_windows_update_check(kodi_version_update_check_manual, os_type_label)
+    try:
+        current_version = get_current_kodi_version()
+        latest_version = get_latest_official_kodi_version()
+        current_str = ".".join(map(str, current_version))
+        latest_str = ".".join(map(str, latest_version))
 
-    else:
-        dialog.ok(CONFIG.ADDONTITLE, f"[B]הפיצ'ר אינו נתמך עבור: {os_type_label}[/B]")
+        if not latest_version:
+            if kodi_version_update_check_manual:
+                dialog.ok(f"{CONFIG.ADDONTITLE} ({os_type_label})",
+                          "[COLOR yellow][B]לא הצלחנו לבדוק את הגרסה העדכנית.[/B][/COLOR]\nנסה שוב מאוחר יותר.")
+            return
+
+        if latest_version > current_version:
+            dialog.ok(f"{CONFIG.ADDONTITLE} ({os_type_label})",
+                      f'[COLOR yellow][B]קיים עדכון רשמי ל-Kodi![/B][/COLOR]\n\n'
+                      f'גרסה נוכחית: [B][COLOR red]{current_str}[/COLOR][/B]\n'
+                      f'גרסה מעודכנת: [B][COLOR limegreen]{latest_str}[/COLOR][/B]\n\n'
+                      f'הבילד שלנו מותאם לרוץ על Kodi נקי והעדכני ביותר.\n'
+                      f'אנא עדכן את קודי דרך החנות הרשמית במכשירך או אתר Kodi.tv.')
+
+        elif kodi_version_update_check_manual:
+            dialog.ok(f"{CONFIG.ADDONTITLE} ({os_type_label})",
+                      f'[COLOR limegreen][B]קודי (Kodi) מעודכן לגרסה האחרונה![/B][/COLOR]\n\n'
+                      f'גרסה נוכחית: [B]{current_str}[/B]')
+
+    except Exception as e:
+        from resources.libs.common import logging
+        logging.log(f'[kodi_version_update_check] Exception: {str(e)}')
+        if kodi_version_update_check_manual:
+            dialog.ok(f"{CONFIG.ADDONTITLE} ({os_type_label})", f'התרחשה שגיאה:\n{str(e)}')
+
+# KODI-RD-IL - ANDROID
+# Required helper for the real_debrid_speedtest android browsers check
+def check_if_app_installed(app_package_id):
+    import xbmcvfs
+    try:
+        apps = xbmcvfs.listdir('androidapp://sources/apps/')[1]
+        return app_package_id in apps
+    except Exception:
+        return False
 ##########################################
 
 

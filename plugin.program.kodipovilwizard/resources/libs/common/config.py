@@ -53,11 +53,6 @@ class Config:
         self.EXCLUDES = getattr(uservar, 'EXCLUDES', [])
         self.UPDATECHECK = getattr(uservar, 'UPDATECHECK', 0)
 
-        # Windows Installation Paths
-        self.LATEST_WINDOWS_VERSION_TEXT_FILE = getattr(uservar, 'LATEST_WINDOWS_VERSION_TEXT_FILE', '')
-        self.WINDOWS_DOWNLOAD_URL = getattr(uservar, 'WINDOWS_DOWNLOAD_URL', '')
-        self.WINDOWS_INSTALLATION_PATH = getattr(uservar, 'WINDOWS_INSTALLATION_PATH', '')
-
         self.ADDONFILE = getattr(uservar, 'ADDONFILE', '')
         self.ADVANCEDFILE = getattr(uservar, 'ADVANCEDFILE', '')
 
