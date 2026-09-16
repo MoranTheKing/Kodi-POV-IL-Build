@@ -297,8 +297,6 @@ def save_menu():
     whitelist = 'true' if getattr(CONFIG, 'KEEPWHITELIST', 'false') == 'true' else 'false'
     addons33db = 'true' if getattr(CONFIG, 'KEEPADDONS33DB', 'false') == 'true' else 'false'
 
-    directory.add_dir('חיבור שירותים (Account Manager)', {'mode': 'run_acctmgr'}, icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME1)
-
     directory.add_file('- לחץ להפעלה או ביטול של ההגדרה -', themeit=CONFIG.THEME3)
 
     # New Targeted Backup Toggles

@@ -482,33 +482,44 @@ UMBRELLA_PACKS = [
 # accounts up on the next boot. Ships with script.module.acctvwr (a hard
 # dependency of acctmgr, in no repo the build already carries) and with the
 # developer's own repository, so from here on he is its update channel, not us.
-ACCTMGR_PACK_VERSION = '1.1.6'
-ACCTMGR_PACKS = [
-    {
-        'name': 'Account Manager Lite',
-        'url': '{0}/Kodi-POV-IL-AcctMgr-pack.zip'.format(NOX_PACK_BASE_URL),
-        'filename': 'acctmgr_pack.zip',
-        'sentinel': 'special://home/addons/script.module.acctmgr/addon.xml',
-        'expected_version': ACCTMGR_PACK_VERSION,
-        'addon_ids': [
-            'script.module.acctmgr',
-            'script.module.acctvwr',
-            'repository.709',
-        ],
-    },
-]
+
+def _acctmgr_was_removed():
+    """True when Account Manager's settings are on disk but the add-on is not.
+
+    Kodi's uninstall removes addons/<id>/ and leaves
+    userdata/addon_data/<id>/ alone, so this is "it was here and somebody
+    took it away" as distinct from "it was never here".
+    """
+    try:
+        import xbmcvfs
+        if _addon_on_disk('script.module.acctmgr'):
+            return False
+        data = xbmcvfs.translatePath(
+            'special://profile/addon_data/script.module.acctmgr')
+        if not xbmcvfs.exists(data):
+            return False
+        dirs, files = xbmcvfs.listdir(data)
+        return bool(dirs or files)
+    except Exception:
+        return False
 
 
 def ensure_acctmgr_installed():
-    """Download + extract the Account Manager pack on demand (same
-    battle-tested path as the NOX/Umbrella packs, including the Addons-DB
-    registration that makes Kodi actually see the new addons)."""
-    return _ensure_packs_installed(
-        ACCTMGR_PACKS,
-        '[COLOR {0}][B]מוריד את Account Manager[/B][/COLOR]'.format(
-            CONFIG.COLOR2),
-        '[COLOR {0}][B]Account Manager מוכן לשימוש[/B][/COLOR]'.format(
-            CONFIG.COLOR1))
+    """Install Account Manager ON DEMAND via Kodi's native InstallAddon.
+
+    Replaces the legacy static monolithic zip extraction. Once the target repository
+    is available, this will safely download and resolve dependencies for
+    script.module.acctmgr through Kodi's internal provisioning system.
+    """
+    if xbmc.getCondVisibility('System.HasAddon(script.module.acctmgr)'):
+        return True
+    try:
+        from resources.libs.modular_updater import ModularUpdater
+        ModularUpdater(background=False).post_install_provisioning(
+            per_addon_timeout=60, ids=['script.module.acctmgr'])
+    except Exception as err:
+        logging.log('[Account Manager] native install failed: {0}'.format(err), level=xbmc.LOGERROR)
+    return xbmc.getCondVisibility('System.HasAddon(script.module.acctmgr)')
 
 
 ACCTMGR_AUTO_SETTING = 'acctmgr_auto'
@@ -539,15 +550,23 @@ def ensure_acctmgr_for_everyone():
     Account Manager on purpose is not fought with at every boot -- that is
     their call, and the screen still works without it.
 
-    Silent when there is nothing to do: the pack's own sentinel + version gate
-    inside _ensure_packs_installed means an already-current install costs a
-    file check, not an 8 MB download. Never raises; the caller runs at
+    Silent when there is nothing to do. Never raises; the caller runs at
     startup and a failure here must not stop the rest of it."""
     try:
         if CONFIG.get_setting(ACCTMGR_AUTO_SETTING) == ACCTMGR_AUTO_DONE:
             return False
         if not CONFIG.get_setting('buildname'):
             return False            # build not installed yet -- too early
+
+        # Check if the user deliberately removed it
+        if _acctmgr_was_removed():
+            logging.log(
+                '[Account Manager] settings from a previous install are here but the '
+                'add-on is not; treating that as a deliberate removal and not '
+                'installing it again', level=xbmc.LOGINFO)
+            CONFIG.set_setting(ACCTMGR_AUTO_SETTING, ACCTMGR_AUTO_DONE)
+            return False
+
         ok = ensure_acctmgr_installed()
         if not ok:
             # No marker: a device that was offline (or where the pack host was
@@ -562,8 +581,7 @@ def ensure_acctmgr_for_everyone():
             xbmc.executebuiltin('UpdateLocalAddons')
         except Exception:
             pass
-        logging.log('[Account Manager] auto-installed {0}'.format(
-            ACCTMGR_PACK_VERSION), level=xbmc.LOGINFO)
+        logging.log('[Account Manager] auto-installed successfully', level=xbmc.LOGINFO)
         return True
     except Exception as e:
         logging.log('[Account Manager] auto-install failed: {0}'.format(e),
@@ -595,6 +613,13 @@ def install_acctmgr_pilot():
             xbmc.executebuiltin('UpdateLocalAddons')
         except Exception:
             pass
+
+        # Record it here too so manual and auto paths leave the same mark
+        try:
+            CONFIG.set_setting(ACCTMGR_AUTO_SETTING, ACCTMGR_AUTO_DONE)
+        except Exception:
+            pass
+
         logging.log_notify(
             CONFIG.ADDONTITLE,
             '[COLOR {0}]הותקן! זמין תחת תוספים -> תוכניות -> '
@@ -1479,4 +1504,4 @@ def speedtest_dialog():
         standard_speedtest()
     else:
         real_debrid_speedtest()
-##########################################
+#############################################

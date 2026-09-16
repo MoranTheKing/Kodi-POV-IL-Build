@@ -59,7 +59,7 @@ class MainMenu:
                 directory.add_dir('התקן Umbrella (ניסיוני)', {'mode': 'install', 'action': 'install_umbrella'}, icon=CONFIG.ICONBUILDS, themeit=CONFIG.THEME1)
                 ##############################################################################################
                 # KODI-POV-IL ACCOUNT MANAGER PILOT (opt-in; see wizard.install_acctmgr_pilot)
-                directory.add_dir('התקן מחדש Account Manager', {'mode': 'install', 'action': 'install_acctmgr'}, icon=CONFIG.ICONBUILDS, themeit=CONFIG.THEME1)
+                directory.add_dir('חיבור שירותים (Account Manager)', {'mode': 'run_acctmgr'}, icon=CONFIG.ICONMAINT, themeit=CONFIG.THEME1)
                 ##############################################################################################
                 
             from resources.libs.gui.build_menu import BuildMenu
