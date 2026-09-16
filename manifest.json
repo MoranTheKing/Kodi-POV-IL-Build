@@ -3,7 +3,7 @@
   "name": "Kodi POV IL Build",
   "repo": "MoranTheKing/Kodi-POV-IL-Build",
   "release_tag": "addons-latest",
-  "generated": "2026-09-16T08:25:49Z",
+  "generated": "2026-09-16T10:57:54Z",
   "manifest_url": "https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL-Build/main/manifest.json",
   "config": {
     "config_version": "2.0.6",
@@ -28,13 +28,13 @@
     "plugin.program.kodipovilwizard": {
       "id": "plugin.program.kodipovilwizard",
       "name": "[COLOR yellow]Kodi POV IL Wizard[/COLOR]",
-      "version": "0.3.3",
+      "version": "0.3.4",
       "type": "plugin",
-      "filename": "plugin.program.kodipovilwizard-0.3.3.zip",
-      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.kodipovilwizard-0.3.3.zip",
-      "size": 2136437,
-      "sha256": "45fe9f4e060507d3dcb9dc19def1e332c0746b4bc5dbed4c1fc2bce828ac286b",
-      "updated": "2026-09-16T08:25:49Z"
+      "filename": "plugin.program.kodipovilwizard-0.3.4.zip",
+      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.kodipovilwizard-0.3.4.zip",
+      "size": 2136491,
+      "sha256": "e9dcd938015167ac7af2ebee092994d63a14f14b71f3cebe1274d830b2a5a747",
+      "updated": "2026-09-16T10:57:54Z"
     },
     "plugin.program.orderfavourites-hebrew": {
       "id": "plugin.program.orderfavourites-hebrew",
@@ -46,6 +46,17 @@
       "size": 12999148,
       "sha256": "35cb6f594a722713d8c9e5953c17b83df80c6cb8dab76092bf7a9a0f28e05684",
       "updated": "2026-09-14T21:51:10Z"
+    },
+    "repository.709": {
+      "id": "repository.709",
+      "name": " The[COLOR FF0C5EB4][B]7o9[/B][/COLOR]Repo",
+      "version": "1.0.2",
+      "type": "repository",
+      "filename": "repository.709-1.0.2.zip",
+      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/repository.709-1.0.2.zip",
+      "size": 707098,
+      "sha256": "2b33b75724c803ed5bca2e78c4082a9af4f845ef916ad7e6c56634c597c2e64c",
+      "updated": "2026-09-16T10:57:54Z"
     },
     "repository.Fishenzon": {
       "id": "repository.Fishenzon",
