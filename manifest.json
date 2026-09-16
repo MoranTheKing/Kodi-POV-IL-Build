@@ -3,7 +3,7 @@
   "name": "Kodi POV IL Build",
   "repo": "MoranTheKing/Kodi-POV-IL-Build",
   "release_tag": "addons-latest",
-  "generated": "2026-09-16T10:57:54Z",
+  "generated": "2026-09-16T12:20:49Z",
   "manifest_url": "https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL-Build/main/manifest.json",
   "config": {
     "config_version": "2.0.6",
@@ -127,13 +127,13 @@
     "service.subtitles.kodipovilai": {
       "id": "service.subtitles.kodipovilai",
       "name": "MoranSubs",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "type": "subtitle",
-      "filename": "service.subtitles.kodipovilai-0.3.0.zip",
-      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/service.subtitles.kodipovilai-0.3.0.zip",
-      "size": 2133258,
-      "sha256": "f460c4fe28d570074f938e5f7d275f154cfd52715f797b5af4125fa1c0a166f6",
-      "updated": "2026-09-16T08:25:49Z"
+      "filename": "service.subtitles.kodipovilai-0.3.1.zip",
+      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/service.subtitles.kodipovilai-0.3.1.zip",
+      "size": 3787492,
+      "sha256": "d5067395e80fa9f77bff9b5b5859afa83478f8bd2115d91d576587b403e1b2c8",
+      "updated": "2026-09-16T12:20:49Z"
     },
     "skin.estuary": {
       "id": "skin.estuary",
@@ -153,9 +153,9 @@
       "type": "skin",
       "filename": "skin.fentastic-1.0.27.zip",
       "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/skin.fentastic-1.0.27.zip",
-      "size": 20851485,
-      "sha256": "2bcec4dc276f38958a3fc124ef9143b96e0460bb4af4be8634f8ef35ed0c8727",
-      "updated": "2026-09-13T18:05:24Z"
+      "size": 20851487,
+      "sha256": "311a5c2a380b586e6154b464142e91edcb3f3669c22454b76945f3e0ec1a8661",
+      "updated": "2026-09-16T12:20:49Z"
     },
     "skin.povil.nox": {
       "id": "skin.povil.nox",
