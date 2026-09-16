@@ -520,16 +520,6 @@
             <allowempty>true</allowempty>
           </constraints>
         </setting>
-        <!-- Hidden marker: one-time restore of the FENtastic/AF3 genre
-             shortcut-folder rows in navigator.db (movies/series by genre).
-             Read/written by pov_genre_folders_reseed_patcher.py. -->
-        <setting id="_pov_genre_folders_reseed" type="string" label="30000">
-          <level>4</level>
-          <default></default>
-          <constraints>
-            <allowempty>true</allowempty>
-          </constraints>
-        </setting>
         <!-- Hidden marker: one-time tune of POV scraper settings
              (pre-release/3D on, piratebay off) has been applied. The value is
              a fingerprint of what the tune intends to write, so editing that

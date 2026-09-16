@@ -399,7 +399,6 @@ def _run_build_startup_repairs():
         _maybe_patch_pov_genre_icons,
         _maybe_patch_pov_hebrew_genres,
         _maybe_patch_pov_hebrew_ui,
-        _maybe_patch_pov_anime_hebrew,
         _maybe_fix_pov_container_refresh_crash,
         _maybe_patch_mdblist_reauth,
         _maybe_seed_pov_seasons_view,
@@ -423,7 +422,6 @@ def _run_build_startup_repairs():
         _maybe_patch_pov_bookmark_refresh,
         _maybe_patch_umbrella_language,
         _maybe_patch_pov_navigator_read,
-        _maybe_reseed_genre_folders,
         _maybe_fix_fentastic_clearlogo_var,
         # POV scans one folder for internal scrapers and 6.08.14 renamed it,
         # so third-party ones stopped being seen at all. Creates the old
@@ -438,8 +436,6 @@ def _run_build_startup_repairs():
         _maybe_add_tonight_entry,
         _maybe_seed_recent_updates_tile,
         _maybe_patch_pov_mdblist_sync,
-        _maybe_guard_pov_debrid_handlers,
-        _maybe_log_pov_debrid_errors,
         _maybe_keep_sources_when_debrid_is_late,
         _maybe_time_pov_directories,
         _maybe_repair_addon_autoupdate,
@@ -879,30 +875,6 @@ def _skip_pov_patchers():
             pass
     return True
 
-def _maybe_reseed_genre_folders():
-    """One-time restore of POV's FENtastic genre shortcut-folder rows in
-    navigator.db (movies/series by genre) when a POV self-update dropped them,
-    which empties the AF3/FENtastic 'by genre' home widgets. Restores only
-    missing/empty rows, then leaves them to the user's edits."""
-    try:
-        from resources.lib import pov_genre_folders_reseed_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_genre_folders_reseed_patcher.maybe_reseed_genre_folders()
-        if status == 'reseeded':
-            kodi_utils.log(
-                'pov_genre_folders_reseed_patcher: restored genre folders',
-                level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_genre_folders_reseed_patcher run failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_repair_pov_cache_schema():
     """Rebuild POV's cache tables when a POV update reordered their columns.
 
@@ -1321,44 +1293,6 @@ def _maybe_restore_pov_torbox():
             pass
 
 
-def _maybe_patch_pov_anime_hebrew():
-    """Hebrew-ise POV's Anime section: the anime menu names in
-    menu_lists.py are hardcoded English (unlike the id-based Movies/TV
-    menus), as are the anime breadcrumb titles in navigator.py.
-    Idempotent, compile-checked, self-healing."""
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_anime_hebrew_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_anime_hebrew_patcher.ensure_patched()
-        if 'patched' in status:
-            kodi_utils.log(
-                'pov_anime_hebrew_patcher: ' + status, level='INFO')
-            # POV runs with reuselanguageinvoker, so its interpreter already
-            # imported menu_lists.py/navigator.py with the OLD English labels
-            # before this patch landed on disk. Cycle POV so it re-imports the
-            # Hebrew version THIS session instead of only after the next
-            # restart (the reason a freshly-updated device still showed the
-            # anime menu in English).
-            try:
-                from resources.lib import pov_reload
-                pov_reload.note_patched()
-            except Exception:
-                pass
-        elif any(bad in status for bad in
-                 ('failed', 'compile', 'write', 'read')):
-            kodi_utils.log(
-                'pov_anime_hebrew_patcher: ' + status, level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_anime_hebrew_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
 
 
 def _maybe_patch_pov_hebrew_ui():
@@ -1585,61 +1519,6 @@ def _maybe_fix_idanplus_youtube_id():
             pass
 
 
-def _maybe_guard_pov_debrid_handlers():
-    """Stop POV's debrid error handlers deleting the error they report.
-
-    A field log showed 38 of 38 AllDebrid sources failing to play, every one
-    of them with `cannot access local variable 'torrent_id'`. The name is
-    assigned inside the try and read by the except, so when the provider
-    errs -- expired key, lapsed subscription, changed endpoint -- the handler
-    raises an UnboundLocalError that REPLACES the cause. The user sees "no
-    results"; the log cannot say why.
-
-    Binding those names before the try does not make the provider work, and
-    it does not do the same thing at all three sites -- a claim this docstring
-    made flatly until a review executed all three instead of reading them.
-
-    AllDebrid and Real-Debrid end their handlers `if errors: raise`, and the
-    caller that matters passes errors=True, so the provider's real error now
-    reaches the log verbatim. That is the reported case. TorBox has no
-    `errors` parameter and never re-raises: it gains the crash removed and its
-    own cleanup running, not the reason. Making it re-raise would invent an
-    error path into two call sites that have no try of their own, which is
-    more than a patcher into someone else's add-on gets to do.
-
-    See the module for the three sites, the fourth its sibling patcher owns,
-    and how they were found."""
-    # It writes into POV's own files, so it answers to the switch that says
-    # not to. The tuple around it is inconsistent about this and a good many
-    # steps still skip the check -- which is a reason to tighten those, never a
-    # licence to add one more.
-    #
-    # No count here on purpose. The comment used to name one, it was already
-    # stale by the time it was written (this very line moved the step into the
-    # other column), and two careful recounts afterwards disagreed with each
-    # other. A number nobody can reproduce is worse than no number.
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_debrid_unbound_guard_patcher, kodi_utils
-        st = pov_debrid_unbound_guard_patcher.ensure_patched()
-        bad = [p for p in st.split(', ')
-               if p.split('=')[-1] in ('unmatched', 'compile_failed',
-                                       'write_failed', 'revert_failed',
-                                       'read_failed')]
-        if bad:
-            kodi_utils.log(
-                'pov_debrid_unbound_guard_patcher: ' + st, level='WARNING')
-    except Exception as e:
-        try:
-            from resources.lib import kodi_utils
-            kodi_utils.log(
-                'pov_debrid_unbound_guard_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_fix_pov_alldebrid_status():
     """POV 6.08.14 indexes a dict with [0] and every AllDebrid play fails.
 
@@ -1775,46 +1654,6 @@ def _maybe_repair_addon_autoupdate():
         except Exception:
             pass
 
-
-def _maybe_log_pov_debrid_errors():
-    """Make a debrid refusal visible in the log instead of "no sources".
-
-    AllDebrid and TorBox both answer HTTP 200 and put the refusal in the body,
-    and POV's _request logs only when the status code is bad -- so the reason
-    the provider spelled out is dropped one line after it arrives. One log
-    line, no control-flow change. See the module for the envelopes and for the
-    two providers this deliberately leaves alone.
-    """
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_debrid_error_log_patcher, kodi_utils
-        st = pov_debrid_error_log_patcher.ensure_patched()
-        bad = [p for p in st.split(', ')
-               if p.split('=')[-1] in ('unmatched', 'compile_failed',
-                                       'write_failed', 'revert_failed',
-                                       'read_failed')]
-        if bad:
-            kodi_utils.log(
-                'pov_debrid_error_log_patcher: ' + st, level='WARNING')
-        elif any(p.endswith('=patched') or p.endswith('=repatched')
-                 for p in st.split(', ')):
-            # A patch into POV's warm interpreter does not take effect until
-            # it re-imports, and the cycle that forces that is armed by this
-            # call. Without it the line would first appear a boot later.
-            try:
-                from resources.lib import pov_reload
-                pov_reload.note_patched()
-            except Exception:
-                pass
-    except Exception as e:
-        try:
-            from resources.lib import kodi_utils
-            kodi_utils.log(
-                'pov_debrid_error_log_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
 
 
 def _maybe_keep_sources_when_debrid_is_late():

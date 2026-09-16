@@ -87,6 +87,89 @@ PATCH_CONFIG = [
         )
     },
     {
+        "id": "pov_anime_trakt_strings",
+        "name": "POV Anime Trakt Strings Translation",
+        "description": "Translates hardcoded English strings in Trakt lists to Hebrew.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/menus/navigator.py",
+        "marker": "# WIZARD_POV_ANIME_TRAKT_STRINGS_v2",
+        "anchor": "\t\tcal_str, ani_str, drp_str = 'Trakt Calendar', 'Anime Calendar', 'Dropped TV Shows'",
+        "action": "append_after",
+        "hook": (
+            "\t\t# WIZARD: Variable shadowing to translate hardcoded Anime strings\n"
+            "\t\tani_str, drp_str = 'לוח שידורי אנימה', 'סדרות שנזנחו'\n"
+        )
+    },
+    {
+        "id": "pov_anime_years_breadcrumbs",
+        "name": "POV Anime Years Breadcrumbs Translation",
+        "description": "Translates dynamic breadcrumb titles for Anime Years.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/menus/navigator.py",
+        "marker": "# WIZARD_POV_ANIME_YEARS_BREADCRUMBS_v2",
+        "anchor": "\t\t\tlist_name = 'ANIME %s: %s %s' % (lst_ins.upper(), str(i), ls(32460))",
+        "action": "append_after",
+        "hook": (
+            "\t\t\t# WIZARD: Variable shadowing for Hebrew breadcrumb\n"
+            "\t\t\tlist_name = '%s: %s' % (('סרטי אנימה' if menu_type == 'movie' else 'סדרות אנימה'), str(i))\n"
+        )
+    },
+    {
+        "id": "pov_anime_genres_breadcrumbs",
+        "name": "POV Anime Genres Breadcrumbs Translation",
+        "description": "Translates dynamic breadcrumb titles for Anime Genres.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/menus/navigator.py",
+        "marker": "# WIZARD_POV_ANIME_GENRES_BREADCRUMBS_v2",
+        "anchor": "\t\t\tlist_name = 'ANIME %s: %s %s' % (lst_ins.upper(), genre, ls(32470))",
+        "action": "append_after",
+        "hook": (
+            "\t\t\t# WIZARD: Variable shadowing for Hebrew breadcrumb\n"
+            "\t\t\tlist_name = '%s: %s' % (('סרטי אנימה' if menu_type == 'movie' else 'סדרות אנימה'), genre)\n"
+        )
+    },
+    {
+        "id": "pov_genre_dict_main_loop_translation",
+        "name": "POV Genre Dict Main Loop Translation",
+        "description": "Translates genre dictionary keys in-memory before looping (covers both genres and anime_genres).",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/menus/navigator.py",
+        "marker": "# WIZARD_POV_GENRE_DICT_MAIN_LOOP_v2",
+        "anchor": "\t\tfor genre, value in sorted(genre_list.items()):",
+        "action": "prepend_before",
+        "hook": (
+            "\t\t# WIZARD: Translate genre dict keys to Hebrew in memory\n"
+            "\t\timport sys, xbmcvfs\n"
+            "\t\t_p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
+            "\t\tsys.path.append(_p) if _p not in sys.path else None\n"
+            "\t\timport pov_translations\n"
+            "\t\tgenre_list = pov_translations.translate_genres(genre_list)\n"
+        )
+    },
+    {
+        "id": "pov_genre_dict_multiselect_translation",
+        "name": "POV Genre Dict Multiselect Translation",
+        "description": "Translates genre dictionary keys in-memory inside the multiselect dialog view.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/menus/navigator.py",
+        "marker": "# WIZARD_POV_GENRE_DICT_MULTISELECT_v2",
+        "anchor": "\t\tgenre_list = dict(sorted(json.loads(genre_list).items()))",
+        "action": "append_after",
+        "hook": (
+            "\t\t# WIZARD: Translate genre dict keys to Hebrew in multiselect memory\n"
+            "\t\timport sys, xbmcvfs\n"
+            "\t\t_p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
+            "\t\tsys.path.append(_p) if _p not in sys.path else None\n"
+            "\t\timport pov_translations\n"
+            "\t\tgenre_list = pov_translations.translate_genres(genre_list)\n"
+        )
+    },
+    {
         "id": "pov_tmdb_timeout_widen",
         "name": "POV TMDB Timeout Widen",
         "addon_id": "plugin.video.pov",
@@ -479,6 +562,118 @@ PATCH_CONFIG = [
             "sys.path.append(p) if p not in sys.path else None;\n"
             "import pov_fav_refresh_dialog;\n"
             "pov_fav_refresh_dialog.run(locals())"
+        )
+    },
+    {
+        "id": "pov_ad_unbound_guard",
+        "name": "POV AllDebrid Unbound Guard",
+        "description": "Prevents crash in except block by ensuring torrent_id is bound.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/indexers/alldebrid_api.py",
+        "marker": "# WIZARD_POV_AD_UNBOUND_GUARD_v2",
+        "anchor": "from modules.source_utils import supported_video_extensions",
+        "action": "append_after",
+        "hook": (
+            "torrent_id = None\n"
+            "import sys, xbmcvfs\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
+            "sys.path.append(p) if p not in sys.path else None\n"
+            "import pov_debrid_guardian\n"
+            "pov_debrid_guardian.log_guard_active('alldebrid')"
+        )
+    },
+    {
+        "id": "pov_rd_unbound_guard",
+        "name": "POV RealDebrid Unbound Guard",
+        "description": "Prevents crash in except block by ensuring torrent_id is bound.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/indexers/realdebrid_api.py",
+        "marker": "# WIZARD_POV_RD_UNBOUND_GUARD_v2",
+        "anchor": "from modules.source_utils import supported_video_extensions",
+        "action": "append_after",
+        "hook": (
+            "torrent_id = None\n"
+            "import sys, xbmcvfs\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
+            "sys.path.append(p) if p not in sys.path else None\n"
+            "import pov_debrid_guardian\n"
+            "pov_debrid_guardian.log_guard_active('realdebrid')"
+        )
+    },
+    {
+        "id": "pov_tb_unbound_guard",
+        "name": "POV TorBox Unbound Guard",
+        "description": "Prevents crash in except block by ensuring path and torrent_id are bound.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/indexers/torbox_api.py",
+        "marker": "# WIZARD_POV_TB_UNBOUND_GUARD_v2",
+        "anchor": "from modules.source_utils import supported_video_extensions",
+        "action": "append_after",
+        "hook": (
+            "path = None\n"
+            "torrent_id = None\n"
+            "import sys, xbmcvfs\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
+            "sys.path.append(p) if p not in sys.path else None\n"
+            "import pov_debrid_guardian\n"
+            "pov_debrid_guardian.log_guard_active('torbox')"
+        )
+    },
+    {
+        "id": "pov_ad_error_log",
+        "name": "POV AllDebrid Error Log",
+        "description": "Logs AllDebrid HTTP 200 soft-errors before POV swallows them.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/indexers/alldebrid_api.py",
+        "marker": "# WIZARD_POV_AD_ERROR_LOG_v2",
+        "anchor": "response = response.json() if 'json' in response.headers.get('Content-Type', '') else response",
+        "action": "append_after",
+        "hook": (
+            "import sys, xbmcvfs\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
+            "sys.path.append(p) if p not in sys.path else None\n"
+            "import pov_debrid_guardian\n"
+            "pov_debrid_guardian.log_debrid_error('alldebrid', response, locals().get('path', ''))"
+        )
+    },
+    {
+        "id": "pov_tb_error_log",
+        "name": "POV TorBox Error Log",
+        "description": "Logs TorBox HTTP 200 soft-errors before POV swallows them.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/indexers/torbox_api.py",
+        "marker": "# WIZARD_POV_TB_ERROR_LOG_v2",
+        "anchor": "response = response.json() if 'json' in response.headers.get('Content-Type', '') else response",
+        "action": "append_after",
+        "hook": (
+            "import sys, xbmcvfs\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
+            "sys.path.append(p) if p not in sys.path else None\n"
+            "import pov_debrid_guardian\n"
+            "pov_debrid_guardian.log_debrid_error('torbox', response, locals().get('path', ''))"
+        )
+    },
+    {
+        "id": "pov_pm_error_log",
+        "name": "POV Premiumize Error Log",
+        "description": "Logs Premiumize HTTP 200 soft-errors before POV swallows them.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/indexers/premiumize_api.py",
+        "marker": "# WIZARD_POV_PM_ERROR_LOG_v2",
+        "anchor": "result = self._post(url, data)",
+        "action": "append_after",
+        "hook": (
+            "import sys, xbmcvfs\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
+            "sys.path.append(p) if p not in sys.path else None\n"
+            "import pov_debrid_guardian\n"
+            "pov_debrid_guardian.log_debrid_error('premiumize', result, locals().get('url', ''))"
         )
     }
 ]
