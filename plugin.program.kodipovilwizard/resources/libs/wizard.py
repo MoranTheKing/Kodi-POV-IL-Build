@@ -181,6 +181,19 @@ class Wizard:
             # auto path -> silent background pass; manual menu click -> foreground
             # (shows the install-manager progress UI + an "up to date" dialog).
             result = ModularUpdater(background=auto).run_update_check()
+
+            # KODI-POV-IL - Engine v2 Runtime Patching. Runs once the update
+            # check has finished (whether or not it found anything new) so
+            # a Quick Update always leaves every patch current, the same
+            # guarantee the boot-cycle heal path gives -- without this,
+            # patches would only ever refresh on a full Kodi restart.
+            try:
+                from resources.libs.patch_engine import PatchEngine
+                PatchEngine().run()
+            except Exception as _patch_err:
+                logging.log("[quick_update] PatchEngine run failed: {0}".format(_patch_err),
+                            level=xbmc.LOGERROR)
+
             return bool(result)
         except Exception as err:
             logging.log("[quick_update] Modular update failed: {0}".format(err),

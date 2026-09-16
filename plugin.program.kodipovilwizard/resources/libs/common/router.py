@@ -221,6 +221,34 @@ class Router:
             menu.developer()
             self._finish(handle)
 
+        # PATCH MANAGER
+        elif mode == 'patchmanager':
+            menu.patch_manager_menu()
+            self._finish(handle)
+
+        elif mode == 'togglepatch':
+            patch_id = name
+            addon_obj = xbmcaddon.Addon()
+            current = addon_obj.getSetting('patch_enabled_' + patch_id)
+
+            # Fall back to patches_config.py defaults if setting has never been manually toggled
+            if not current:
+                try:
+                    from resources.libs.patches.patches_config import PATCH_CONFIG
+                    default_state = next((p.get('enabled', True) for p in PATCH_CONFIG if p.get('id') == patch_id), True)
+                except Exception:
+                    default_state = True
+                current = 'true' if default_state else 'false'
+
+            new_state = 'false' if current == 'true' else 'true'
+            addon_obj.setSetting('patch_enabled_' + patch_id, new_state)
+
+            # Execute PatchEngine to immediately scrub/apply the toggled patch
+            from resources.libs.patch_engine import PatchEngine
+            PatchEngine().run()
+
+            xbmc.executebuiltin('Container.Refresh()')
+
         # MAINTENANCE FUNCTIONS
         elif mode == 'kodi17fix':  # Misc Maintenance -> Kodi 17 Fix
             from resources.libs import db

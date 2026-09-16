@@ -358,6 +358,19 @@ def fresh_build_auto_install_if_needed():
         except Exception as err:
             logging.log("[Fresh Build Auto Install] Failed to execute media_installer: {0}".format(err), level=xbmc.LOGERROR)
 
+        # KODI-POV-IL - Engine v2 Runtime Patching. Freshly extracted addons
+        # (plugin.video.pov and friends) have never been patched at this
+        # point -- run it now, before arm_first_boot_stabilize() and the
+        # forced restart, so the very first boot against the new install
+        # already has every source patch applied instead of racing to catch
+        # up on a later ModularUpdater pass.
+        try:
+            from resources.libs.patch_engine import PatchEngine
+            PatchEngine().run()
+        except Exception as _patch_err:
+            logging.log("[Fresh Build Auto Install] PatchEngine run failed: {0}".format(_patch_err),
+                        level=xbmc.LOGERROR)
+
         # Arm the first-boot stabilizer: the NEXT boot (the first time the
         # FENtastic home renders against the freshly installed POV) is the race
         # window. The marker makes that boot warm POV up before loading widgets.
@@ -629,6 +642,18 @@ if CONFIG.get_setting('buildname'):
         _mu = ModularUpdater(background=True)
         _mu.run_update_check()        # version bumps for installed addons + config
         _mu.heal_missing_addons()     # strict HasAddon enforcement -> install missing
+
+        # KODI-POV-IL - Engine v2 Runtime Patching. Runs right after healing
+        # so any addon that was just (re)installed to fill a gap gets its
+        # source patches re-applied in the same boot pass, not on some
+        # later run. PatchEngine.run() never raises, so a bad patch entry
+        # or a missing target file can never turn into a startup crash.
+        try:
+            from resources.libs.patch_engine import PatchEngine
+            PatchEngine().run()
+        except Exception as _patch_err:
+            logging.log("[PatchEngine] Boot-cycle run failed: {0}".format(_patch_err),
+                        level=xbmc.LOGERROR)
     except Exception as _modular_err:
         logging.log("[ModularUpdater] Startup check failed: {0}".format(_modular_err),
                     level=xbmc.LOGERROR)
