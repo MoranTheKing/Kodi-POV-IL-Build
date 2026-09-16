@@ -1,3 +1,90 @@
+0.2.543
+- Bound POV movie and TV home widgets to the items each skin can actually display on FENtastic, NOX and Arctic Fuse 3, reducing hidden metadata work on slower 32-bit devices.
+- Preserve full POV catalogue navigation and existing list freshness; Estuary and subtitle search, matching and playback paths remain unchanged.
+
+0.2.542
+- Recover malformed POV, Umbrella and CocoScrapers settings while preserving user choices, then safely reload repaired services.
+- Restore missed AllDebrid sync from Account Manager and incomplete Umbrella external-provider wiring.
+
+0.2.541
+- Recover safely when Gemini reports a blocked or filtered response even if it also includes partial text.
+- Exclude internal thinking parts and malformed response fields from subtitle and SubSync output.
+
+0.2.540
+- Give every AI-translation chunk the intended previous source context, including the second chunk, so continuity does not silently reset at chunk boundaries.
+- Validate generated subtitle slots before delivery and safely retry or preserve the source cue when a model omits, duplicates or invents entries.
+- Reject narrow high-risk output leaks while abstaining on conditional phrasing that can express the same meaning with a positive Hebrew verb.
+
+0.2.539
+- Match Tonight movie playback to Umbrella's native player path and pass runtime in seconds so valid sources are not filtered out.
+- Add persistent, browsable liked and saved collections to Tonight that remain usable when switching playback providers.
+- Keep known future premieres out of Tonight recommendations and refresh older cached suggestions once.
+
+0.2.538
+- Read original subtitle text for AI reference analysis instead of the player-rendered RTL copy.
+
+0.2.537
+- Fix Tonight launch when a recommendation combines liked and unrated viewing-history origins.
+
+0.2.536
+- Prevent missing or malformed viewing-history counts from blocking Tonight at launch.
+- Treat invalid legacy catalog timestamps as stale data that can be refreshed safely.
+
+0.2.535
+- Learn Tonight preferences automatically from repeated viewing and connected-list patterns without requiring ratings.
+- Expand each mode to a scrollable nine-title shelf and make light, tense, moving and surprise modes visibly distinct.
+- Rotate through up to 64 history, list and explicit anchors while preventing one like or a disliked title from dominating.
+
+0.2.534
+- Replace Tonight's nested dialogs with a dedicated living-room hub and three explainable picks.
+- Add one-tap evening modes, direct playback, trailers, replacement, saving, liking and similar-title refinement.
+- Read connected MDBList and Trakt lists conservatively while preserving titles shared by more than one source.
+- Add dedicated Tonight artwork and migrate the exact generated home shortcut without changing user customisations.
+
+0.2.533
+- Broaden Tonight discovery across rotating history and liked titles with bounded incremental loading.
+- Match available creator, cast and catalog-topic metadata alongside explicit preferences.
+- Offer distinct recommendation lanes, saved picks, reversible refinements and optional paired feedback.
+- Preserve useful partial catalog results on timeout and keep provider routing isolated.
+
+0.2.532
+- Use connected viewing history to seed evening recommendations, including series exposure.
+- Keep explicit preferences stronger than inferred viewing signals and preserve watched status.
+- Show imported history counts and use the active playback provider for catalog requests.
+- Tighten subtitle repair guards for literals, Latin names and visible Hebrew.
+
+0.2.531
+- Keep Hebrew punctuation and phrase order correct across subtitle style boundaries.
+- Deliver validated cached AI subtitles to the player after a background cache hit.
+- Preserve playback and subtitle selection ownership during final delivery.
+- Retry clearly copied English lines with source context, preserving subtitles on failure.
+- Clarify translation of understandable lyrics and mixed-language dialogue.
+- Report the actual reference language in script-cleanup diagnostics.
+
+0.2.530
+- Protect streaming playback by skipping automatic remote video/audio sync probes.
+- Keep cached timing references, subtitle-reference synchronization and local-file probing.
+
+0.2.529
+- Preserve subtitle negation, numbers, quoted text and markup during cleanup and gender repair.
+- Prefer explicit source facts over conflicting Hebrew reference gender.
+- Add integrated evening discovery with per-viewer preferences and active-provider routing.
+- Make trailers easier to reach, confirm personal markings and quietly cancel catalog loading.
+- Supply complete season artwork metadata when opening Umbrella series.
+- Avoid destructive process probing on Windows.
+
+0.2.528
+- SubSync HTTP probing validates returned byte ranges and resumes interrupted
+  reads from the missing position using smaller ranges. Probe byte/time
+  budgets cover all stages, and older cached sync verdicts are rechecked.
+
+0.2.527
+- Safer AI subtitle corrections use the original dialogue and nearby context,
+  preserve uncertain lines, and reject changes to negation or numbers.
+- Finishing an older translation no longer overrides a newer selection.
+- Google translations are excluded from AI sharing; cache cleanup keeps
+  translations and their provenance markers together.
+
 0.2.526
 - "Share my cached translations" was uploading nothing at all.
 
@@ -7570,4 +7657,3 @@ v0.1.0 (initial)
 - Caches translations under userdata/addon_data with TTL + size cap
 - Skips translation when real Hebrew subs already exist
 - Settings UI for API key, model, source language priority, cache
-

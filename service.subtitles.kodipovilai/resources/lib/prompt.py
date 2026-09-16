@@ -158,7 +158,15 @@ def build(source_lang, title, year, cast, is_episode=False,
         'OTHER TRANSLATION RULES:\n'
         '1. Use natural conversational Hebrew. Idioms should sound '
         'native, not literal.\n'
-        '2. Keep HTML tags like <i></i> intact.\n'
+        '2. Translate dialogue and meaningful song lyrics into Hebrew, '
+        'including dialogue in a different language from the file label. '
+        'The label names only the main language. A change of language or '
+        'music symbols is NOT a reason to leave understandable text '
+        'untranslated. In particular, translate English lines even when '
+        'surrounded by other-language lyrics. Preserve music symbols and '
+        'HTML tags like <i></i>. Do not invent meaning for genuinely '
+        'unintelligible words; preserve only those words and translate '
+        'the rest.\n'
         '3. Do NOT add hearing-impaired annotations like [breathing], '
         '(music playing), {{chuckles}}, or [BACKGROUND NOISE]. Drop '
         'them in the Hebrew output. (NOTE: ALL-CAPS speaker prefixes '
@@ -278,11 +286,11 @@ def build_gender_block(entry_ref, lang='ar'):
         return _arabic_block_text(body)
     if lang == 'he':
         return (
-            'HEBREW GENDER REFERENCE -- HARD CONSTRAINT, NOT A HINT.\n'
+            'HEBREW GENDER REFERENCE -- GENDER EVIDENCE, SUBJECT TO SOURCE FIDELITY.\n'
             'For some entries below, the line from a PROFESSIONAL HUMAN Hebrew '
             'translation of the SAME scene is given (it comes from a different '
             'video cut, so its wording may be aligned imperfectly). Hebrew '
-            'marks gender everywhere; for each such entry you MUST make your '
+            'marks gender everywhere; for each such entry when consistent with explicit source evidence, make your '
             'Hebrew agree in SPEAKER / ADDRESSEE / REFERENT gender with the '
             'reference line (אתה/את, masculine/feminine verbs and adjectives). '
             'Do NOT default to masculine -- read the reference and match it.\n'
@@ -291,6 +299,7 @@ def build_gender_block(entry_ref, lang='ar'):
             + _FIDELITY_CLAUSE.format(ref='Hebrew') +
             'Per-entry Hebrew reference (entry_number: hebrew_line):\n'
             + body + '\n\n'
+            + 'SOURCE PRIORITY: If the source explicitly establishes gender or relationship (for example daughter versus son), it overrides a contradictory reference. Never change daughter into son or another source fact to match the reference. Use reference gender when the source does not settle it. Apply this separately to speaker, listener and referent; do not guess a new speaker from adjacency.\n\n'
         )
     name = LANG_NAME.get(lang, lang.upper())
     signals = _GENDER_SIGNALS.get(
