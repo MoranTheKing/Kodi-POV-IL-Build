@@ -423,10 +423,6 @@ def _run_build_startup_repairs():
         _maybe_patch_umbrella_language,
         _maybe_patch_pov_navigator_read,
         _maybe_fix_fentastic_clearlogo_var,
-        # POV scans one folder for internal scrapers and 6.08.14 renamed it,
-        # so third-party ones stopped being seen at all. Creates the old
-        # folder and teaches POV to scan both.
-        _maybe_shim_pov_internal_scrapers,
         # POV 6.08.14 broke AllDebrid playback outright: torrent_info()
         # subscripts a dict with [0]. Every magnet resolve raises KeyError(0).
         _maybe_fix_pov_alldebrid_status,
@@ -436,7 +432,6 @@ def _run_build_startup_repairs():
         _maybe_add_tonight_entry,
         _maybe_seed_recent_updates_tile,
         _maybe_patch_pov_mdblist_sync,
-        _maybe_keep_sources_when_debrid_is_late,
         _maybe_time_pov_directories,
         _maybe_repair_addon_autoupdate,
         _maybe_fix_idanplus_youtube_id,
@@ -1542,34 +1537,6 @@ def _maybe_fix_pov_alldebrid_status():
             pass
 
 
-def _maybe_shim_pov_internal_scrapers():
-    """Make POV look for internal scrapers where third-party ones land.
-
-    POV scans exactly ONE folder for them, and 6.08.14 renamed it from
-    resources/lib/scrapers/ to resources/lib/debrids/. An installer written
-    against the old name fails with ENOENT -- and POV would not have looked
-    there anyway -- so those sources stop appearing entirely. This creates the
-    old folder so the write succeeds, and edits the one line in POV's
-    sources.py so pkgutil scans both. POV's own folder stays first, so nothing
-    stale can shadow its modules. See pov_internal_scraper_shim.
-    """
-    try:
-        from resources.lib import pov_internal_scraper_shim, kodi_utils
-        st = pov_internal_scraper_shim.ensure_patched()
-        bad = [p for p in st.split(', ')
-               if p.split('=')[-1].startswith(('failed', 'no_internal',
-                                               'list_failed'))]
-        if bad:
-            kodi_utils.log('pov_internal_scraper_shim: ' + st, level='WARNING')
-    except Exception as e:
-        try:
-            from resources.lib import kodi_utils
-            kodi_utils.log('pov_internal_scraper_shim failed: {0}'.format(e),
-                           level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_fix_fentastic_clearlogo_var():
     """Close brackets the skin left open, so the OSD logo can draw at all.
 
@@ -1655,51 +1622,6 @@ def _maybe_repair_addon_autoupdate():
             pass
 
 
-
-def _maybe_keep_sources_when_debrid_is_late():
-    """Stop a slow or refused debrid from erasing the whole source list.
-
-    POV builds final_sources only inside the loop over the debrid cache-check
-    threads that finished in time, so with one debrid configured a single late
-    answer discards every torrent the scrapers found -- and a check that failed
-    outright is recorded as an authoritative "not cached", which the default
-    "Display Uncached Torrents = off" filter then deletes. Both roads end at
-    "no results" on a title with hundreds of sources.
-
-    Two independent edits. A failed check returns an empty tuple, which
-    unpatched POV reads as "nothing cached" exactly as it always did, so
-    neither half needs the other to be safe -- see the module for the crash
-    window that ruled out the obvious `return None`.
-    """
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_debrid_timeout_patcher, kodi_utils
-        st = pov_debrid_timeout_patcher.ensure_patched()
-        bad = [p for p in st.split(', ')
-               if p.split('=')[-1] in ('unmatched', 'compile_failed',
-                                       'write_failed', 'revert_failed',
-                                       'read_failed')]
-        if bad:
-            kodi_utils.log(
-                'pov_debrid_timeout_patcher: ' + st, level='WARNING')
-        if any(p.endswith('=patched') or p.endswith('=repatched')
-               for p in st.split(', ')):
-            # A patch into POV's warm interpreter does not take effect until
-            # it re-imports, and the cycle that forces that is armed here.
-            try:
-                from resources.lib import pov_reload
-                pov_reload.note_patched()
-            except Exception:
-                pass
-    except Exception as e:
-        try:
-            from resources.lib import kodi_utils
-            kodi_utils.log(
-                'pov_debrid_timeout_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
 
 
 def _maybe_patch_mdblist_reauth():
@@ -2766,38 +2688,6 @@ def _maybe_prewarm_engine():
         pass
 
 
-def _maybe_patch_pov_prewarm():
-    """Fire the Hebrew-availability warm at the START of POV's source scrape (in
-    source_select, before get_sources) instead of when the dialog builds -- so
-    the OS/Wizdom/Ktuvit warm runs concurrently with the scrape and the % is
-    ready on the FIRST entry. Idempotent, compile-checked."""
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_prewarm_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_prewarm_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log('pov_prewarm_patcher: prewarm hooked into source scrape',
-                           level='INFO')
-            try:
-                from resources.lib import pov_reload
-                pov_reload.note_patched()
-            except Exception:
-                pass
-        elif status in ('unmatched', 'compile_failed', 'write_failed',
-                        'read_failed'):
-            kodi_utils.log('pov_prewarm_patcher: ' + status, level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log('pov_prewarm_patcher failed: {0}'.format(e),
-                           level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_patch_pov_subtitle_match():
     """Show a Hebrew-subtitle match % under each source in POV's source-results
     window (gated by `show_subtitle_match`, default on). Patches POV's
@@ -2870,43 +2760,6 @@ def _maybe_patch_pov_source_quality():
         except Exception:
             pass
 
-
-def _maybe_patch_pov_source_name():
-    """Self-healing patch of POV's sources.py so that when POV picks
-    a source from the source-select dialog (the one with cached/
-    uncached/quality flags), it stashes the picked release name +
-    URL in a Window(10000) property right before yielding the link
-    to the player. DarkSubs (separate addon) reads the property and
-    uses the real release name -- complete with encoder/source/group
-    tokens -- as the filename for subtitle matching, instead of
-    whatever opaque basename the debrid CDN URL happens to have.
-    Without this, TorBox playbacks get 0% on every subtitle (URL is
-    a UUID) and the user sees the UUID as the dialog title -- they
-    can't even visually compare it to subtitle release names to pick
-    one manually. With this, the dialog title shows the real release
-    name and the percentages reflect actual sync quality."""
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_source_name_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_source_name_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'pov_source_name_patcher: applied source-name '
-                'window-property stash', level='INFO')
-        elif status in ('unmatched', 'write_failed', 'read_failed'):
-            kodi_utils.log(
-                'pov_source_name_patcher: ' + status, level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_source_name_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
 def _maybe_patch_skin_dialog_subtitles():
     """Self-healing patch of the ACTIVE skin's DialogSubtitles.xml
     so the subtitle-picker dialog HEADER prefers our window property
@@ -4343,9 +4196,6 @@ def main():
     # same source-results window, compile-checked so it can't break POV.
     _maybe_patch_pov_source_quality()
 
-    # Fire the Hebrew-availability warm at the START of the source scrape (in
-    # source_select), so the % is ready on the FIRST entry for OS/Ktuvit titles.
-    _maybe_patch_pov_prewarm()
 
     # Pre-warm the built-in sources engine (only when the user enabled it) so
     # the first subtitle search doesn't pay the heavy import cost inline.

@@ -675,5 +675,107 @@ PATCH_CONFIG = [
             "import pov_debrid_guardian\n"
             "pov_debrid_guardian.log_debrid_error('premiumize', result, locals().get('url', ''))"
         )
+    },
+    {
+        "id": "pov_debrid_timeout_v2",
+        "name": "Debrid Timeout Resiliency",
+        "description": "Prevents source erasure when a debrid provider times out by injecting unconfirmed tuples.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/modules/sources.py",
+        "marker": "# WIZARD_POV_DEBRID_TIMEOUT_v2",
+        "anchor": "threads = [i for i in threads if i.done() and not i.exception()]",
+        "action": "prepend_before",
+        "hook": (
+            "import sys, xbmcvfs;\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
+            "sys.path.append(p) if p not in sys.path else None;\n"
+            "import pov_debrid_timeout;\n"
+            "pov_debrid_timeout.run(self, threads, torrent_sources)\n"
+        )
+    },
+    {
+        "id": "pov_legacy_scrapers_v2",
+        "name": "Legacy Scraper Compatibility",
+        "description": "Scans the legacy 'scrapers' folder for backwards compatibility with third-party providers.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/modules/sources.py",
+        "marker": "# WIZARD_POV_LEGACY_SCRAPERS_v2",
+        "anchor": "for loader, module_name, is_pkg in pkgutil.iter_modules([source_path]):",
+        "action": "prepend_before",
+        "hook": (
+            "import sys, xbmcvfs;\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
+            "sys.path.append(p) if p not in sys.path else None;\n"
+            "import pov_legacy_scrapers;\n"
+            "pov_legacy_scrapers.run(self, prescrape)\n"
+        )
+    },
+    {
+        "id": "pov_provider_rank_v2",
+        "name": "Unknown Provider Crash Guard",
+        "description": "Intercepts sort ranking to prevent KeyErrors on unregistered 3rd party providers.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/modules/sources.py",
+        "marker": "# WIZARD_POV_PROVIDER_RANK_v2",
+        "anchor": "return self.source.provider_sort_ranks[account_type] or 11",
+        "action": "prepend_before",
+        "hook": "return self.source.provider_sort_ranks.get(account_type) or 11\n"
+    },
+    {
+        "id": "pov_heb_prewarm_v2",
+        "name": "Hebrew Subtitles Prewarm",
+        "description": "Triggers background subtitle cache pre-warming concurrently with video scraping.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/modules/sources.py",
+        "marker": "# WIZARD_POV_HEB_PREWARM_v2",
+        "anchor": "results = self.get_sources()",
+        "action": "prepend_before",
+        "hook": (
+            "import sys, xbmcvfs;\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
+            "sys.path.append(p) if p not in sys.path else None;\n"
+            "import pov_prewarm;\n"
+            "pov_prewarm.run(self.meta)\n"
+        )
+    },
+    {
+        "id": "pov_playback_capture_v2",
+        "name": "Source Name Stash & Playback Capture",
+        "description": "Stashes played source names into Window properties and captures source for re-selection.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/modules/sources.py",
+        "marker": "# WIZARD_POV_PLAYBACK_CAPTURE_v2",
+        "anchor": "return POVPlayer().run(link, self.meta, progress_media)",
+        "action": "prepend_before",
+        "hook": (
+            "import sys, xbmcvfs;\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
+            "sys.path.append(p) if p not in sys.path else None;\n"
+            "import pov_playback_capture;\n"
+            "pov_playback_capture.run(self, item, link)\n"
+        )
+    },
+    {
+        "id": "pov_reorder_sources_v2",
+        "name": "Remember Source Auto-Pick Reorder",
+        "description": "Moves previously picked sources to the top of the UI list.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/modules/sources.py",
+        "marker": "# WIZARD_POV_REORDER_SOURCES_v2",
+        "anchor": "window_style = results_xml_style()",
+        "action": "prepend_before",
+        "hook": (
+            "import sys, xbmcvfs;\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
+            "sys.path.append(p) if p not in sys.path else None;\n"
+            "import pov_reorder_sources;\n"
+            "pov_reorder_sources.run(self, results)\n"
+        )
     }
 ]
