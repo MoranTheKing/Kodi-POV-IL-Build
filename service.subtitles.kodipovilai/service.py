@@ -406,7 +406,6 @@ def _run_build_startup_repairs():
         _maybe_patch_pov_scraper_settings,
         _maybe_patch_pov_mdblist_like,
         _maybe_patch_pov_aiostreams,
-        _maybe_patch_pov_resolve_diag,
         _maybe_restore_pov_torbox,
         _maybe_fix_pov_torbox_url,
         # Bound only explicit home-widget requests before AF3 can rebuild its
@@ -791,39 +790,6 @@ def _maybe_patch_idanplus_channels():
             pass
 
 
-def _maybe_patch_pov_navigator_read():
-    """Let POV read the navigator rows it ships.
-
-    Every row in navigator.db is stored as a Python repr, and POV reads them
-    all with json.loads. Shortcut folders therefore render empty ("חיבור
-    שירותים" opening onto nothing), and the main menus come back None, which
-    makes POV rebuild them from its own defaults over the build's. Nothing is
-    logged either way.
-
-    The fix is on POV's read path, not in the database: converting the rows to
-    JSON would break six other patchers here that match on the repr spelling.
-    See pov_navigator_read_patcher for the full reasoning."""
-    try:
-        from resources.lib import pov_navigator_read_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_navigator_read_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log('pov_navigator_read_patcher: patched',
-                           level='WARNING')
-        elif status in ('unmatched', 'compile_failed', 'write_failed',
-                        'read_failed'):
-            kodi_utils.log('pov_navigator_read_patcher: ' + status,
-                           level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log('pov_navigator_read_patcher run failed: '
-                           '{0}'.format(e), level='WARNING')
-        except Exception:
-            pass
-
-
 # ---------------------------------------------------------------------------
 # One switch that stops this add-on touching plugin.video.pov at all.
 #
@@ -1175,35 +1141,6 @@ def _maybe_patch_pov_scraper_settings():
                 level='WARNING')
         except Exception:
             pass
-
-
-def _maybe_patch_pov_resolve_diag():
-    """Make POV's opaque 'selected_files failed' say how many files the debrid
-    actually returned. Diagnostic only -- it changes no behaviour, and it is the
-    difference between fixing the right thing and guessing."""
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_resolve_diag_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_resolve_diag_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'pov_resolve_diag_patcher: resolve failures now report the '
-                'debrid file count', level='INFO')
-        elif status not in ('already', 'no_file'):
-            kodi_utils.log(
-                'pov_resolve_diag_patcher: ' + status, level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log('pov_resolve_diag_patcher failed: {0}'.format(e),
-                           level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_patch_pov_aiostreams():
     """Stop an AIOStreams that is switched on but has no credentials from
     being the ONLY scraper POV asks.
@@ -1649,8 +1586,7 @@ def _maybe_patch_mdblist_reauth():
         # (MDBList fixed, Trakt still failing beside it), from a hiccup on
         # the other side of the pair, behind a WARNING that reads as if it
         # were only about MDBList.
-        for _mod_name in ('pov_mdblist_reauth_patcher',
-                          'pov_trakt_reauth_patcher'):
+        for _mod_name in ('pov_mdblist_reauth_patcher'):
             try:
                 from resources.lib import kodi_utils
                 _mod = __import__('resources.lib.' + _mod_name,
@@ -2686,79 +2622,6 @@ def _maybe_prewarm_engine():
         autosub_service.prewarm_engine()
     except Exception:
         pass
-
-
-def _maybe_patch_pov_subtitle_match():
-    """Show a Hebrew-subtitle match % under each source in POV's source-results
-    window (gated by `show_subtitle_match`, default on). Patches POV's
-    windows/sources.py to prepend a coloured '<NN>% עברית' to each row's
-    size_label -- a property rendered first in the info line of every layout, so
-    it shows on every skin with no skin-XML changes. The patcher compile-checks
-    before writing, so it can never break the source window / playback."""
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_subtitle_match_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_subtitle_match_patcher.ensure_patched()
-        if status in ('patched', 'unmatched', 'compile_failed',
-                      'write_failed', 'read_failed'):
-            kodi_utils.log('pov_subtitle_match_patcher: ' + status,
-                           level=('INFO' if status == 'patched' else 'WARNING'))
-        # Cycle POV so its reuse-language-invoker interpreter re-imports the
-        # patched window this session (the runtime gate in he_sub_match means a
-        # user who turns the feature off just sees no badge).
-        if status == 'patched':
-            try:
-                from resources.lib import pov_reload
-                pov_reload.note_patched()
-            except Exception:
-                pass
-    except Exception as e:
-        try:
-            kodi_utils.log('pov_subtitle_match_patcher failed: {0}'.format(e),
-                           level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_pov_source_quality():
-    """Fix a source whose NAME reads 1080p/2160p/720p being shown with an SD
-    badge, and keep the list ordered by quality then size. POV classifies quality
-    from a scraper `name_info` field (or the URL), not from the visible name, and
-    then SORTS by that value -- so a well-named release lands on SD and is also
-    mis-sorted among the SD rows. The patcher re-derives quality from the visible
-    name via POV's own get_release_quality (upgrade-only, to real resolutions)
-    and re-orders the results by quality high->low then size high->low.
-    Compile-checked and revertible."""
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_source_quality_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_source_quality_patcher.ensure_patched()
-        if status in ('patched', 'unmatched', 'compile_failed',
-                      'write_failed', 'read_failed'):
-            kodi_utils.log('pov_source_quality_patcher: ' + status,
-                           level=('INFO' if status == 'patched' else 'WARNING'))
-        # Cycle POV so its reuse-language-invoker interpreter re-imports the
-        # patched window this session.
-        if status == 'patched':
-            try:
-                from resources.lib import pov_reload
-                pov_reload.note_patched()
-            except Exception:
-                pass
-    except Exception as e:
-        try:
-            kodi_utils.log('pov_source_quality_patcher failed: {0}'.format(e),
-                           level='WARNING')
-        except Exception:
-            pass
 
 def _maybe_patch_skin_dialog_subtitles():
     """Self-healing patch of the ACTIVE skin's DialogSubtitles.xml
@@ -4185,16 +4048,6 @@ def main():
     # remember_source setting, OFF by default; compile-checked so it can't
     # break POV playback).
     _maybe_patch_pov_remember_source()
-
-    # Hebrew-subtitle match % under each source in POV's source-results window
-    # (skin-agnostic: prepends to a property shown in every layout). Gated by
-    # show_subtitle_match (default on); compile-checked so it can't break POV.
-    _maybe_patch_pov_subtitle_match()
-
-    # Fix source rows whose NAME says 1080p/2160p/720p but POV labelled SD
-    # (POV classifies from name_info/URL, not the visible name). Upgrade-only,
-    # same source-results window, compile-checked so it can't break POV.
-    _maybe_patch_pov_source_quality()
 
 
     # Pre-warm the built-in sources engine (only when the user enabled it) so

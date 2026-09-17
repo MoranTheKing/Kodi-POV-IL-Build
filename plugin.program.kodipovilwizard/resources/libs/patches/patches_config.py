@@ -777,5 +777,114 @@ PATCH_CONFIG = [
             "import pov_reorder_sources;\n"
             "pov_reorder_sources.run(self, results)\n"
         )
+    },
+    {
+        "id": "pov_resolve_diag_v2",
+        "name": "Debrid Resolve Diagnostics",
+        "description": "Expands opaque selected_files exceptions to include file counts and filter rejection details.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/modules/debrid.py",
+        "marker": "# WIZARD_POV_RESOLVE_DIAG_v2",
+        "anchor": "if not selected_files: raise Exception('selected_files failed')",
+        "action": "prepend_before",
+        "hook": (
+            "import sys, xbmcvfs;\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
+            "sys.path.append(p) if p not in sys.path else None;\n"
+            "import pov_resolve_diag;\n"
+            "pov_resolve_diag.run(self, files, selected_files)\n"
+        )
+    },
+    {
+        "id": "pov_debrid_error_guard_v2",
+        "name": "Debrid Timeout Error Guard",
+        "description": "Safely wraps direct provider cache checks, returning a tuple on timeout to preserve checked states.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/modules/debrid.py",
+        "marker": "# WIZARD_POV_DEBRID_ERROR_GUARD_v2",
+        "anchor": "if self.debrid in ('rd', 'realdebrid'):",
+        "action": "prepend_before",
+        "hook": (
+            "import sys, xbmcvfs;\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
+            "sys.path.append(p) if p not in sys.path else None;\n"
+            "import pov_debrid_error_guard;\n"
+            "_wiz_res = pov_debrid_error_guard.run(self, unchecked_hashes);\n"
+            "if _wiz_res is not None: return _wiz_res\n"
+        )
+    },
+    {
+        "id": "pov_trakt_reauth_recovery",
+        "name": "Trakt 401 Reauth Recovery",
+        "description": "Intercepts Trakt 401 Unauthorized errors and safely refreshes token instead of dropping syncs for 30 mins.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/indexers/trakt_api.py",
+        "marker": "# WIZARD_POV_TRAKT_REAUTH_v2",
+        "anchor": "def trakt_sync_activities(force_update=False, init_callback=None, monitor=None):",
+        "action": "prepend_before",
+        "hook": (
+            "import sys, xbmcvfs\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
+            "sys.path.append(p) if p not in sys.path else None\n"
+            "import pov_trakt_reauth\n"
+            "pov_trakt_reauth.run(sys.modules[__name__])\n"
+        )
+    },
+    {
+        "id": "pov_source_quality_fix",
+        "name": "POV Source Quality Badge Fix",
+        "description": "Corrects SD badges for sources that are actually HD/4K based on release names and re-sorts them.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/windows/sources.py",
+        "marker": "# WIZARD_POV_SOURCE_QUALITY_v2",
+        "anchor": "for count, item in enumerate(self.results, 1):",
+        "action": "prepend_before",
+        "hook": (
+            "import sys, xbmcvfs;\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
+            "sys.path.append(p) if p not in sys.path else None;\n"
+            "import pov_source_quality_v2;\n"
+            "pov_source_quality_v2.run(locals())"
+        )
+    },
+    {
+        "id": "pov_subtitle_match_percent",
+        "name": "POV Subtitle Match Percentage",
+        "description": "Prepends Hebrew subtitle match percentage to the source size label.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/windows/sources.py",
+        "marker": "# WIZARD_POV_SUB_MATCH_v2",
+        "anchor": "set_property('tikiskins.size_label', get('size_label', 'N/A'))",
+        "action": "append_after",
+        "hook": (
+            "import sys, xbmcvfs;\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
+            "sys.path.append(p) if p not in sys.path else None;\n"
+            "import pov_sub_match_v2;\n"
+            "pov_sub_match_v2.run(locals())"
+        )
+    },
+    {
+        "id": "pov_navigator_read_fix",
+        "name": "POV Navigator DB Parse Interceptor",
+        "description": "Intercepts jsloads on navigator cache to fallback to AST literal evaluation for legacy repr-formatted DB rows.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/caches/navigator_cache.py",
+        "marker": "# WIZARD_POV_NAV_READ_FIX_v2",
+        "anchor": "navigator_cache = NavigatorCache()",
+        "action": "append_after",
+        "hook": (
+            "import sys, xbmcvfs;\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
+            "sys.path.append(p) if p not in sys.path else None;\n"
+            "import pov_nav_read_fix;\n"
+            "pov_nav_read_fix.run(navigator_cache)"
+        )
     }
 ]
