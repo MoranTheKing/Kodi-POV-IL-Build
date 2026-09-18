@@ -4036,13 +4036,6 @@ def main():
     # engine is off. Affects the active skin (Estuary / FENtastic).
     _point_subtitle_button(_engine_on)
 
-    # Stash POV's picked release name (from the source-select dialog)
-    # in a Window(10000) property before play() so DarkSubs can use
-    # it as the filename for subtitle matching. Solves both the
-    # TorBox UUID-as-title problem AND raises the % match across all
-    # debrid services to ~85-95% (the full release name has the
-    # encoder/source/group tokens that subtitle releases carry).
-    _maybe_patch_pov_source_name()
 
     # PHASE 1 capture for "remember the source the user picked" (gated by the
     # remember_source setting, OFF by default; compile-checked so it can't

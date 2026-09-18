@@ -28,7 +28,7 @@ PATCH_CONFIG = [
         "enabled": True,
         "target_file": "resources/lib/modules/debrid.py",
         "marker": "# WIZARD_POV_DEBRID_RESOLVE_GUARD_v1",
-        "anchor": "\t\t\tif files and torrent_id: self._delete(api, torrent_id, is_nzb)",
+        "anchor": "\t\t\tif files and torrent_id: self._delete(api, torrent_id)",
         "action": "prepend_before",
         "hook": (
             "\t\t\timport sys, xbmcvfs;\n"
@@ -225,7 +225,7 @@ PATCH_CONFIG = [
         "enabled": True,
         "target_file": "resources/lib/indexers/tmdb_api.py",
         "marker": "# WIZARD_POV_MOVIE_NETWORKS_v3",
-        "anchor": "def tmdb_movies_networks(network_id, page):",
+        "anchor": "def tmdb_movies_networks(network_id, page_no):",
         "action": "prepend_before",
         "hook": (
             "# WIZARD: Dynamically override tmdb_movies_networks for Watch Providers query\n"
@@ -255,7 +255,7 @@ PATCH_CONFIG = [
         "name": "TorBox Stats API Addition",
         "addon_id": "plugin.video.pov",
         "enabled": True,
-        "target_file": "resources/lib/debrids/torbox_api.py",
+        "target_file": "resources/lib/indexers/torbox_api.py",
         "marker": "# WIZARD_POV_TORBOX_API_STATS_v2",
         "anchor": "\tdef torrent_info(self, request_id):",
         "action": "prepend_before",
@@ -270,7 +270,7 @@ PATCH_CONFIG = [
         "name": "TorBox 30-Day Usage UI",
         "addon_id": "plugin.video.pov",
         "enabled": True,
-        "target_file": "resources/lib/menus/torbox.py",
+        "target_file": "resources/lib/debrids/tb_cloud.py",
         "marker": "# WIZARD_POV_TORBOX_USAGE_UI_v2",
         "anchor": "\t\t\tappend('[B]Downloaded[/B]: %s' % account_info['total_downloaded'])",
         "action": "append_after",
@@ -308,7 +308,7 @@ PATCH_CONFIG = [
         "enabled": True,
         "target_file": "resources/lib/caches/trakt_cache.py",
         "marker": "# WIZARD_POV_TRAKT_TABLE_CLEAR_v1",
-        "anchor": "def clear_all_trakt_cache_data():",
+        "anchor": "def clear_all_trakt_cache_data(refresh=True):",
         "action": "append_after",
         "hook": (
             "    try:\n"
@@ -500,7 +500,7 @@ PATCH_CONFIG = [
         "enabled": True,
         "target_file": "resources/lib/service.py",
         "marker": "# WIZARD_POV_DEBRID_STATUS_v2",
-        "anchor": "\tPOVMonitor().run()",
+        "anchor": "\t__import__('entry').SettingsMonitor()()",
         "action": "prepend_before",
         "hook": (
             "import sys, xbmcvfs;\n"
@@ -518,8 +518,8 @@ PATCH_CONFIG = [
         "enabled": True,
         "target_file": "resources/lib/service.py",
         "marker": "# WIZARD_POV_CUSTOM_DEBRID_TOASTS_v2",
-        "anchor": "\tlogger('POV', 'Settings Monitor Service Starting')",
-        "action": "append_after",
+        "anchor": "\t__import__('entry').SettingsMonitor()()",
+        "action": "prepend_before",
         "hook": (
             "\timport sys, xbmcvfs, threading;\n"
             "\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
@@ -692,24 +692,6 @@ PATCH_CONFIG = [
             "sys.path.append(p) if p not in sys.path else None;\n"
             "import pov_debrid_timeout;\n"
             "pov_debrid_timeout.run(self, threads, torrent_sources)\n"
-        )
-    },
-    {
-        "id": "pov_legacy_scrapers_v2",
-        "name": "Legacy Scraper Compatibility",
-        "description": "Scans the legacy 'scrapers' folder for backwards compatibility with third-party providers.",
-        "addon_id": "plugin.video.pov",
-        "enabled": True,
-        "target_file": "resources/lib/modules/sources.py",
-        "marker": "# WIZARD_POV_LEGACY_SCRAPERS_v2",
-        "anchor": "for loader, module_name, is_pkg in pkgutil.iter_modules([source_path]):",
-        "action": "prepend_before",
-        "hook": (
-            "import sys, xbmcvfs;\n"
-            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
-            "sys.path.append(p) if p not in sys.path else None;\n"
-            "import pov_legacy_scrapers;\n"
-            "pov_legacy_scrapers.run(self, prescrape)\n"
         )
     },
     {
