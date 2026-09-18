@@ -289,15 +289,15 @@ PATCH_CONFIG = [
         "addon_id": "plugin.video.pov",
         "enabled": True,
         "target_file": "resources/lib/caches/trakt_cache.py",
-        "marker": "# WIZARD_POV_TRAKT_EMPTY_CACHE_v2",  # Bumped marker version due to anchor change
+        "marker": "# WIZARD_POV_TRAKT_EMPTY_CACHE_v3",  # Bumped marker version due to anchor change
         "anchor": "dbcur.execute(TC_BASE_SET, (string, json.dumps(result)))",
         "action": "prepend_before",
         "hook": (
-            "import sys, xbmcvfs\n"
-            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
-            "sys.path.append(p) if p not in sys.path else None\n"
-            "import pov_trakt_cache\n"
-            "if pov_trakt_cache.is_empty_result(result, string): return result\n"
+        "\timport sys, xbmcvfs\n"
+        "\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
+        "\tsys.path.append(p) if p not in sys.path else None\n"
+        "\timport pov_trakt_cache\n"
+        "\tif pov_trakt_cache.is_empty_result(result, string): return result\n"
         )
     },
     {
@@ -307,13 +307,13 @@ PATCH_CONFIG = [
         "addon_id": "plugin.video.pov",
         "enabled": True,
         "target_file": "resources/lib/caches/trakt_cache.py",
-        "marker": "# WIZARD_POV_TRAKT_TABLE_CLEAR_v1",
+        "marker": "# WIZARD_POV_TRAKT_TABLE_CLEAR_v2",
         "anchor": "def clear_all_trakt_cache_data(refresh=True):",
         "action": "append_after",
         "hook": (
-            "    try:\n"
-            "        TraktCache().dbcur.execute('CREATE TABLE IF NOT EXISTS trakt_data (id TEXT UNIQUE, data TEXT)')\n"
-            "    except Exception: pass\n"
+        "\ttry:\n"
+        "\t\tTraktCache().dbcur.execute('CREATE TABLE IF NOT EXISTS trakt_data (id TEXT UNIQUE, data TEXT)')\n"
+        "\texcept Exception: pass\n"
         )
     },
     {
@@ -867,6 +867,24 @@ PATCH_CONFIG = [
             "sys.path.append(p) if p not in sys.path else None;\n"
             "import pov_nav_read_fix;\n"
             "pov_nav_read_fix.run(navigator_cache)"
+        )
+    },
+    {
+        "id": "pov_aiostreams_credentials_fix",
+        "name": "POV AIOStreams Credentials Guard",
+        "description": "Prevents AIOStreams from swallowing all scrapes when enabled but missing user credentials.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/modules/settings.py",
+        "marker": "# WIZARD_POV_AIOSTREAMS_FIX_v2",
+        "anchor": "\telse: settings = ['provider.external', 'provider.easynews']",
+        "action": "append_after",
+        "hook": (
+            "\timport sys, xbmcvfs\n"
+            "\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
+            "\tif p not in sys.path: sys.path.append(p)\n"
+            "\timport pov_aiostreams_fix\n"
+            "\tsettings = pov_aiostreams_fix.enforce_credentials(settings)"
         )
     }
 ]

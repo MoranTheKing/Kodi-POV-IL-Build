@@ -405,8 +405,6 @@ def _run_build_startup_repairs():
         _maybe_patch_pov_resume_cancel,
         _maybe_patch_pov_scraper_settings,
         _maybe_patch_pov_mdblist_like,
-        _maybe_patch_pov_aiostreams,
-        _maybe_restore_pov_torbox,
         _maybe_fix_pov_torbox_url,
         # Bound only explicit home-widget requests before AF3 can rebuild its
         # home. Normal catalogue navigation carries no widget_limit.
@@ -1141,90 +1139,6 @@ def _maybe_patch_pov_scraper_settings():
                 level='WARNING')
         except Exception:
             pass
-def _maybe_patch_pov_aiostreams():
-    """Stop an AIOStreams that is switched on but has no credentials from
-    being the ONLY scraper POV asks.
-
-    POV's active_internal_scrapers() opens with
-    "if provider.aiostreams == 'true': return ['aiostreams']" -- a takeover,
-    not a filter -- and the aiostreams scraper returns nothing instantly when
-    aio.username/aio.password are empty. Result: "No Results" on every movie
-    and episode, with no network request made. POV dropped aiostreams in 6.04
-    and brought it back in 6.07; a 'true' left in the profile from the 6.03
-    era got its meaning back with it.
-
-    Both halves only ever fire when the credentials are empty, so a user who
-    actually uses AIOStreams is untouched."""
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_aiostreams_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_aiostreams_patcher.disarm_setting()
-        if status not in ('off', 'configured', 'no_pov', 'disarmed'):
-            kodi_utils.log(
-                'pov_aiostreams_patcher: disarm ' + status, level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_aiostreams_patcher disarm failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-    try:
-        status = pov_aiostreams_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'pov_aiostreams_patcher: guarded POV\'s aiostreams takeover',
-                level='INFO')
-        elif status in ('already_patched', 'no_pov', 'no_file'):
-            pass
-        else:
-            kodi_utils.log(
-                'pov_aiostreams_patcher: ' + status, level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_aiostreams_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_restore_pov_torbox():
-    """Undo damage the build's own quick-update package did to POV.
-
-    Every quickfix zip up to 0.1.492 carried two of POV's files -- an old
-    debrids/torbox_api.py and a debrids/torbox.py that POV no longer has -- and
-    Kodi extracts a quickfix straight over the add-ons folder, so each update
-    replaced POV's TorBox client with the June copy. Harmless until POV 6.07.92
-    began reading api.defaults_to_cloud, which that copy does not define: the
-    source resolves, the URL is thrown away by the AttributeError, and POV walks
-    the rest of the list to the same end. Restores POV's own file where that
-    signature is present, and nowhere else."""
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_torbox_restore_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_torbox_restore_patcher.ensure_patched()
-        if status in ('restored', 'not_damaged', 'no_pov'):
-            return
-        kodi_utils.log(
-            'pov_torbox_restore_patcher: ' + status, level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_torbox_restore_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
 
 
 def _maybe_patch_pov_hebrew_ui():
