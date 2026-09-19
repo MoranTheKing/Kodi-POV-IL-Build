@@ -224,15 +224,15 @@ PATCH_CONFIG = [
         "addon_id": "plugin.video.pov",
         "enabled": True,
         "target_file": "resources/lib/indexers/tmdb_api.py",
-        "marker": "# WIZARD_POV_MOVIE_NETWORKS_v3",
-        "anchor": "def tmdb_movies_networks(network_id, page_no):",
-        "action": "prepend_before",
+        "marker": "# WIZARD_POV_MOVIE_NETWORKS_v4",
+        "anchor": "\turl += '&sort_by=popularity.desc&certification_country=US&with_companies=%s' % network_id",
+        "action": "append_after",
         "hook": (
-            "# WIZARD: Dynamically override tmdb_movies_networks for Watch Providers query\n"
-            "import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/'); "
-            "sys.path.append(p) if p not in sys.path else None; import pov_networks_hook; pov_networks_hook.apply_monkey_patch(globals())\n"
+            "\t# Shadow variable to override 'with_companies' to 'watch_providers'\n"
+            "\turl = '%s/3/discover/movie?language=en-US&region=US&page=%s' % (base_url, page_no)\n"
+            "\turl += '&sort_by=popularity.desc&certification_country=US&with_watch_providers=%s&watch_region=US&with_watch_monetization_types=flatrate' % network_id\n"
         )
-    },
+    }
     {
         "id": "pov_repeat_timer_resiliency",
         "name": "RepeatTimer Crash Prevention",
@@ -257,7 +257,7 @@ PATCH_CONFIG = [
         "enabled": True,
         "target_file": "resources/lib/indexers/torbox_api.py",
         "marker": "# WIZARD_POV_TORBOX_API_STATS_v2",
-        "anchor": "\tdef torrent_info(self, request_id):",
+        "anchor": "\tdef torrent_info(self, request_id, path='torrents'):",
         "action": "prepend_before",
         "hook": (
             "\tdef user_stats(self):\n"

@@ -1,6 +1,8 @@
 import xbmc
 from xbmcaddon import Addon
-from resources.libs.common.logging import log  # Adjust relative to Wizard architecture if needed
+
+def log(msg, level=xbmc.LOGINFO):
+    xbmc.log(f"[POV Addon Window] {msg}", level)
 
 def wait_for_window():
     try:
