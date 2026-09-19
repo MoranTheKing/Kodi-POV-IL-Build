@@ -400,11 +400,6 @@ def _run_build_startup_repairs():
         _maybe_patch_af3_home,
         _maybe_quiet_update_nags,
         _maybe_patch_pov_widget_crash_guard,
-        # _maybe_patch_pov_language_invoker used to sit here. Moved to the
-        # very front of this tuple -- see the note there. It is idempotent
-        # ('already_set' writes nothing), so the move is a reordering, not a
-        # second run.
-        _maybe_patch_pov_bookmark_refresh,
         _maybe_patch_umbrella_language,
         _maybe_patch_pov_navigator_read,
         # POV 6.08.14 broke AllDebrid playback outright: torrent_info()
@@ -1670,38 +1665,6 @@ def _maybe_patch_umbrella_language():
         except Exception:
             pass
 
-
-def _maybe_patch_pov_bookmark_refresh():
-    """Stopping an episode mid-way left the user staring at a spinner (and
-    sometimes a bare '..' files screen) while the episode list rebuilt in a
-    race against the Trakt sync that the very same stop had scheduled: POV 6
-    fires container_refresh() BEFORE the progress write that invalidates the
-    Trakt caches. The patcher moves that one refresh AFTER the progress
-    write (the POV 5 ordering), so the old list stays live and navigable
-    and the single refresh lands when the data is ready. Self-healing:
-    re-applies every startup; no-ops on POV 5.x or a changed upstream."""
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_bookmark_refresh_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_bookmark_refresh_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'pov_bookmark_refresh_patcher: set_bookmark now refreshes '
-                'after the progress write', level='INFO')
-        elif status in ('write_failed', 'read_failed', 'compile_failed'):
-            kodi_utils.log(
-                'pov_bookmark_refresh_patcher: ' + status, level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_bookmark_refresh_patcher run failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
 
 
 def _maybe_patch_pov_services():

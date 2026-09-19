@@ -18,7 +18,7 @@ PATCH_CONFIG = [
             "\t\tsys.path.append(p) if p not in sys.path else None;\n"
             "\t\timport pov_cache_handler;\n"
             "\t\tpov_cache_handler.handle_empty(string);\n"
-            "\t\treturn result"
+            "\t\treturn result\n"
         )
     },
     {
@@ -232,7 +232,7 @@ PATCH_CONFIG = [
             "\turl = '%s/3/discover/movie?language=en-US&region=US&page=%s' % (base_url, page_no)\n"
             "\turl += '&sort_by=popularity.desc&certification_country=US&with_watch_providers=%s&watch_region=US&with_watch_monetization_types=flatrate' % network_id\n"
         )
-    }
+    },
     {
         "id": "pov_repeat_timer_resiliency",
         "name": "RepeatTimer Crash Prevention",
@@ -779,6 +779,24 @@ PATCH_CONFIG = [
         )
     },
     {
+            "id": "pov_legacy_scrapers",
+            "name": "Legacy Internal Scrapers Support",
+            "description": "Restores loading of 3rd-party scrapers from the old resources/lib/scrapers/ directory without import failures.",
+            "addon_id": "plugin.video.pov",
+            "enabled": False,
+            "target_file": "resources/lib/modules/sources.py",
+            "marker": "# WIZARD_POV_LEGACY_SCRAPERS_v2",
+            "anchor": "for loader, module_name, is_pkg in pkgutil.iter_modules([source_path]):",
+            "action": "prepend_before",
+            "hook": (
+                "\t\timport sys, xbmcvfs\n"
+                "\t\t_p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
+                "\t\tif _p not in sys.path: sys.path.append(_p)\n"
+                "\t\timport pov_legacy_scrapers\n"
+                "\t\tpov_legacy_scrapers.run(self, source_path, append, prescrape)\n"
+            )
+        },
+    {
         "id": "pov_resolve_diag",
         "name": "Debrid Resolve Diagnostics",
         "description": "Expands opaque selected_files exceptions to include file counts and filter rejection details.",
@@ -1188,6 +1206,26 @@ PATCH_CONFIG = [
             "\t\t\tsys.path.append(p) if p not in sys.path else None;\n"
             "\t\t\timport pov_widget_budget;\n"
             "\t\t\tself.worker = pov_widget_budget.wrap_worker(self, self.worker)"
+        )
+    },
+    {
+        "id": "pov_bookmark_refresh_order",
+        "name": "Fix Bookmark UI Refresh Race Condition",
+        "description": "Reorders playback stopping behavior so network syncs complete before the UI refreshes, preventing empty directories.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/caches/watched_cache.py",
+        "marker": "# WIZARD_POV_BOOKMARK_REFRESH_LAST_v2",
+        "anchor": "if refresh == 'true': kodi_utils.widget_refresh() if kodi_utils.external_browse() else kodi_utils.container_refresh()",
+        "action": "prepend_before",
+        "hook": (
+            "\t\t# WIZARD_POV_BOOKMARK_REFRESH_LAST_v2\n"
+            "\t\timport sys, xbmcvfs;\n"
+            "\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
+            "\t\tsys.path.append(p) if p not in sys.path else None;\n"
+            "\t\timport bookmark_refresh_order;\n"
+            "\t\tbookmark_refresh_order.run(locals(), globals());\n"
+            "\t\treturn\n"
         )
     }
 ]

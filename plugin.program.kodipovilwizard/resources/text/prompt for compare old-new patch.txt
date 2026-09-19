@@ -12,8 +12,7 @@ Your task is to perform a rigorous code audit and technical verification on a ne
 ### ARCHITECTURAL STANDARDS FOR ENGINE v2 (STRICT RULES):
 - **Additive-Only Controls**: The `action` key MUST strictly be `prepend_before` or `append_after`. The `replace` action is FORBIDDEN. State modifications must use variable shadowing, sequential property overrides, or loop bypasses.
 - **Placement & Pathing**: All decoupled patch modules MUST reside inside `plugin.program.kodipovilwizard/resources/libs/patches/`.
-- **Lean Hooks**: The hook string must only import sys/xbmcvfs, add the patches path to `sys.path`, import the module, and execute it.
-- **Tab Indentation (`\t`)**: All injected multi-line hook code MUST strictly use explicit `\t` characters matching the depth of the upstream anchor target scope to prevent runtime `IndentationError` bugs.
+- **Lean Hooks**: The hook string must only add the patches path to `sys.path`, import the module, and execute it.
 - **Markers**: Must use the `# WIZARD_...` naming convention (e.g., `# WIZARD_POV_FEATURE_v2`).
 - **Closure Protection**: No dynamic closures/lambdas capturing loop variables.
 
@@ -68,7 +67,7 @@ Please analyze the three inputs thoroughly and provide a structured report cover
 
 #### 4. Engine v2 Architectural Compliance
 
-* Verify that the patch strictly follows all 9 Engine v2 architectural rules (Additive-only, strict `\t` tab usage in the hook string, placement in `resources/libs/patches/`, no `replace` actions, correct marker naming, clean `sys.path` handling).
+* Verify that the patch strictly follows all Engine v2 architectural rules (Additive-only, placement in `resources/libs/patches/`, no `replace` actions, correct marker naming, clean `sys.path` handling).
 * Ensure the anchor string in the new patch is an exact, unique, single-line match in the latest upstream code.
 
 #### 5. Final Verdict & Refinement Plan
