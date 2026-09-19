@@ -749,33 +749,33 @@ PATCH_CONFIG = [
         "addon_id": "plugin.video.pov",
         "enabled": True,
         "target_file": "resources/lib/modules/sources.py",
-        "marker": "# WIZARD_POV_PLAYBACK_CAPTURE_v2",
+        "marker": "# WIZARD_POV_PLAYBACK_CAPTURE_v3",
         "anchor": "return POVPlayer().run(link, self.meta, progress_media)",
         "action": "prepend_before",
         "hook": (
-            "import sys, xbmcvfs;\n"
-            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
-            "sys.path.append(p) if p not in sys.path else None;\n"
-            "import pov_playback_capture;\n"
-            "pov_playback_capture.run(self, item, link)\n"
+            "\timport sys, xbmcvfs;\n"
+            "\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
+            "\tsys.path.append(p) if p not in sys.path else None;\n"
+            "\timport pov_source_remember;\n"
+            "\tpov_source_remember.run_capture(self, item, link)\n"
         )
     },
     {
         "id": "pov_reorder_sources",
         "name": "Remember Source Auto-Pick Reorder",
-        "description": "Moves previously picked sources to the top of the UI list.",
+        "description": "Moves previously picked sources to the top of the UI list with a visual marker.",
         "addon_id": "plugin.video.pov",
         "enabled": True,
         "target_file": "resources/lib/modules/sources.py",
-        "marker": "# WIZARD_POV_REORDER_SOURCES_v2",
+        "marker": "# WIZARD_POV_REORDER_SOURCES_v3",
         "anchor": "window_style = results_xml_style()",
         "action": "prepend_before",
         "hook": (
-            "import sys, xbmcvfs;\n"
-            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
-            "sys.path.append(p) if p not in sys.path else None;\n"
-            "import pov_reorder_sources;\n"
-            "pov_reorder_sources.run(self, results)\n"
+            "\timport sys, xbmcvfs;\n"
+            "\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
+            "\tsys.path.append(p) if p not in sys.path else None;\n"
+            "\timport pov_source_remember;\n"
+            "\tpov_source_remember.run_reorder(self, results)\n"
         )
     },
     {

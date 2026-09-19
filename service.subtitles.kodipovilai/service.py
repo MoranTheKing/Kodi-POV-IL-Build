@@ -1698,42 +1698,6 @@ def _maybe_patch_pov_services():
         except Exception:
             pass
 
-
-def _maybe_patch_pov_remember_source():
-    """PHASE 1 (capture only) of "remember the source the user picked": patch
-    POV's sources.py to record the chosen source per media (gated by our
-    `remember_source` setting, OFF by default). The patcher compile-checks the
-    result before writing, so it can never break POV playback."""
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_remember_source_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_remember_source_patcher.ensure_patched()
-        if status in ('patched', 'unmatched', 'compile_failed',
-                      'write_failed', 'read_failed'):
-            kodi_utils.log('pov_remember_source_patcher: ' + status,
-                           level=('INFO' if status == 'patched' else 'WARNING'))
-        # If we just changed POV's sources.py AND the user opted in, cycle POV
-        # so its reuse-language-invoker interpreter re-imports the patched code
-        # this session (otherwise it only applies a restart later). Gated by the
-        # setting so users with the feature off never get POV cycled.
-        if status == 'patched' and kodi_utils.get_bool('remember_source', False):
-            try:
-                from resources.lib import pov_reload
-                pov_reload.note_patched()
-            except Exception:
-                pass
-    except Exception as e:
-        try:
-            kodi_utils.log('pov_remember_source_patcher failed: {0}'.format(e),
-                           level='WARNING')
-        except Exception:
-            pass
-
-
 # The auto-on-play machinery (state, the on-play search/apply flow, and the
 # Player listener) lives in resources/lib/autosub_service.py -- extracted
 # VERBATIM so the standalone (repo-channel) service runs the exact same code.
@@ -2946,39 +2910,6 @@ def _maybe_enable_osd_autoclose():
             pass
 
 
-def _maybe_default_remember_source():
-    """Turn "remember picked source" (the source that floats to the top of the
-    list, marked "« נצפה לאחרונה »") ON for everyone.
-
-    v1 was a gentle default: it only flipped a stored 'false' to 'true' once and
-    then respected a manual opt-out. v2 is a stronger rollout -- because this is
-    an important feature, it FORCE-enables it once for EVERYONE, including users
-    who had turned it off. Marker-gated by a fresh key (_remember_source_force_
-    v2) so it re-applies exactly once even for users who already passed v1; a
-    later manual opt-out AFTER this run sticks again (we never force it back on
-    on subsequent startups). New installs get it via the settings.xml default.
-    Runs BEFORE the POV patcher so the patcher sees it on and reloads POV this
-    session."""
-    try:
-        from resources.lib import kodi_utils
-    except Exception:
-        return
-    try:
-        if kodi_utils.get_setting('_remember_source_force_v2', '') == '1':
-            return
-        # Force ON once -- override a prior opt-out, this rollout only.
-        kodi_utils.set_setting('remember_source', 'true')
-        # Keep the v1 marker set too, so the old gentle path stays a no-op.
-        kodi_utils.set_setting('_remember_source_default_v1', '1')
-        kodi_utils.set_setting('_remember_source_force_v2', '1')
-        kodi_utils.log('remember_source force-enabled for everyone '
-                       '(rollout v2)', level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log('remember_source default migration failed: {0}'
-                           .format(e), level='WARNING')
-        except Exception:
-            pass
 
 
 def _maybe_force_pool_share():
@@ -3453,10 +3384,6 @@ def main():
     if build_mode:
         _ensure_build_marker()
 
-    # Enable "remember picked source" by default (one-shot) BEFORE the POV
-    # patcher runs, so the patcher sees it on and reloads POV this session.
-    _maybe_default_remember_source()
-
     # Grow the shared Hebrew pool: force community-pool sharing ON for everyone
     # once (a later manual opt-out sticks). Must run before the harvest/drainer
     # below so it mirrors Ktuvit subs to the pool already this session.
@@ -3506,12 +3433,6 @@ def main():
     # subtitle dialog (which now runs MoranSubs). Reverts to DarkSubs when the
     # engine is off. Affects the active skin (Estuary / FENtastic).
     _point_subtitle_button(_engine_on)
-
-
-    # PHASE 1 capture for "remember the source the user picked" (gated by the
-    # remember_source setting, OFF by default; compile-checked so it can't
-    # break POV playback).
-    _maybe_patch_pov_remember_source()
 
 
     # Pre-warm the built-in sources engine (only when the user enabled it) so
