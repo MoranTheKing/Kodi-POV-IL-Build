@@ -301,6 +301,7 @@ class ModularUpdater:
     # timeout can never block the core addons (POV, IdanPlus, YouTube, language
     # pack) -- heal_missing_addons() simply (re)installs Otaku on the next launch.
     PROVISION_IDS = [
+        'script.module.acctmgr',            # <- repository.709 (Account Manager)
         'plugin.video.pov',                 # <- repository.kodifitzwell (+ patched at runtime)
         'plugin.video.idanplus',            # <- repository.Fishenzon
         'plugin.video.youtube',             # <- Kodi official repo

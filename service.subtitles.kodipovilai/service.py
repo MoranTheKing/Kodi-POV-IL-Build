@@ -402,16 +402,12 @@ def _run_build_startup_repairs():
         _maybe_patch_pov_widget_crash_guard,
         _maybe_patch_umbrella_language,
         _maybe_patch_pov_navigator_read,
-        # POV 6.08.14 broke AllDebrid playback outright: torrent_info()
-        # subscripts a dict with [0]. Every magnet resolve raises KeyError(0).
-        _maybe_fix_pov_alldebrid_status,
         _maybe_patch_skin_watched_poster,
         _maybe_patch_favourites_xml,
         _maybe_patch_favourites_personal_tiles,
         _maybe_add_tonight_entry,
         _maybe_seed_recent_updates_tile,
         _maybe_patch_pov_mdblist_sync,
-        _maybe_repair_addon_autoupdate,
         _maybe_fix_idanplus_youtube_id,
         _maybe_refresh_shared_sdh,
         _maybe_show_af3_first_launch_dialog,
@@ -966,40 +962,6 @@ def _maybe_patch_pov_hebrew_genres():
         except Exception:
             pass
 
-
-def _maybe_patch_pov_resume_cancel():
-    """Fix POV's 'stuck on BACK at the Resume/Restart prompt' (all skins): when
-    you pick a source for a mid-watched title, POVPlayer.run() shows the resume
-    prompt while a modal resolving window is open; pressing BACK returned
-    'cancel' and run() returned WITHOUT closing that window -> UI stuck until a
-    full Kodi restart. The cancel path now closes the dialog(s) first.
-    Idempotent, compile-checked, revertible."""
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_resume_cancel_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_resume_cancel_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'pov_resume_cancel_patcher: BACK on the resume prompt no longer '
-                'hangs', level='INFO')
-        elif status in ('no_file', 'already_patched'):
-            pass
-        else:
-            kodi_utils.log(
-                'pov_resume_cancel_patcher: ' + status, level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_resume_cancel_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_patch_pov_scraper_settings():
     """One-time tune of POV's scraper settings for the build: keep pre-release
     (CAM/SCR/TELE) and 3D results ON (the build owner wants them), and turn the
@@ -1169,52 +1131,6 @@ def _maybe_fix_idanplus_youtube_id():
                 level='WARNING')
         except Exception:
             pass
-
-
-def _maybe_fix_pov_alldebrid_status():
-    """POV 6.08.14 indexes a dict with [0] and every AllDebrid play fails.
-
-    indexers/alldebrid_api.py torrent_info() does `result['magnets'][0]` on a
-    call that returns a single object, so parse_magnet_pack raises KeyError(0)
-    and resolve_external_sources gives up on every source in turn. Two field
-    logs show it dozens of times each. See pov_alldebrid_status_fix.
-    """
-    try:
-        from resources.lib import pov_alldebrid_status_fix, kodi_utils
-        st = pov_alldebrid_status_fix.ensure_patched()
-        if st in ('unmatched', 'read_failed', 'write_failed',
-                  'compile_failed'):
-            kodi_utils.log('pov_alldebrid_status_fix: ' + st, level='WARNING')
-    except Exception as e:
-        try:
-            from resources.lib import kodi_utils
-            kodi_utils.log('pov_alldebrid_status_fix failed: {0}'.format(e),
-                           level='WARNING')
-        except Exception:
-            pass
-
-def _maybe_repair_addon_autoupdate():
-    """Un-stick a device where add-ons are found but never installed.
-
-    Two filters sit between "an update exists" and "Kodi installs it": the
-    update mode, and Kodi's update_rules table, whose installer-set pins are
-    invisible at info level and permanent once a repository stops answering.
-    See the module -- this reports both and repairs only what the build owns.
-    """
-    try:
-        from resources.lib import addon_autoupdate_repair, kodi_utils
-        st = addon_autoupdate_repair.ensure_repaired()
-        kodi_utils.log('addon_autoupdate_repair: ' + st, level='INFO')
-    except Exception as e:
-        try:
-            from resources.lib import kodi_utils
-            kodi_utils.log(
-                'addon_autoupdate_repair failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
 
 
 def _maybe_patch_mdblist_reauth():
