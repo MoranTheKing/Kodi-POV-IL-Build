@@ -373,7 +373,7 @@ PATCH_CONFIG = [
         )
     },
     {
-      "id": "wizard_pov_logger_enable_movies_v2",
+      "id": "wizard_pov_logger_enable_movies",
       "name": "Content Logger Enable (Movies)",
       "description": "Installs the exception tracer before run() builds any items.",
       "addon_id": "plugin.video.pov",
@@ -388,7 +388,7 @@ PATCH_CONFIG = [
       )
     },
     {
-      "id": "wizard_pov_logger_disable_movies_v2",
+      "id": "wizard_pov_logger_disable_movies",
       "name": "Content Logger Disable (Movies)",
       "description": "Tears down the exception tracer once run() finishes.",
       "addon_id": "plugin.video.pov",
@@ -403,7 +403,7 @@ PATCH_CONFIG = [
       )
     },
     {
-      "id": "wizard_pov_logger_enable_tvshows_v2",
+      "id": "wizard_pov_logger_enable_tvshows",
       "name": "Content Logger Enable (TV Shows)",
       "description": "Installs the exception tracer before run() builds any items.",
       "addon_id": "plugin.video.pov",
@@ -418,7 +418,7 @@ PATCH_CONFIG = [
       )
     },
     {
-      "id": "wizard_pov_logger_disable_tvshows_v2",
+      "id": "wizard_pov_logger_disable_tvshows",
       "name": "Content Logger Disable (TV Shows)",
       "description": "Tears down the exception tracer once run() finishes.",
       "addon_id": "plugin.video.pov",
@@ -433,7 +433,7 @@ PATCH_CONFIG = [
       )
     },
     {
-      "id": "wizard_pov_logger_enable_episodes_v2",
+      "id": "wizard_pov_logger_enable_episodes",
       "name": "Content Logger Enable (Episodes)",
       "description": "Installs the exception tracer before run() builds any items.",
       "addon_id": "plugin.video.pov",
@@ -448,7 +448,7 @@ PATCH_CONFIG = [
       )
     },
     {
-      "id": "wizard_pov_logger_disable_episodes_v2",
+      "id": "wizard_pov_logger_disable_episodes",
       "name": "Content Logger Disable (Episodes)",
       "description": "Tears down the exception tracer once run() finishes (episodes.py's run() ends at the focus_index line, not set_view_mode).",
       "addon_id": "plugin.video.pov",
@@ -463,7 +463,7 @@ PATCH_CONFIG = [
       )
     },
     {
-      "id": "wizard_pov_my_lists_movies_v3",
+      "id": "wizard_pov_my_lists_movies",
       "name": "My Lists Dispatch Hook (Movies)",
       "description": "Populates self.list for tmdb_my_movies / trakt_my_movies by merging TMDB favorites+watchlist or Trakt collection+watchlist+favorites, before POV's own dispatch chain runs (and no-ops for every other action).",
       "addon_id": "plugin.video.pov",
@@ -478,7 +478,7 @@ PATCH_CONFIG = [
       )
     },
     {
-      "id": "wizard_pov_my_lists_tvshows_v3",
+      "id": "wizard_pov_my_lists_tvshows",
       "name": "My Lists Dispatch Hook (TV Shows)",
       "description": "Populates self.list for tmdb_my_tvshows / trakt_my_tvshows by merging TMDB favorites+watchlist or Trakt collection+watchlist+favorites, before POV's own dispatch chain runs (and no-ops for every other action).",
       "addon_id": "plugin.video.pov",
@@ -493,7 +493,7 @@ PATCH_CONFIG = [
       )
     },
     {
-        "id": "pov_debrid_status_v2",
+        "id": "pov_debrid_status",
         "name": "Debrid Expiry Notification Override",
         "description": "Dynamically disables POV's upstream generic debrid notification in memory to prevent duplication with the custom build's Hebrew UI toasts.",
         "addon_id": "plugin.video.pov",
@@ -511,7 +511,7 @@ PATCH_CONFIG = [
         )
     },
     {
-        "id": "pov_custom_debrid_toasts_v2",
+        "id": "pov_custom_debrid_toasts",
         "name": "Custom Debrid Startup Toasts",
         "description": "Fires Hebrew-localized, icon-aware Debrid subscription status notifications when Kodi starts, replacing the generic upstream toasts.",
         "addon_id": "plugin.video.pov",
@@ -529,7 +529,7 @@ PATCH_CONFIG = [
         )
     },
     {
-        "id": "wizard_fav_refresh_manage_v2",
+        "id": "wizard_fav_refresh_manage",
         "name": "Favorites Refresh (List Manager)",
         "description": "Forces the UI container to refresh immediately when adding a title to TMDB/Trakt/MDBList, preventing stale views.",
         "addon_id": "plugin.video.pov",
@@ -547,7 +547,7 @@ PATCH_CONFIG = [
         )
     },
     {
-        "id": "wizard_fav_refresh_dialog_v2",
+        "id": "wizard_fav_refresh_dialog",
         "name": "Favorites Refresh (Local Dialogs)",
         "description": "Forces the UI container to refresh immediately when adding a title to POV-local favorites, preventing stale views.",
         "addon_id": "plugin.video.pov",
@@ -623,6 +623,24 @@ PATCH_CONFIG = [
         )
     },
     {
+       "id": "pov_torbox_url_fix_indexers",
+       "name": "POV TorBox Malformed URL Fix (Indexers)",
+       "description": "Fixes libcurl error 3 by percent-encoding raw TorBox download links (POV 6.08.14+).",
+       "addon_id": "plugin.video.pov",
+       "enabled": True,
+       "target_file": "resources/lib/indexers/torbox_api.py",
+       "marker": "# WIZARD_POV_TORBOX_URL_FIX_v2",
+       "anchor": "return self._get(path, params=params)",
+       "action": "prepend_before",
+       "hook": (
+           "\t\timport sys, xbmcvfs;\n"
+           "\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
+           "\t\tsys.path.append(p) if p not in sys.path else None;\n"
+           "\t\timport pov_torbox_url_fix;\n"
+           "\t\treturn pov_torbox_url_fix.safe_url(self._get(path, params=params))\n"
+       )
+    },
+    {
         "id": "pov_ad_error_log",
         "name": "POV AllDebrid Error Log",
         "description": "Logs AllDebrid HTTP 200 soft-errors before POV swallows them.",
@@ -677,25 +695,25 @@ PATCH_CONFIG = [
         )
     },
     {
-        "id": "pov_debrid_timeout_v2",
+        "id": "pov_debrid_timeout",
         "name": "Debrid Timeout Resiliency",
         "description": "Prevents source erasure when a debrid provider times out by injecting unconfirmed tuples.",
         "addon_id": "plugin.video.pov",
         "enabled": True,
         "target_file": "resources/lib/modules/sources.py",
-        "marker": "# WIZARD_POV_DEBRID_TIMEOUT_v2",
-        "anchor": "threads = [i for i in threads if i.done() and not i.exception()]",
-        "action": "prepend_before",
+        "marker": "# WIZARD_POV_DEBRID_TIMEOUT_v3",
+        "anchor": "self.monitor(threads, debrid_format, True)",
+        "action": "append_after",
         "hook": (
-            "import sys, xbmcvfs;\n"
-            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
-            "sys.path.append(p) if p not in sys.path else None;\n"
-            "import pov_debrid_timeout;\n"
-            "pov_debrid_timeout.run(self, threads, torrent_sources)\n"
+            "\t\t\timport sys, xbmcvfs\n"
+            "\t\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
+            "\t\t\tif p not in sys.path: sys.path.append(p)\n"
+            "\t\t\timport pov_debrid_timeout\n"
+            "\t\t\tpov_debrid_timeout.run(self, threads, torrent_sources)\n"
         )
     },
     {
-        "id": "pov_provider_rank_v2",
+        "id": "pov_provider_rank",
         "name": "Unknown Provider Crash Guard",
         "description": "Intercepts sort ranking to prevent KeyErrors on unregistered 3rd party providers.",
         "addon_id": "plugin.video.pov",
@@ -707,7 +725,7 @@ PATCH_CONFIG = [
         "hook": "return self.source.provider_sort_ranks.get(account_type) or 11\n"
     },
     {
-        "id": "pov_heb_prewarm_v2",
+        "id": "pov_heb_prewarm",
         "name": "Hebrew Subtitles Prewarm",
         "description": "Triggers background subtitle cache pre-warming concurrently with video scraping.",
         "addon_id": "plugin.video.pov",
@@ -725,7 +743,7 @@ PATCH_CONFIG = [
         )
     },
     {
-        "id": "pov_playback_capture_v2",
+        "id": "pov_playback_capture",
         "name": "Source Name Stash & Playback Capture",
         "description": "Stashes played source names into Window properties and captures source for re-selection.",
         "addon_id": "plugin.video.pov",
@@ -743,7 +761,7 @@ PATCH_CONFIG = [
         )
     },
     {
-        "id": "pov_reorder_sources_v2",
+        "id": "pov_reorder_sources",
         "name": "Remember Source Auto-Pick Reorder",
         "description": "Moves previously picked sources to the top of the UI list.",
         "addon_id": "plugin.video.pov",
@@ -761,7 +779,7 @@ PATCH_CONFIG = [
         )
     },
     {
-        "id": "pov_resolve_diag_v2",
+        "id": "pov_resolve_diag",
         "name": "Debrid Resolve Diagnostics",
         "description": "Expands opaque selected_files exceptions to include file counts and filter rejection details.",
         "addon_id": "plugin.video.pov",
@@ -779,7 +797,7 @@ PATCH_CONFIG = [
         )
     },
     {
-        "id": "pov_debrid_error_guard_v2",
+        "id": "pov_debrid_error_guard",
         "name": "Debrid Timeout Error Guard",
         "description": "Safely wraps direct provider cache checks, returning a tuple on timeout to preserve checked states.",
         "addon_id": "plugin.video.pov",
@@ -885,6 +903,200 @@ PATCH_CONFIG = [
             "\tif p not in sys.path: sys.path.append(p)\n"
             "\timport pov_aiostreams_fix\n"
             "\tsettings = pov_aiostreams_fix.enforce_credentials(settings)"
+        )
+    },
+    {
+        "id": "mdblist_api_redact_and_reauth_prep",
+        "name": "MDBList API Redact Log",
+        "description": "Redacts API keys in logs via exception class shadowing.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/indexers/mdblist_api.py",
+        "marker": "# WIZARD_POV_MDBL_REAUTH_PREP_v2",
+        "anchor": "\t\tlogger('mdblist error', str(e))",
+        "action": "prepend_before",
+        "hook": (
+            "\t\t_orig_e = e; e = type('RedactedE', (Exception,), {'__str__': lambda s: __import__('re').sub(r'apikey=[^&\\s]+', 'apikey=***', str(_orig_e)), 'response': getattr(_orig_e, 'response', None)})();\n"
+        )
+    },
+    {
+        "id": "mdblist_api_reauth_retry",
+        "name": "MDBList API 401 Reauth Retry",
+        "description": "Transparently recovers from expired MDBList tokens on 401.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/indexers/mdblist_api.py",
+        "marker": "# WIZARD_POV_MDBL_REAUTH_RETRY_v2",
+        "anchor": "\t\tlogger('mdblist error', str(e))",
+        "action": "append_after",
+        "hook": (
+            "\t\timport sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/'); sys.path.append(p) if p not in sys.path else None; import pov_mdblist_patch_logic;\n"
+            "\t\t_ai_retry = pov_mdblist_patch_logic.handle_401_reauth(_orig_e, path, params, json, method);\n"
+            "\t\tif _ai_retry is not None: return _ai_retry\n"
+        )
+    },
+    {
+        "id": "mdblist_api_scrobble_stop",
+        "name": "MDBList Watch Scrobble Fix",
+        "description": "Clears MDBList paused state when marking as watched.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/indexers/mdblist_api.py",
+        "marker": "# WIZARD_POV_MDBL_SCROBBLE_STOP_v2",
+        "anchor": "\tsuccess = result[result_key][success_key] > 0",
+        "action": "append_after",
+        "hook": (
+            "\timport sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/'); sys.path.append(p) if p not in sys.path else None; import pov_mdblist_patch_logic;\n"
+            "\tpov_mdblist_patch_logic.scrobble_stop_if_watched(action, key, media, media_id, season, episode)\n"
+        )
+    },
+    {
+        "id": "mdblist_api_add_to_list_guard",
+        "name": "MDBList Add to List Guard",
+        "description": "Prevents crash on 404 when adding to list.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/indexers/mdblist_api.py",
+        "marker": "# WIZARD_POV_MDBL_ADD_LIST_GUARD_v2",
+        "anchor": "\tif result['added']['movies'] + result['added']['shows'] == 0: return kodi_utils.notify_failed()",
+        "action": "prepend_before",
+        "hook": "\tif not result: return kodi_utils.notify_failed()\n"
+    },
+    {
+        "id": "mdblist_api_add_to_coll_guard",
+        "name": "MDBList Add to Collection Guard",
+        "description": "Prevents crash on 404 when adding to collection.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/indexers/mdblist_api.py",
+        "marker": "# WIZARD_POV_MDBL_ADD_COLL_GUARD_v2",
+        "anchor": "\tif result['updated']['movies'] + result['updated']['shows'] == 0: return kodi_utils.notify_failed()",
+        "action": "prepend_before",
+        "hook": "\tif not result: return kodi_utils.notify_failed()\n"
+    },
+    {
+        "id": "mdblist_api_sync_guard",
+        "name": "MDBList Sync Tuple Crash Fix",
+        "description": "Prevents reset_activity tuple indices string crash.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/indexers/mdblist_api.py",
+        "marker": "# WIZARD_POV_MDBL_SYNC_GUARD_v2",
+        "anchor": "\tcached = mdbl_cache.reset_activity(latest)",
+        "action": "append_after",
+        "hook": (
+            "\tif not isinstance(cached, dict) or not isinstance(latest, dict):\n"
+            "\t\ttry: mdbl_cache.clear_all_mdbl_cache_data(refresh=False)\n"
+            "\t\texcept: pass\n"
+            "\t\treturn 'failed'\n"
+        )
+    },
+    {
+        "id": "mdblist_api_merge_collection",
+        "name": "MDBList Merge Collection to Watchlist",
+        "description": "Injects Trakt Collection items into the Watchlist view.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/indexers/mdblist_api.py",
+        "marker": "# WIZARD_POV_MDBL_MERGE_COLLECTION_v2",
+        "anchor": "\tif not settings.show_unaired_watchlist():",
+        "action": "prepend_before",
+        "hook": (
+            "\timport sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/'); sys.path.append(p) if p not in sys.path else None; import pov_mdblist_patch_logic;\n"
+            "\tpov_mdblist_patch_logic.merge_collection_to_watchlist(original_list, mediatype)\n"
+        )
+    },
+    {
+        "id": "mdblist_api_like_routes",
+        "name": "MDBList Like API Routes",
+        "description": "Injects missing MDBList like/unlike context menu logic routes.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/indexers/mdblist_api.py",
+        "marker": "# WIZARD_POV_MDBL_LIKE_ROUTES_v2",
+        "anchor": "def delete_mdbl_list(params):",
+        "action": "prepend_before",
+        "hook": (
+            "def mdbl_like_a_list(params):\n"
+            "\timport sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/'); sys.path.append(p) if p not in sys.path else None; import pov_mdblist_patch_logic; pov_mdblist_patch_logic.like_a_list(params)\n\n"
+            "def mdbl_unlike_a_list(params):\n"
+            "\timport sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/'); sys.path.append(p) if p not in sys.path else None; import pov_mdblist_patch_logic; pov_mdblist_patch_logic.unlike_a_list(params)\n\n"
+        )
+    },
+    {
+        "id": "mdblist_menu_manager_watchlist",
+        "name": "MDBList Manager Watchlist Only",
+        "description": "Hides collection to prevent crashes and stabilize Hebrew IDs.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/menus/mdblist.py",
+        "marker": "# WIZARD_POV_MDBL_WATCHLIST_ONLY_v2",
+        "anchor": "\t\tchoices = [(i.lower(), i, '', self.icon) for i in (watchl_str, coll_str)]",
+        "action": "append_after",
+        "hook": "\t\tchoices = [('watchlist', watchl_str, '', self.icon)]\n"
+    },
+    {
+        "id": "mdblist_menu_pre_search",
+        "name": "MDBList Search History & Flow",
+        "description": "Adds intermediate search screens and fixes blank cancellation flow.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/menus/mdblist.py",
+        "marker": "# WIZARD_POV_MDBL_PRE_SEARCH_v2",
+        "anchor": "\treturn SearchMdblLists(params).build()",
+        "action": "prepend_before",
+        "hook": (
+            "\timport sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/'); sys.path.append(p) if p not in sys.path else None; import pov_mdblist_patch_logic;\n"
+            "\t_ai_params = pov_mdblist_patch_logic.pre_search_check(params)\n"
+            "\tif _ai_params is None: return\n"
+            "\tparams.update(_ai_params)\n"
+        )
+    },
+    {
+        "id": "mdblist_menu_like_append",
+        "name": "MDBList Like Menu Option",
+        "description": "Appends Like/Unlike to MDBList context menus natively.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/menus/mdblist.py",
+        "marker": "# WIZARD_POV_MDBL_MENU_LIKE_v2",
+        "anchor": "\t\t\t\tcm_append((add2menu_str, 'RunPlugin(%s)' % build_url({'mode': 'menu_editor.add_external', 'name': name, 'iconImage': 'mdblist.png'})))",
+        "action": "prepend_before",
+        "hook": (
+            "\t\t\t\timport sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/'); sys.path.append(p) if p not in sys.path else None; import pov_mdblist_patch_logic;\n"
+            "\t\t\t\tpov_mdblist_patch_logic.append_like_menu(cm_append, list_type, list_id)\n"
+        )
+    },
+    {
+        "id": "pov_mdblist_sort_default",
+        "name": "MDBList Watchlist/Collection Sort Default",
+        "description": "Intercepts list sorting to default to 'Date Added' (recency) if unconfigured.",
+        "addon_id": "plugin.video.pov",
+        "enabled": False,
+        "target_file": "resources/lib/modules/settings.py",
+        "marker": "# WIZARD_POV_MDBL_SORT_DEFAULT_v2",
+        "anchor": "def metadata_user_info():",
+        "action": "prepend_before",
+        "hook": (
+            "_orig_lists_sort_order = lists_sort_order\n"
+            "def lists_sort_order(setting, mediatype=None):\n"
+            "\timport sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/'); sys.path.append(p) if p not in sys.path else None; import pov_mdblist_patch_logic;\n"
+            "\treturn pov_mdblist_patch_logic.lists_sort_order_override(_orig_lists_sort_order, setting, mediatype)\n\n"
+        )
+    },
+    {
+        "id": "mdblist_api_account_heal",
+        "name": "MDBList Account State Heal",
+        "description": "Repairs broken MDBList OAuth states by recovering missing usernames.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/indexers/mdblist_api.py",
+        "marker": "# WIZARD_POV_MDBL_ACCOUNT_HEAL_v2",
+        "anchor": "\tif not get_setting('mdblist_user', ''): return 'no account'",
+        "action": "prepend_before",
+        "hook": (
+            "\timport sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/'); sys.path.append(p) if p not in sys.path else None; import pov_mdblist_patch_logic;\n"
+            "\tpov_mdblist_patch_logic.heal_mdblist_account_if_needed()\n"
         )
     }
 ]

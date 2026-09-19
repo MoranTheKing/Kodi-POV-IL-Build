@@ -404,7 +404,6 @@ def _run_build_startup_repairs():
         _maybe_seed_pov_seasons_view,
         _maybe_patch_pov_resume_cancel,
         _maybe_patch_pov_scraper_settings,
-        _maybe_patch_pov_mdblist_like,
         _maybe_fix_pov_torbox_url,
         # Bound only explicit home-widget requests before AF3 can rebuild its
         # home. Normal catalogue navigation carries no widget_limit.
@@ -429,7 +428,6 @@ def _run_build_startup_repairs():
         _maybe_add_tonight_entry,
         _maybe_seed_recent_updates_tile,
         _maybe_patch_pov_mdblist_sync,
-        _maybe_time_pov_directories,
         _maybe_repair_addon_autoupdate,
         _maybe_fix_idanplus_youtube_id,
         _maybe_refresh_shared_sdh,
@@ -1070,43 +1068,6 @@ def _maybe_patch_pov_resume_cancel():
             pass
 
 
-def _maybe_patch_pov_mdblist_like():
-    """Give an MDBList list the same long-press menu a Trakt list already has:
-    Like List / Unlike List, which POV wired for Trakt and never for MDBList.
-    MDBList's API does support it (PUT/DELETE on lists/<id>/like) and POV
-    already reads the liked-lists bucket, so only the action was missing."""
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_mdblist_like_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_mdblist_like_patcher.ensure_patched()
-        # Judge the VALUES, not the whole string. `'patched' in status` reads
-        # True for "api=unmatched, menu=patched" -- the substring is right
-        # there in the healthy half -- so a half-failed run logged INFO and the
-        # WARNING branch was unreachable for exactly the case worth seeing.
-        parts = [p.split('=', 1)[-1].strip()
-                 for p in status.split(',') if '=' in p]
-        # 'repatched' = an older injected version was reverted and the current
-        # one written over it. Healthy, and worth seeing: it is the only signal
-        # that a version bump actually reached this device, which is precisely
-        # what silently failed between v2 and v3.
-        if any(p not in ('patched', 'repatched', 'unchanged', 'no_file')
-               for p in parts):
-            kodi_utils.log('pov_mdblist_like_patcher: ' + status,
-                           level='WARNING')
-        elif 'patched' in parts or 'repatched' in parts:
-            kodi_utils.log('pov_mdblist_like_patcher: ' + status, level='INFO')
-    except Exception as e:
-        try:
-            kodi_utils.log('pov_mdblist_like_patcher failed: {0}'.format(e),
-                           level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_patch_pov_scraper_settings():
     """One-time tune of POV's scraper settings for the build: keep pre-release
     (CAM/SCR/TELE) and 3D results ON (the build owner wants them), and turn the
@@ -1202,93 +1163,6 @@ def _maybe_add_tonight_entry():
         ensure()
     except Exception:
         pass  # An optional home shortcut must not interrupt startup repairs.
-
-def _maybe_patch_pov_mdblist_sync():
-    """Patch POV's indexers/mdblist_api.py (POV 6.x) for two MDBList
-    watched/progress-sync bugs that surface when MDBList is the Watched Status
-    Provider: (A) the user's full API key leaking into kodi.log via the error
-    logger, and (B) 'mark as watched' leaving the title PAUSED on MDBList (the
-    scrobble/clear resume-clear 404s) and not counting in Watch Stats. The patch
-    scrubs the key from the log and adds a scrobble/stop@100 on mark-watched.
-    Safe no-op without POV / on a POV version whose anchors moved."""
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_mdblist_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_mdblist_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'pov_mdblist_patcher: MDBList sync patched (apikey redacted '
-                'in logs; mark-watched now clears resume + counts)',
-                level='INFO')
-        elif status in ('no_pov', 'no_file', 'already_patched'):
-            pass  # quiet steady-state
-        else:
-            kodi_utils.log(
-                'pov_mdblist_patcher: ' + status, level='WARNING')
-        # Stable Watchlist/Collection ids so the list manager doesn't crash
-        # under a Hebrew UI (POV routes on the English label otherwise).
-        try:
-            mstatus = pov_mdblist_patcher.ensure_manager_patched()
-            if mstatus == 'patched':
-                kodi_utils.log(
-                    'pov_mdblist_patcher: manager Watchlist/Collection ids '
-                    'stabilised', level='INFO')
-            elif mstatus not in ('no_pov', 'no_file', 'already_patched'):
-                kodi_utils.log(
-                    'pov_mdblist_patcher manager: ' + mstatus, level='WARNING')
-        except Exception:
-            pass
-        # Repair 'No MDBList Account Active' (empty mdblist_user despite a set
-        # token) so the sync monitor + list manager stop failing.
-        try:
-            hstatus = pov_mdblist_patcher.heal_mdblist_account()
-            if hstatus == 'healed':
-                kodi_utils.log(
-                    'pov_mdblist_patcher: healed empty mdblist_user '
-                    '(account was inactive)', level='INFO')
-            elif hstatus not in ('ok', 'no_pov'):
-                kodi_utils.log(
-                    'pov_mdblist_patcher heal: ' + hstatus, level='WARNING')
-        except Exception:
-            pass
-        # Default the personal-list sort (MDBList/Trakt/TMDB Watchlist +
-        # Collection) to 'recently added' so the newest title leads instead of
-        # A-Z. Two layers: (1) a code patch of POV's lists_sort_order reader
-        # (deterministic -- the source of truth, since cross-addon setting writes
-        # don't reliably reach POV's cached settings); (2) the setting write, as a
-        # best-effort so POV's own sort menu also shows "Date Added" selected.
-        try:
-            gstatus = pov_mdblist_patcher.ensure_sort_default_patched()
-            if gstatus == 'patched':
-                kodi_utils.log(
-                    'pov_mdblist_patcher: patched list-sort default -> recency',
-                    level='INFO')
-            elif gstatus not in ('no_pov', 'no_file', 'already_patched'):
-                kodi_utils.log(
-                    'pov_mdblist_patcher sort-default: ' + gstatus, level='WARNING')
-        except Exception:
-            pass
-        try:
-            sstatus = pov_mdblist_patcher.ensure_lists_sort_recent()
-            if sstatus == 'set':
-                kodi_utils.log(
-                    'pov_mdblist_patcher: defaulted list sort to recently-added',
-                    level='INFO')
-            elif sstatus not in ('ok', 'already', 'no_pov'):
-                kodi_utils.log(
-                    'pov_mdblist_patcher sort: ' + sstatus, level='WARNING')
-        except Exception:
-            pass
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_mdblist_patcher failed: {0}'.format(e), level='WARNING')
-        except Exception:
-            pass
 
 
 def _maybe_fix_pov_maincache_schema():
@@ -1416,41 +1290,6 @@ def _maybe_fix_fentastic_clearlogo_var():
             pass
 
 
-def _maybe_time_pov_directories():
-    """Put a number on the spinner.
-
-    A user reports a wait on every category press; the log they can produce is
-    info level and contains not one POV timing, so the only evidence is Kodi's
-    focus errors and the gaps between them -- which are the user's reading
-    time and the directory build added together. This logs one INFO line per
-    plugin call with the seconds and the route, so the next log answers the
-    question instead of raising it. It makes nothing faster; see the module.
-    """
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_directory_timing_patcher, kodi_utils
-        st = pov_directory_timing_patcher.ensure_patched()
-        if st in ('unmatched', 'compile_failed', 'write_failed',
-                  'revert_failed', 'read_failed'):
-            kodi_utils.log(
-                'pov_directory_timing_patcher: ' + st, level='WARNING')
-        elif st in ('patched', 'repatched'):
-            try:
-                from resources.lib import pov_reload
-                pov_reload.note_patched()
-            except Exception:
-                pass
-    except Exception as e:
-        try:
-            from resources.lib import kodi_utils
-            kodi_utils.log(
-                'pov_directory_timing_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_repair_addon_autoupdate():
     """Un-stick a device where add-ons are found but never installed.
 
@@ -1492,29 +1331,7 @@ def _maybe_patch_mdblist_reauth():
     # the switch's own text promises to stop changes to plugin.video.pov and
     # says nothing about any other add-on, and turning it on to isolate a POV
     # problem must not change Umbrella's behaviour as a side effect.
-    if not _skip_pov_patchers():
-        # ONE try EACH. Sharing a try meant an exception out of the MDBList
-        # patcher -- and it has unguarded paths, an os.listdir over
-        # __pycache__ among them -- skipped the Trakt one entirely. That
-        # reproduces the exact field symptom this round exists to close
-        # (MDBList fixed, Trakt still failing beside it), from a hiccup on
-        # the other side of the pair, behind a WARNING that reads as if it
-        # were only about MDBList.
-        for _mod_name in ('pov_mdblist_reauth_patcher'):
-            try:
-                from resources.lib import kodi_utils
-                _mod = __import__('resources.lib.' + _mod_name,
-                                  fromlist=[_mod_name])
-                st = _mod.ensure_patched()
-                if st in ('unmatched', 'compile_failed', 'write_failed'):
-                    kodi_utils.log(_mod_name + ': ' + st, level='WARNING')
-            except Exception as e:
-                try:
-                    from resources.lib import kodi_utils
-                    kodi_utils.log('{0} failed: {1}'.format(_mod_name, e),
-                                   level='WARNING')
-                except Exception:
-                    pass
+
     try:
         from resources.lib import umbrella_mdblist_token_patcher, kodi_utils
         st = umbrella_mdblist_token_patcher.ensure_patched()
@@ -1710,47 +1527,6 @@ def _maybe_patch_pov_widget_crash_guard():
                 level='WARNING')
         except Exception:
             pass
-
-
-def _maybe_fix_pov_torbox_url():
-    """Restore playback. POV 6.08.12 asks TorBox to append the file name to the
-    download link (`append_name=true`); TorBox returns it unencoded, so the
-    link arrives with raw spaces and brackets and libcurl rejects it
-    (`URL using bad/illegal format`) without sending a byte. Every release name
-    has spaces, so nothing plays.
-
-    We ENCODE the link rather than removing POV's parameter: POV added it
-    deliberately and would re-add it in every release, and each of those
-    releases would break playback again until this patcher caught up. Encoding
-    keeps POV's feature and makes the URL valid, so a future POV that keeps
-    `append_name` needs nothing from us."""
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_torbox_url_fix, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_torbox_url_fix.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'pov_torbox_url_fix: TorBox links are percent-encoded before '
-                'playback (restores playback on POV 6.08.12+)', level='INFO')
-            try:
-                from resources.lib import pov_reload
-                pov_reload.note_patched()
-            except Exception:
-                pass
-        elif status in ('read_failed', 'write_failed', 'compile_failed',
-                        'no_anchor'):
-            kodi_utils.log('pov_torbox_url_fix: ' + status, level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log('pov_torbox_url_fix run failed: {0}'.format(e),
-                           level='WARNING')
-        except Exception:
-            pass
-
 
 def _maybe_patch_pov_language_invoker():
     """Hold POV's reuse-language-invoker flag where this device wants it.

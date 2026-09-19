@@ -1,0 +1,93 @@
+
+Act as a Senior Kodi Addon Code Auditor, Reverse Engineer, and Engine v2 Patch Architect.
+
+Your task is to perform a rigorous code audit and technical verification on a newly refactored patch for our Kodi Wizard Addon (`plugin.program.kodipovilwizard`). You will be provided with three code inputs:
+
+1. **LATEST UPSTREAM CODE**: The original, pristine source code (latest version).
+2. **LEGACY (OLD) PATCH**: The original patch/workaround implementation.
+3. **NEW ENGINE V2 PATCH**: The new metadata configuration object (dictionary) and any decoupled Python module intended for Engine v2 (`patches_config.py`).
+
+---
+
+### ARCHITECTURAL STANDARDS FOR ENGINE v2 (STRICT RULES):
+- **Additive-Only Controls**: The `action` key MUST strictly be `prepend_before` or `append_after`. The `replace` action is FORBIDDEN. State modifications must use variable shadowing, sequential property overrides, or loop bypasses.
+- **Placement & Pathing**: All decoupled patch modules MUST reside inside `plugin.program.kodipovilwizard/resources/libs/patches/`.
+- **Lean Hooks**: The hook string must only import sys/xbmcvfs, add the patches path to `sys.path`, import the module, and execute it.
+- **Tab Indentation (`\t`)**: All injected multi-line hook code MUST strictly use explicit `\t` characters matching the depth of the upstream anchor target scope to prevent runtime `IndentationError` bugs.
+- **Markers**: Must use the `# WIZARD_...` naming convention (e.g., `# WIZARD_POV_FEATURE_v2`).
+- **Closure Protection**: No dynamic closures/lambdas capturing loop variables.
+
+---
+
+### INPUT CODE SNIPPETS:
+
+#### [INPUT 1: LATEST UPSTREAM CODE]
+```python
+# Paste latest pristine upstream code here
+
+```
+
+#### [INPUT 2: LEGACY / OLD PATCH]
+
+```python
+# Paste legacy/old patch code here
+
+```
+
+#### [INPUT 3: NEW ENGINE V2 PATCH]
+
+```python
+# Paste new metadata config dictionary and decoupled module code here
+
+```
+
+---
+
+### AUDIT REQUIREMENTS & EVALUATION PROTOCOL:
+
+Please analyze the three inputs thoroughly and provide a structured report covering the following 5 dimensions:
+
+#### 1. Upstream Necessity Verification
+
+* Analyze the **LATEST UPSTREAM CODE** to determine if the patch is **still necessary**.
+* Check if upstream developers have already fixed the issue, refactored the logic, or removed the target function/variable.
+* Explicitly state whether the issue still exists in the latest upstream code.
+
+#### 2. Functional Parity & Intent Alignment
+
+* Compare the **LEGACY PATCH** with the **NEW ENGINE V2 PATCH**.
+* Does the new patch accomplish the exact same functional goal as the legacy patch?
+* Does it cover **all edge cases, variables, and side-effects** handled by the legacy patch?
+* Identify any missing logic, dropped parameters, or unintended behavioral changes.
+
+#### 3. Bug & Syntax Analysis (New Patch)
+
+* Inspect the **NEW ENGINE V2 PATCH** (both metadata config and decoupled module) for bugs.
+* Check for Python syntax errors, scope leakage, missing variable imports, potential `NameError`, `KeyError`, or `TypeError` exceptions.
+* Verify that variable shadowing or scope overrides in the new patch do not break surrounding upstream execution.
+
+#### 4. Engine v2 Architectural Compliance
+
+* Verify that the patch strictly follows all 9 Engine v2 architectural rules (Additive-only, strict `\t` tab usage in the hook string, placement in `resources/libs/patches/`, no `replace` actions, correct marker naming, clean `sys.path` handling).
+* Ensure the anchor string in the new patch is an exact, unique, single-line match in the latest upstream code.
+
+#### 5. Final Verdict & Refinement Plan
+
+* Give a clear final verdict: **APPROVED**, **NEEDS REVISION**, or **OBSOLETE (NOT NEEDED)**.
+* If revisions are required, provide the precise corrected Python dictionary and/or decoupled module code ready for production deployment.
+
+---
+
+### OUTPUT FORMAT:
+
+Structure your response into the following clear sections:
+
+1. **Executive Summary & Verdict** (Status badge + 2-3 sentence overview)
+2. **Upstream Necessity Analysis** (Detailed assessment of pristine code state)
+3. **Feature Parity & Coverage Gap Table** (Comparing Legacy vs New implementation)
+4. **Bug & Risk Report** (List of bugs, syntax issues, or risks found in the new patch)
+5. **Engine v2 Compliance Checklist** (Pass/Fail breakdown against rules)
+6. **Corrected / Final Patch Code** (If adjustments are needed, provide the fully corrected code blocks here)
+
+```
+
