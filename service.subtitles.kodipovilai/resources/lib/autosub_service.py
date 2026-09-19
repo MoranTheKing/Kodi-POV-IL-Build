@@ -149,6 +149,48 @@ def autosub_on_play():
     STATE['busy'] = True
     _eng_general = None
     try:
+        # Ownership starts as the selection token present when auto-on-play
+        # began. Once autosub claims a candidate it advances to that exact
+        # token/link/stream snapshot. Any manual pick changes the token and
+        # permanently aborts this run instead of being overwritten by a later
+        # fallback candidate.
+        try:
+            _initial_selection_token = (
+                kodi_utils.get_subtitle_selection_token() or '')
+        except Exception:
+            _initial_selection_token = ''
+        _run_owner = {'selection': None}
+
+        def _autosub_owns_player():
+            owned = _run_owner.get('selection')
+            try:
+                if owned:
+                    return bool(kodi_utils.subtitle_selection_matches(
+                        owned.get('token') or '',
+                        owned.get('link_hash') or '',
+                        owned.get('stream_hash') or ''))
+                return ((kodi_utils.get_subtitle_selection_token() or '')
+                        == _initial_selection_token)
+            except Exception:
+                return False
+
+        def _claim_candidate(candidate_link):
+            if not _autosub_owns_player():
+                return {}
+            try:
+                kodi_utils.set_current_subtitle(candidate_link)
+                claimed = kodi_utils.current_subtitle_selection(
+                    expected_link=candidate_link)
+                if not kodi_utils.subtitle_selection_matches(
+                        claimed.get('token') or '',
+                        claimed.get('link_hash') or '',
+                        claimed.get('stream_hash') or ''):
+                    return {}
+                _run_owner['selection'] = dict(claimed)
+                return claimed
+            except Exception:
+                return {}
+
         # Show the DarkSubs-style top overlay (with live per-source counts the
         # engine fills into general.show_msg as it searches), so the user sees
         # the same "loading subtitles" screen from the start of the search --
@@ -259,10 +301,25 @@ def autosub_on_play():
             # below) is present, so the picker can later tell embedded from
             # external and never mistake an AI translation for "embedded Hebrew".
             try:
-                subs_engine_bridge.note_playback_streams(info, _streams)
+                # This poll has run to completion. Seal even an empty result
+                # before we append an external subtitle, otherwise the parallel
+                # snapshot poller can mistake our own file for an embedded one.
+                subs_engine_bridge.note_playback_streams(
+                    info, _streams, final=True)
             except Exception:
                 pass
             if _heb_idx is not None:
+                try:
+                    import json as _json
+                    import urllib.parse as _up
+                    _elink = _up.quote(_json.dumps(
+                        {'type': 'engine', 'embedded': True,
+                         'stream_index': _heb_idx}, ensure_ascii=False))
+                except Exception:
+                    _elink = ''
+                _selection = _claim_candidate(_elink) if _elink else {}
+                if not _selection or not _autosub_owns_player():
+                    return
                 # Bare calls, deliberately: a Player-API failure raises into the
                 # except below, which skips the overlay and the return, so
                 # execution falls through to the real subtitle search. Routing
@@ -273,12 +330,13 @@ def autosub_on_play():
                 _pl.setSubtitleStream(_heb_idx)
                 _pl.showSubtitles(True)
                 try:
-                    import json as _json
-                    import urllib.parse as _up
-                    _elink = _up.quote(_json.dumps(
-                        {'type': 'engine', 'embedded': True,
-                         'stream_index': _heb_idx}, ensure_ascii=False))
-                    kodi_utils.set_current_subtitle(_elink)
+                    if not _autosub_owns_player():
+                        return
+                    kodi_utils.set_subtitle_sync_status(
+                        'confirmed', source='embedded',
+                        selection_token=_selection.get('token') or '',
+                        link_hash=_selection.get('link_hash') or '',
+                        stream_hash=_selection.get('stream_hash') or '')
                 except Exception:
                     pass
                 _final_overlay('[COLOR lightblue]הופעל תרגום מובנה בעברית[/COLOR]')
@@ -293,6 +351,11 @@ def autosub_on_play():
         # (list_candidates already queued every human Ktuvit release for the
         # background harvest; the service drainer downloads + uploads them
         # gently over time. Nothing to do here.)
+        try:
+            from resources.lib import subsync
+            cands = subsync.rank_ready_candidates(info, cands)
+        except Exception:
+            pass
         # Try the ready Hebrew candidates in priority order until one actually
         # downloads. If a source fails (e.g. Ktuvit rate-limited / "refused"),
         # skip the rest from that SAME source (they fail identically) and move
@@ -328,23 +391,43 @@ def autosub_on_play():
                 # first pick, by default, on an ordinary install.
                 continue
             is_embedded = (pl.get('type') == 'engine' and pl.get('embedded'))
+            if not _autosub_owns_player():
+                return
             try:
-                path = translate.resolve(link2, info)
+                # Associate foreground/background SubSync state with this
+                # candidate before resolve() can enqueue its service job.
+                selection = _claim_candidate(link2)
+                if not selection:
+                    return
+                path = translate.resolve(
+                    link2, info, selection=selection)
             except Exception:
                 path = None
+            if not _autosub_owns_player():
+                return
             if is_embedded:
                 # resolve() switched the embedded stream and returns None -- that
                 # IS success for an embedded pick.
-                applied = True
-                chosen_link = link2
-                chosen_name = 'תרגום מובנה בעברית'
-                break
-            if path:
+                status = kodi_utils.get_subtitle_sync_status(link2)
+                if (status.get('state') == 'confirmed'
+                        and kodi_utils.subtitle_selection_matches(
+                            selection.get('token') or '',
+                            selection.get('link_hash') or '',
+                            selection.get('stream_hash') or '')):
+                    applied = True
+                    chosen_link = link2
+                    chosen_name = 'תרגום מובנה בעברית'
+                    break
+            if (path and kodi_utils.subtitle_selection_matches(
+                    selection.get('token') or '',
+                    selection.get('link_hash') or '',
+                    selection.get('stream_hash') or '')):
                 try:
-                    p = xbmc.Player()
-                    if p.isPlayingVideo():
-                        p.setSubtitles(path)
-                        p.showSubtitles(True)
+                    if not kodi_utils.apply_subtitle_file(
+                            path, selection=selection):
+                        if not _autosub_owns_player():
+                            return
+                        continue
                     applied = True
                     chosen_link = link2
                     # Full subtitle name + cache note for the overlay status,
@@ -391,15 +474,26 @@ def autosub_on_play():
                         except Exception:
                             pass
                     try:
-                        path = translate.resolve(c.get('link'), info)
+                        ai_link = c.get('link') or ''
+                        selection = _claim_candidate(ai_link)
+                        if not selection:
+                            return
+                        path = translate.resolve(
+                            ai_link, info, selection=selection)
                     except Exception:
                         path = None
-                    if path:
+                    if not _autosub_owns_player():
+                        return
+                    if (path and kodi_utils.subtitle_selection_matches(
+                            selection.get('token') or '',
+                            selection.get('link_hash') or '',
+                            selection.get('stream_hash') or '')):
                         try:
-                            pp = xbmc.Player()
-                            if pp.isPlayingVideo():
-                                pp.setSubtitles(path)
-                                pp.showSubtitles(True)
+                            if not kodi_utils.apply_subtitle_file(
+                                    path, selection=selection):
+                                if not _autosub_owns_player():
+                                    return
+                                continue
                             applied = True
                             chosen_link = c.get('link')
                         except Exception:
@@ -407,13 +501,19 @@ def autosub_on_play():
                     break
 
         if not applied:
+            if not _autosub_owns_player():
+                return
+            try:
+                kodi_utils.set_current_subtitle('')
+            except Exception:
+                pass
             _final_overlay('[COLOR red]לא נמצאה כתובית עברית[/COLOR]', hold=4.0)
             return
-        # Remember it as the current sub so the picker marks it '» נוכחית'.
-        try:
-            kodi_utils.set_current_subtitle(chosen_link or '')
-        except Exception:
-            pass
+        # The winning candidate was already claimed before resolve. Rewriting
+        # it here would let an old autosub run steal ownership back from a
+        # manual pick that happened during delivery.
+        if not _autosub_owns_player():
+            return
         # DarkSubs-style final status in the top overlay (full subtitle name,
         # + cache note when it came straight from the Cached_subs folder),
         # instead of a success toast.
@@ -519,7 +619,7 @@ def snapshot_on_play():
             info = kodi_utils.current_video_info() or {}
         except Exception:
             info = {}
-        subs_engine_bridge.note_playback_streams(info, streams)
+        subs_engine_bridge.note_playback_streams(info, streams, final=True)
     except Exception as e:
         try:
             from resources.lib import kodi_utils

@@ -16,6 +16,7 @@
 
 import json
 import os
+import sys
 import threading
 import time
 
@@ -154,6 +155,31 @@ REPAIRS_DONE_PROPERTY = 'kodipovil_startup_repairs_done'
 
 _REPAIRS_STARTED = None
 
+# Heavy work that is useful later must not compete with the first home-widget
+# wave.  This matters disproportionately on 32-bit Android boxes: two field
+# logs measured the subtitle engine's cold import at 13.1s and 19.7s, and the
+# full patch-health tree scan at 4.5-13.2s.  Both used to start while the skin
+# was opening all of its lists.  A real request still takes the fast path at
+# once; only speculative/background work is delayed.
+_BACKGROUND_SETTLE_32 = 45.0
+_BACKGROUND_SETTLE_OTHER = 15.0
+
+
+def _background_settle_seconds():
+    return (_BACKGROUND_SETTLE_32 if sys.maxsize <= 2 ** 32
+            else _BACKGROUND_SETTLE_OTHER)
+
+
+def _background_ui_busy():
+    """Best-effort gate for CPU/disk work that has no user waiting on it."""
+    try:
+        return bool(xbmc.getCondVisibility('Player.HasMedia')
+                    or xbmc.getCondVisibility('Container.IsUpdating')
+                    or xbmc.getCondVisibility('System.HasVisibleModalDialog')
+                    or xbmc.getCondVisibility('System.HasActiveModalDialog'))
+    except Exception:
+        return False
+
 
 def _publish_repairs_state(value):
     """Announce the repair pass to anyone waiting on it.
@@ -213,12 +239,12 @@ def _other_addon_version(addon_id):
 
 
 def _report_patcher_health():
-    """Say which of our repairs are applied right now, and which stopped.
+    """Schedule the full applied-repair audit after the home has settled.
 
-    RUNS LAST in the tuple below, and that is load-bearing: it reads the host
-    add-ons AFTER the pass has finished writing to them, so a repair that just
-    applied reads as applied. Anywhere earlier and it would report the state
-    the pass had not reached yet.
+    RUNS LAST in the tuple below, and that is load-bearing: the worker is only
+    scheduled AFTER the pass has finished writing to the host add-ons, so a
+    repair that just applied reads as applied. Anywhere earlier and it could
+    race a repair the pass had not reached yet.
 
     Why it exists: the loop at the end of _run_build_startup_repairs calls
     `step()` and DISCARDS the return value, and all 123 step functions return
@@ -227,18 +253,44 @@ def _report_patcher_health():
     That is exactly how five repairs died on POV 6.08.14 with nobody the wiser
     for days. patcher_health asks the host add-ons what they actually contain
     instead of trusting any of that.
+
+    The scan walks every Python/XML/JSON file in every patched host. On a fast
+    desktop that was sub-second; on two real ARM32 logs it took 4.5-13.2s and
+    overlapped the first widget wave. Detection does not need to be synchronous
+    with the repair pass. It remains a full scan with the same warnings/report,
+    just on an idle daemon after the startup budget. If Kodi exits first, the
+    next start schedules it again.
     """
-    try:
-        from resources.lib import patcher_health, kodi_utils
-        st = patcher_health.run()
-        kodi_utils.log('patcher health: {0}'.format(st))
-    except Exception as e:
+    def _worker():
         try:
-            from resources.lib import kodi_utils
-            kodi_utils.log('patcher health check unavailable: {0}'.format(e),
-                           level='WARNING')
-        except Exception:
-            pass
+            monitor = xbmc.Monitor()
+            if monitor.waitForAbort(_background_settle_seconds()):
+                return
+            # Never steal CPU/disk from playback, a modal, or a list Kodi is
+            # visibly resolving. There is no deadline: this is diagnostic and
+            # the next quiet interval is strictly better than a stutter now.
+            while _background_ui_busy():
+                if monitor.waitForAbort(2.0):
+                    return
+            from resources.lib import patcher_health, kodi_utils
+            started = time.time()
+            st = patcher_health.run()
+            kodi_utils.log(
+                'patcher health: {0}; deferred scan took {1:.1f}s'.format(
+                    st, time.time() - started))
+        except Exception as e:
+            try:
+                from resources.lib import kodi_utils
+                kodi_utils.log(
+                    'patcher health check unavailable: {0}'.format(e),
+                    level='WARNING')
+            except Exception:
+                pass
+
+    try:
+        threading.Thread(target=_worker, daemon=True).start()
+    except Exception:
+        pass
 
 
 def _maybe_repair_addon_settings_integrity():
@@ -321,6 +373,26 @@ def _maybe_repair_addon_settings_integrity():
             pass
 
 
+def _maybe_optimize_32bit_artwork():
+    """Undo only the build's original-size image policy on 32-bit boxes."""
+    try:
+        from resources.lib import kodi_32bit_artwork, kodi_utils
+        status = kodi_32bit_artwork.ensure_optimized()
+        if status in ('invalid_xml', 'wrong_root', 'unmatched',
+                      'invalid_result', 'write_failed', 'failed'):
+            kodi_utils.log(
+                '32-bit artwork optimisation needs attention: {0}'.format(
+                    status), level='WARNING')
+    except Exception as exc:
+        try:
+            from resources.lib import kodi_utils
+            kodi_utils.log(
+                '32-bit artwork optimisation unavailable: {0}'.format(exc),
+                level='WARNING')
+        except Exception:
+            pass
+
+
 def _run_build_startup_repairs():
     """Run build-only UI/POV repairs early in Kodi startup.
 
@@ -389,6 +461,9 @@ def _run_build_startup_repairs():
         # displayChannels.json otherwise crashes every channel load). Cheap,
         # self-contained, and independent of the POV/skin repairs below.
         _maybe_fix_pov_maincache_schema,
+        # Cheap XML migration. It touches only the build's exact 9999 value,
+        # keeps every cached thumbnail, and affects Kodi after its next start.
+        _maybe_optimize_32bit_artwork,
         _maybe_patch_idanplus_channels,
         _maybe_patch_pov_genre_icons,
         _maybe_patch_pov_hebrew_genres,
@@ -397,6 +472,25 @@ def _run_build_startup_repairs():
         _maybe_seed_pov_seasons_view,
         _maybe_patch_pov_resume_cancel,
         _maybe_patch_pov_scraper_settings,
+        # TMDb/Trakt catalogue modules are needed to read POV's own SQLite
+        # cache, but their HTTP stack is needed only after that cache misses.
+        # Defer requests/session construction without changing cache expiry or
+        # the live fallback, so first-home rendering stays current and light.
+        _maybe_patch_pov_http_lazy_imports,
+        # Ordinary catalogue reads need only POV's synced watched SQLite data.
+        # Keep the remote Trakt/MDBList account stacks out of a fresh Python
+        # interpreter until a watched/progress operation actually calls them.
+        _maybe_patch_pov_watched_lazy_imports,
+        # Bound only explicit home-widget requests before AF3 can rebuild its
+        # home. Normal catalogue navigation carries no widget_limit.
+        _maybe_patch_pov_widget_budget,
+        # AF3's compact 32-bit rows read these local shortcut folders. Seed or
+        # upgrade them before AF3 exposes the rows, so a fresh profile cannot
+        # race the skin and momentarily render an empty personal/network/genre
+        # shelf. These are small local SQLite writes/checks, never web calls.
+        _maybe_patch_pov_personal_area,
+        _maybe_reseed_series_networks,
+        _maybe_reseed_genre_folders,
         _maybe_patch_af3_home,
         _maybe_quiet_update_nags,
         _maybe_patch_pov_widget_crash_guard,
@@ -657,7 +751,10 @@ TEMP_PURGE_VERSION = '2'
 #       line -- see srt.strip_leaked_arabic. NOT every file here is ours: the
 #       Google Translate fallback saves into this directory too, so the repair
 #       is gated per file by srt.may_carry_arabic_leak.
-CACHE_RTL_FIX_VERSION = '7'
+#   v7: explicit RTL-base controls and style-run normalization.
+#   v8: restore archived physical-order ellipses, dialogue marks and paired
+#       closing quote/bracket punctuation before wrapping for Kodi.
+CACHE_RTL_FIX_VERSION = '8'
 
 
 def _maybe_repair_rtl_cache():
@@ -697,7 +794,8 @@ def _maybe_repair_rtl_cache():
                 body = (srt.strip_leaked_arabic(content)
                         if srt.may_carry_arabic_leak(p) else content)
                 fixed = srt.clamp_cue_durations(
-                    srt.fix_rtl_punctuation(body))
+                    srt.fix_rtl_punctuation(
+                        body, legacy_engine='auto'))
                 if fixed == content:
                     continue
                 tmp = p + '.aitmp'
@@ -849,6 +947,48 @@ def _maybe_patch_skin_watched_poster():
                 level='WARNING')
         except Exception:
             pass
+
+def _maybe_patch_pov_watched_lazy_imports():
+    """Defer POV watched-account backends until an operation needs them."""
+    try:
+        from resources.lib import pov_watched_lazy_import_patcher, kodi_utils
+        status = pov_watched_lazy_import_patcher.ensure_patched()
+        if status in ('read_failed', 'write_failed', 'compile_failed',
+                      'unmatched', 'failed'):
+            kodi_utils.log(
+                'pov_watched_lazy_import_patcher needs attention: {0}'.format(
+                    status), level='WARNING')
+    except Exception as exc:
+        try:
+            from resources.lib import kodi_utils
+            kodi_utils.log(
+                'pov_watched_lazy_import_patcher run failed: {0}'.format(exc),
+                level='WARNING')
+        except Exception:
+            pass
+
+
+def _maybe_patch_pov_http_lazy_imports():
+    """Defer POV's catalogue HTTP stack until a cache miss needs it."""
+    try:
+        from resources.lib import pov_http_lazy_import_patcher, kodi_utils
+        results = pov_http_lazy_import_patcher.ensure_patched()
+        bad = {key: value for key, value in results.items()
+               if value in ('read_failed', 'write_failed', 'compile_failed',
+                            'unmatched', 'failed')}
+        if bad:
+            kodi_utils.log(
+                'pov_http_lazy_import_patcher needs attention: {0}'.format(
+                    bad), level='WARNING')
+    except Exception as exc:
+        try:
+            from resources.lib import kodi_utils
+            kodi_utils.log(
+                'pov_http_lazy_import_patcher run failed: {0}'.format(exc),
+                level='WARNING')
+        except Exception:
+            pass
+
 
 def _tile_reload_worker():
     """Do ONE skin reload so freshly-cache-dropped tiles re-cache from disk. The
@@ -1785,25 +1925,28 @@ def _start_he_warm_drainer(monitor):
     except Exception:
         return
 
+    def _preimport_engine():
+        """Pay the cold import once, outside the initial widget budget."""
+        try:
+            import time as _t
+            _pt0 = _t.time()
+            from resources.lib import subs_engine_bridge as _b
+            _b.ensure_engine_settings()
+            from resources.lib.subs_engine.sources import opensubtitles as _o  # noqa: F401
+            from resources.lib.subs_engine.sources import ktuvit as _k  # noqa: F401
+            _hsm._dbg('drainer engine pre-imported in {0:.1f}s after startup '
+                      'settled'.format(_t.time() - _pt0))
+        except Exception as e:
+            _hsm._dbg('drainer engine pre-import failed: ' + repr(e))
+
     def _loop():
         try:
             if monitor.waitForAbort(0.5):   # tiny settle, then poll fast
                 return
-            # Pre-import the engine ONCE now, on this thread, so the FIRST real
-            # warm doesn't pay the ~2-3s cold-import (that made the first title of
-            # a session lose the race even though later ones were quick). Harmless
-            # if it fails -- run_warm re-imports lazily and guards everything.
-            try:
-                import time as _t
-                _pt0 = _t.time()
-                from resources.lib import subs_engine_bridge as _b
-                _b.ensure_engine_settings()
-                from resources.lib.subs_engine.sources import opensubtitles as _o  # noqa: F401
-                from resources.lib.subs_engine.sources import ktuvit as _k  # noqa: F401
-                _hsm._dbg('drainer engine pre-imported in {0:.1f}s'.format(_t.time() - _pt0))
-            except Exception as e:
-                _hsm._dbg('drainer engine pre-import failed: ' + repr(e))
+            preload_at = time.time() + _background_settle_seconds()
+            engine_ready = False
             while not monitor.abortRequested():
+                picked_up = False
                 try:
                     d = _hsm._warm_queue_dir()
                     if d and os.path.isdir(d):
@@ -1832,14 +1975,28 @@ def _start_he_warm_drainer(monitor):
                             except OSError:
                                 pass
                             if info:
+                                picked_up = True
                                 _hsm._dbg('drainer picked up {0} (queued {1:.1f}s ago)'.format(
                                     (info.get('mk') or fn), age))
                                 try:
+                                    # A user is waiting, so do not impose the
+                                    # speculative-preload delay. run_warm imports
+                                    # the engine lazily and starts immediately.
                                     _hsm.run_warm(info)
+                                    engine_ready = True
                                 except Exception:
                                     pass
                 except Exception:
                     pass
+                # With no real title waiting, import only after the home-widget
+                # wave and only while Kodi is quiet. This preserves first-title
+                # HEB availability: a title queued before the deadline bypasses
+                # this gate above instead of waiting for it.
+                if (not engine_ready and not picked_up
+                        and time.time() >= preload_at
+                        and not _background_ui_busy()):
+                    _preimport_engine()
+                    engine_ready = True
                 # Sub-second poll so prewarm -> warm start is nearly immediate.
                 if monitor.waitForAbort(0.2):
                     break
@@ -1916,19 +2073,17 @@ def _start_subsync_delay_watch(monitor):
                     except Exception:
                         playing = False
                     if playing:
-                        raw = xbmcgui.Window(10000).getProperty(
-                            _ss._DELIVERED_PROP) or ''
-                        rec = None
-                        if raw:
-                            try:
-                                rec = json.loads(raw)
-                            except Exception:
-                                rec = None
+                        rec = _ss.current_delivery_record()
                         if rec and (active is None
                                     or rec.get('key') != active.get('key')
                                     or float(rec.get('ts') or 0)
                                     != float(active.get('ts') or 0)):
                             active, watched, last_delay = rec, 0, 0.0
+                        elif not rec:
+                            # A piecewise correction deliberately disables
+                            # scalar delay learning. Do not keep accumulating
+                            # watch time against the subtitle it replaced.
+                            active, watched, last_delay = None, 0, 0.0
                         if active is not None:
                             watched += 10
                             last_delay = _delay_now()
@@ -1938,9 +2093,18 @@ def _start_subsync_delay_watch(monitor):
                             rep = _ss.finalize_delay_session(
                                 active, last_delay, watched)
                             if rep:
+                                # Remember the viewer's correction locally only
+                                # for the exact content-derived media cut.  The
+                                # existing community report below stays backward
+                                # compatible by namespacing the Worker's existing
+                                # release field with that same signature.
+                                _ss.store_human_verdict(rep)
                                 _pool.report_sync(
                                     rep.get('info') or {}, rep['sub_hash'],
-                                    rep['release'], rep['scale'],
+                                    _ss._sync_registry_release(
+                                        rep['release'],
+                                        rep.get('cut_signature') or ''),
+                                    rep['scale'],
                                     rep['offset_ms'], rep['status'],
                                     origin='human')
                                 reported.add(akey)
@@ -1949,11 +2113,7 @@ def _start_subsync_delay_watch(monitor):
                                     '({0}, {1:+.0f}ms, watched {2}s)'.format(
                                         rep['status'], rep['offset_ms'],
                                         watched), level='INFO')
-                        try:
-                            xbmcgui.Window(10000).clearProperty(
-                                _ss._DELIVERED_PROP)
-                        except Exception:
-                            pass
+                        _ss.clear_delivery_record(active)
                         active, watched, last_delay = None, 0, 0.0
                 except Exception:
                     pass
@@ -3306,7 +3466,9 @@ def main():
     _maybe_force_pool_share()
 
     # ROLLOUT: switch everyone to MoranSubs's built-in engine (one-shot, marker-
-    # gated). A later manual opt-out sticks (marker prevents re-forcing).
+    # gated). Must run before _ensure_darksubs_enabled() so that when it flips
+    # the engine on, DarkSubs is disabled THIS startup. A later manual opt-out
+    # sticks (marker prevents re-forcing).
     _maybe_default_builtin_engine()
 
     # Ktuvit is back -> re-enable the source for everyone once (a later manual

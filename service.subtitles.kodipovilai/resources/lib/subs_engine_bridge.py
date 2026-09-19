@@ -22,12 +22,20 @@
 #     engine results" instead of breaking the subtitle dialog.
 
 import json
+import hashlib
 import os
 import re
+import threading
 import time
 import urllib.parse
 
 from . import kodi_utils
+
+
+# The vendored engine exposes provider results through module-level lists.
+# A manual picker and SubSync's later timing pass must never reset those lists
+# underneath each other. Cache hits bypass this lock entirely.
+_ENGINE_SEARCH_LOCK = threading.Lock()
 
 
 # Tokens that mark a string as a real release name (vs a clean title or a
@@ -398,12 +406,13 @@ def _cache_dir():
         return None
 
 
-def _cache_get(info):
+def _cache_get(info, variant=''):
     key = _cache_key(info)
     d = _cache_dir()
     if not key or not d:
         return None
-    p = os.path.join(d, key + '.json')
+    suffix = ('.' + variant) if variant else ''
+    p = os.path.join(d, key + suffix + '.json')
     try:
         if not os.path.isfile(p):
             return None
@@ -415,12 +424,13 @@ def _cache_get(info):
         return None
 
 
-def _cache_put(info, candidates):
+def _cache_put(info, candidates, variant=''):
     key = _cache_key(info)
     d = _cache_dir()
     if not key or not d:
         return
-    p = os.path.join(d, key + '.json')
+    suffix = ('.' + variant) if variant else ''
+    p = os.path.join(d, key + suffix + '.json')
     try:
         tmp = p + '.tmp'
         with open(tmp, 'w', encoding='utf-8') as f:
@@ -430,7 +440,45 @@ def _cache_put(info, candidates):
         pass
 
 
-def _search_inner(info, modal_progress=True):
+def search_all_languages_for_timing(info):
+    """Return a background-only all-language oracle set for SubSync.
+
+    The picker continues to respect the user's language settings. This path
+    runs only after the ordinary set could not prove a correction, and its
+    separate cache prevents later selections in the same episode from repeating
+    the provider search. Empty or failed results are never cached.
+    """
+    if not enabled():
+        return []
+    cacheable = _release_ready(info)
+    if cacheable:
+        cached = _cache_get(info, variant='timing_all')
+        if cached:
+            return cached
+    try:
+        out = _search_inner(info, modal_progress=False,
+                            all_lang_override=True)
+        # Legacy providers commonly swallow connection/HTTP/parse failures
+        # and expose the same [] value as a genuine zero-result search.  The
+        # bridge therefore cannot safely turn an empty timing search into a
+        # permanent exact-cut UNKNOWN verdict.  Treat it as retryable; the
+        # ordinary picker remains unchanged and a later attempt can reuse a
+        # successful non-empty timing cache.
+        if not out:
+            return None
+        if cacheable and out:
+            _cache_put(info, out, variant='timing_all')
+        return out
+    except Exception as e:
+        kodi_utils.log(
+            'subs_engine_bridge.search_all_languages_for_timing failed: {0}'.format(e),
+            level='WARNING')
+        # None means the search did not prove a completed result and must not
+        # turn into a persistent UNKNOWN verdict.
+        return None
+
+
+def _search_inner(info, modal_progress=True, all_lang_override=False):
     # Make sure the engine's internal settings have real values before the
     # engine module (and general.py) is imported -- otherwise int('') / empty
     # language flags break it. Safe to call every time.
@@ -444,34 +492,51 @@ def _search_inner(info, modal_progress=True):
                             'media_type')}),
                    level='INFO')
 
-    # Show the same live per-provider progress dialog DarkSubs shows while
-    # the providers run (manual flow only). general.show_results reads
-    # general.show_msg (which c_get_subtitles updates with per-source counts)
-    # until we set 'END'. Heavily guarded: any failure must not affect search.
-    import threading
-    progress_thread = None
-    if modal_progress:
-        try:
-            general.break_all = False
-            general.with_dp = True
-            general.show_msg = 'MoranSubs — מחפש כתוביות'
-            progress_thread = threading.Thread(
-                target=general.show_results, args=(True,))
-            progress_thread.daemon = True
-            progress_thread.start()
-        except Exception:
-            progress_thread = None
+    with _ENGINE_SEARCH_LOCK:
+        # Show the same live per-provider progress dialog DarkSubs shows while
+        # the providers run (manual flow only). general.show_results reads
+        # general.show_msg (which c_get_subtitles updates with per-source
+        # counts) until we set 'END'. The lock also protects this shared state.
+        progress_thread = None
+        if modal_progress:
+            try:
+                general.break_all = False
+                general.with_dp = True
+                general.show_msg = 'MoranSubs — מחפש כתוביות'
+                progress_thread = threading.Thread(
+                    target=general.show_results, args=(True,))
+                progress_thread.daemon = True
+                progress_thread.start()
+            except Exception:
+                progress_thread = None
 
-    try:
-        f_result = engine.get_subtitles(video_data)
-        sorted_subs = engine.sort_subtitles(f_result, video_data) \
-            if f_result else []
-    finally:
-        # Close the progress dialog (show_results exits on 'END').
         try:
-            general.show_msg = 'END'
-        except Exception:
-            pass
+            # The ordinary picker obeys the user's language selection. SubSync
+            # has one later, background-only use for every language: when the
+            # visible result set cannot provide an independent timing family.
+            # Do not mutate the setting or visible list; use the engine's
+            # explicit override and keep these results in a separate cache.
+            f_result = (engine.c_get_subtitles(
+                            video_data, all_lang_override=True,
+                            timing_only=True)
+                        if all_lang_override
+                        else engine.get_subtitles(video_data))
+            sorted_subs = engine.sort_subtitles(
+                f_result, video_data, silent=all_lang_override) \
+                if f_result else []
+        finally:
+            # Close the progress dialog (show_results exits on 'END') before a
+            # waiting search can acquire the lock and publish its own state.
+            try:
+                general.show_msg = 'END'
+            except Exception:
+                pass
+            if progress_thread is not None and progress_thread.is_alive():
+                progress_thread.join(0.5)
+                if progress_thread.is_alive():
+                    kodi_utils.log(
+                        'subs_engine_bridge: progress dialog did not close '
+                        'within 500ms', level='WARNING')
 
     if not sorted_subs:
         return []
@@ -619,45 +684,140 @@ def _snap_get():
         return None
 
 
-def _snap_set(key, streams):
+def _snap_set(key, streams, sealed=False, media_key=None):
     try:
         import xbmcgui
         xbmcgui.Window(10000).setProperty(
             _SNAP_PROP,
-            json.dumps({'key': key, 'streams': list(streams or [])},
+            json.dumps({'key': key, 'media': media_key or {},
+                        'streams': list(streams or []),
+                        'sealed': bool(sealed), 'ts': time.time()},
                        ensure_ascii=False))
     except Exception:
         pass
 
 
 def _stream_key(info):
-    """A stable id for the currently-playing item (same across the dialog opens
-    of one playback). Prefer the player's own file over the info dict."""
+    """Private transport identity for the current playback.
+
+    Include Kodi's header suffix because debrid endpoints may reuse the visible
+    URL and select the actual object through those headers.  Only a digest is
+    stored in the shared Window property.
+    """
     try:
         import xbmc
         f = (xbmc.Player().getPlayingFile() or '').strip()
     except Exception:
         f = ''
-    return f or ((info or {}).get('filepath') or (info or {}).get('title') or '')
+    value = f or ((info or {}).get('filepath') or '')
+    if not value:
+        value = (info or {}).get('title') or ''
+    if not value:
+        return ''
+    return hashlib.sha256(
+        str(value).encode('utf-8', 'replace')).hexdigest()[:32]
+
+
+def _stream_media_key(info):
+    """Opaque title identity with optional, progressively-known episode ids."""
+    info = info or {}
+    ids = {
+        'tmdb': str(info.get('tmdb_id') or '').strip().lower(),
+        'imdb': str(info.get('imdb_id') or '').strip().lower(),
+    }
+    if not (ids['tmdb'] or ids['imdb']):
+        ids.update({
+            'tvshow': str(info.get('tvshow') or '').strip().lower(),
+            'title': str(info.get('title') or '').strip().lower(),
+            'year': str(info.get('year') or '').strip().lower(),
+        })
+    if not any(ids.values()):
+        return {}
+    canonical = json.dumps(ids, ensure_ascii=False, sort_keys=True,
+                           separators=(',', ':'))
+    return {
+        'base': hashlib.sha256(
+            canonical.encode('utf-8', 'replace')).hexdigest()[:24],
+        # S/E can arrive a moment after onAVStarted. Store them separately so
+        # a later poll can enrich a snapshot, while two fully-known episodes
+        # sharing a recycled URL can never reuse each other's stream indices.
+        'season': str(info.get('season') or '').strip().lower(),
+        'episode': str(info.get('episode') or '').strip().lower(),
+    }
+
+
+def _media_keys_match(stored, current, allow_unknown_current=False):
+    if stored and not current:
+        # A recycled endpoint can expose the next title before Kodi publishes
+        # its metadata. Consumers must not show the previous title's stream
+        # indices in that window. Writers may still treat this as the same play
+        # so a late poller cannot overwrite a sealed empty baseline with our
+        # own external Hebrew file.
+        return bool(allow_unknown_current)
+    if not stored or not current:
+        return True
+    if not isinstance(stored, dict) or not isinstance(current, dict):
+        return stored == current
+    if (stored.get('base') and current.get('base')
+            and stored.get('base') != current.get('base')):
+        return False
+    for field in ('season', 'episode'):
+        if stored.get(field) and not current.get(field):
+            if not allow_unknown_current:
+                return False
+            continue
+        if (stored.get(field) and current.get(field)
+                and stored.get(field) != current.get(field)):
+            return False
+    return True
+
+
+def _merge_media_key(stored, current):
+    if not isinstance(stored, dict):
+        stored = {}
+    if not isinstance(current, dict):
+        current = {}
+    return {field: current.get(field) or stored.get(field) or ''
+            for field in ('base', 'season', 'episode')}
+
+
+def _snapshot_matches(snap, info, allow_unknown_current=False):
+    """Match both transport and media when both sides know the media id."""
+    if not snap or snap.get('key') != _stream_key(info):
+        return False
+    stored_media = snap.get('media') or ''
+    current_media = _stream_media_key(info)
+    return _media_keys_match(
+        stored_media, current_media,
+        allow_unknown_current=allow_unknown_current)
 
 
 def have_playback_snapshot(info=None):
-    """True when the file playing RIGHT NOW already has a real (non-empty)
-    play-start snapshot. Lets a caller skip an expensive stream poll it does not
-    need. An EMPTY snapshot deliberately reads as False -- it means "captured
-    nothing yet", so a retry is still wanted (see note_playback_streams)."""
+    """True when the current file has a complete play-start snapshot.
+
+    A non-empty capture is complete immediately. An empty capture becomes
+    complete only when its caller explicitly seals it after a bounded poll; that
+    distinction prevents both premature empty snapshots and late external files
+    from being mistaken for embedded streams.
+    """
     try:
         snap = _snap_get()
-        return bool(snap and snap.get('key') == _stream_key(info)
-                    and snap.get('streams'))
+        if info is None:
+            try:
+                info = kodi_utils.current_video_info() or {}
+            except Exception:
+                info = {}
+        return bool(_snapshot_matches(snap, info)
+                    and (snap.get('streams') or snap.get('sealed')))
     except Exception:
         return False
 
 
-def note_playback_streams(info, streams=None):
+def note_playback_streams(info, streams=None, final=False):
     """Snapshot the embedded/local subtitle streams at PLAY START, before any
     external sub is loaded. Call ONCE per file, as early as possible. `streams`
-    may be passed if the caller already polled them (auto-on-play does).
+    may be passed if the caller already polled them (auto-on-play does). Set
+    ``final`` only after that poll is complete; a final empty list is sealed.
     Stored on a window property so the subtitle-dialog process can read it."""
     try:
         import xbmc
@@ -665,19 +825,23 @@ def note_playback_streams(info, streams=None):
         if not player.isPlayingVideo():
             return
         key = _stream_key(info)
+        media_key = _stream_media_key(info)
         cur = _snap_get()
-        # Only a NON-EMPTY snapshot is final. An empty one is provisional: the
-        # demuxer may simply not have enumerated the tracks yet, and a caller
-        # whose poll timed out first must not be able to latch [] and discard a
-        # real list that arrives afterwards -- that would silently reproduce the
-        # "no embedded rows" bug through a different door. A file that genuinely
-        # has no subtitle streams just gets rewritten as [] each time, which
-        # costs one window-property write and changes nothing downstream.
-        if cur and cur.get('key') == key and cur.get('streams'):
+        # A non-empty snapshot is final. An empty one stays provisional until a
+        # caller that completed its bounded poll seals it. Once sealed, a late
+        # poller cannot overwrite it with the external subtitle we appended.
+        if (_snapshot_matches(cur, info, allow_unknown_current=True)
+                and (cur.get('streams') or cur.get('sealed'))):
+            # Metadata often settles after the earliest play-start poll. Bind
+            # that otherwise-complete snapshot to the newly available title id.
+            merged_media = _merge_media_key(cur.get('media'), media_key)
+            if merged_media != (cur.get('media') or {}):
+                _snap_set(key, cur.get('streams') or [],
+                          sealed=cur.get('sealed'), media_key=merged_media)
             return  # already captured for this file
         if streams is None:
             streams = _wait_for_subtitle_streams(player)
-        _snap_set(key, streams)
+        _snap_set(key, streams, sealed=final, media_key=media_key)
         kodi_utils.log('embedded baseline ({0} stream(s)): {1}'.format(
             len(streams or []), list(streams or [])), level='INFO')
         # If this source ships a built-in Hebrew track, tell the pool so the
@@ -730,7 +894,43 @@ def note_playback_streams(info, streams=None):
         pass
 
 
-def _wait_for_snapshot(key, timeout=3.0):
+def seal_playback_streams(info=None):
+    """Freeze the embedded baseline before an external subtitle is appended.
+
+    An empty, fully-polled baseline is meaningful. Without this seal, a second
+    ``onAVStarted`` poller can see the external Hebrew file we just loaded and
+    advertise it as a fake 101% built-in track on the next picker open.
+    """
+    try:
+        import xbmc
+        player = xbmc.Player()
+        if not player.isPlayingVideo():
+            return False
+        key = _stream_key(info or {})
+        media_key = _stream_media_key(info or {})
+        cur = _snap_get()
+        if (_snapshot_matches(cur, info or {}, allow_unknown_current=True)
+                and cur.get('sealed')):
+            merged_media = _merge_media_key(cur.get('media'), media_key)
+            if merged_media != (cur.get('media') or {}):
+                _snap_set(key, cur.get('streams') or [], sealed=True,
+                          media_key=merged_media)
+            return True
+        streams = []
+        if _snapshot_matches(cur, info or {}, allow_unknown_current=True):
+            streams = list(cur.get('streams') or [])
+        else:
+            try:
+                streams = list(player.getAvailableSubtitleStreams() or [])
+            except Exception:
+                streams = []
+        _snap_set(key, streams, sealed=True, media_key=media_key)
+        return True
+    except Exception:
+        return False
+
+
+def _wait_for_snapshot(info, timeout=3.0):
     """Bounded wait for the play-start snapshot to be populated for `key`.
 
     On the FIRST play, the subtitle dialog / autosub search can fire before the
@@ -742,6 +942,7 @@ def _wait_for_snapshot(key, timeout=3.0):
     None."""
     try:
         import xbmc
+        key = _stream_key(info)
         player = xbmc.Player()
         monitor = xbmc.Monitor()
         elapsed = 0.0
@@ -750,7 +951,7 @@ def _wait_for_snapshot(key, timeout=3.0):
             if not player.isPlayingVideo():
                 return provisional
             snap = _snap_get()
-            if snap and snap.get('key') == key:
+            if _snapshot_matches(snap, info):
                 if snap.get('streams'):
                     return snap
                 # Empty means "captured nothing YET" (see note_playback_streams):
@@ -779,12 +980,12 @@ def embedded_candidates(info):
         return []
     key = _stream_key(info)
     snap = _snap_get()
-    if not snap or snap.get('key') != key:
+    if not _snapshot_matches(snap, info):
         # First-play race: the play-start snapshot is captured in the service
         # process and may not be ready when the dialog opens. Wait briefly for
         # it so the embedded-Hebrew 101% entry shows on the FIRST open too.
-        snap = _wait_for_snapshot(key)
-        if not snap or snap.get('key') != key:
+        snap = _wait_for_snapshot(info)
+        if not _snapshot_matches(snap, info):
             return []
     streams = snap.get('streams')
     if not streams:
@@ -1297,6 +1498,25 @@ def select_embedded(stream_index, lang=None):
         return False
 
 
+def cached_source(payload):
+    """Return an already-downloaded canonical subtitle without networking."""
+    try:
+        cache_dir = _cached_subs_dir()
+        if not cache_dir:
+            return None
+        keybase = _cached_subs_keybase(
+            cache_dir, payload.get('source') or '',
+            payload.get('language') or 'Hebrew',
+            payload.get('filename') or 'subtitle')
+        hit = _cached_subs_lookup(keybase)
+        if not hit:
+            return None
+        _ensure_utf8(hit)
+        return hit if os.path.isfile(hit) else None
+    except Exception:
+        return None
+
+
 def download(payload, for_delivery=True):
     """Resolve an 'engine' link to a Hebrew SRT path on disk. Returns
     the path or None. Called from translate.resolve().
@@ -1411,7 +1631,8 @@ def _download_inner(payload, for_delivery=True):
                     # engine's reversed dash/ellipsis shapes. Render a copy;
                     # never mutate/delete the cache source or its share marker.
                     return _render_hebrew_rtl_copy(
-                        hit, legacy_engine=not is_logical_source(hit))
+                        hit, legacy_engine=(
+                            'auto' if is_logical_source(hit) else True))
                 return hit
         except Exception as e:
             kodi_utils.log('subs_engine_bridge: cache lookup skipped: {0}'
@@ -1459,5 +1680,10 @@ def _download_inner(payload, for_delivery=True):
     if (for_delivery
             and kodi_utils.get_bool('auto_fix_sub_punctuation', True)
             and 'Hebrew' in language):
-        return _render_hebrew_rtl_copy(source_file, legacy_engine=False)
+        # "Logical source" means MoranSubs itself did not reverse these
+        # bytes.  Human subtitle archives can nevertheless already contain
+        # old physical-RTL punctuation.  Auto-detection repairs only files
+        # carrying an unambiguous signature and preserves genuinely logical
+        # leading ellipses in clean files.
+        return _render_hebrew_rtl_copy(source_file, legacy_engine='auto')
     return source_file
