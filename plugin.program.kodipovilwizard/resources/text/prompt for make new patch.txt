@@ -40,6 +40,10 @@ We are building a highly professional, metadata-driven patching engine inside ou
    - Injected lines inside the `hook` key MUST strictly use tab characters (`\t`) for indentation to align precisely with the target scope's indentation level in the upstream file.
    - Ensure every line of code inside the multi-line hook string incorporates the correct relative amount of `\t` prefixes to prevent Python `IndentationError` bugs during runtime execution.
 
+10. Target Addon Module Naming Prefix:
+    - All extracted module filenames in `resources/libs/patches/` MUST be prefixed with the shorthand name of the target addon (e.g., `pov_` for `plugin.video.pov`, `idan_` for `plugin.video.idanalplus`, etc.).
+    - Example filenames: `pov_source_remember.py`, `idan_ch_selector.py`.
+
 ---
 
 ### INPUTS PROVIDED BY THE USER:
@@ -76,8 +80,8 @@ Provide the patch configuration strictly formatted as a Python dictionary ready 
         "\timport sys, xbmcvfs;\n"
         "\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
         "\tsys.path.append(p) if p not in sys.path else None;\n"
-        "\timport feature_module;\n"
-        "\tfeature_module.run(local_vars)"
+        "\timport pov_feature_module;\n"
+        "\tpov_feature_module.run(local_vars)"
     )
 }
 
@@ -87,7 +91,7 @@ Part 4: The Extracted Wizard Module Logic
 Provide the decoupled, clean Python business logic that the lean hook executes.
 
 * Provide this logic in a SEPARATE, copy-pasteable Python code block.
-* Specify the exact file path at the top of the block: `File: plugin.program.kodipovilwizard/resources/libs/patches/feature_module.py`.
+* Specify the exact file path at the top of the block using the target prefix (e.g., `File: plugin.program.kodipovilwizard/resources/libs/patches/pov_feature_module.py`).
 * Ensure proper exception handling and logging via the `resources.libs.common.logging` module or `xbmc`.
 
 Part 5: Deprecation & Post-Migration Cleanup

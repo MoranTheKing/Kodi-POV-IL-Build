@@ -389,25 +389,14 @@ def _run_build_startup_repairs():
         # displayChannels.json otherwise crashes every channel load). Cheap,
         # self-contained, and independent of the POV/skin repairs below.
         _maybe_fix_pov_maincache_schema,
-        # Immediately after it, and for the same reason its own
-        # docstring gives: every POV menu that reads one of these
-        # caches is wrong until the table is rebuilt. That module
-        # covers maincache from a hardcoded schema; this one covers
-        # the other four the same POV upgrade transposed.
-        _maybe_repair_pov_cache_schema,
         _maybe_patch_idanplus_channels,
         _maybe_patch_pov_genre_icons,
         _maybe_patch_pov_hebrew_genres,
         _maybe_patch_pov_hebrew_ui,
-        _maybe_fix_pov_container_refresh_crash,
         _maybe_patch_mdblist_reauth,
         _maybe_seed_pov_seasons_view,
         _maybe_patch_pov_resume_cancel,
         _maybe_patch_pov_scraper_settings,
-        _maybe_fix_pov_torbox_url,
-        # Bound only explicit home-widget requests before AF3 can rebuild its
-        # home. Normal catalogue navigation carries no widget_limit.
-        _maybe_patch_pov_widget_budget,
         _maybe_patch_af3_home,
         _maybe_quiet_update_nags,
         _maybe_patch_pov_widget_crash_guard,
@@ -418,7 +407,6 @@ def _run_build_startup_repairs():
         _maybe_patch_pov_bookmark_refresh,
         _maybe_patch_umbrella_language,
         _maybe_patch_pov_navigator_read,
-        _maybe_fix_fentastic_clearlogo_var,
         # POV 6.08.14 broke AllDebrid playback outright: torrent_info()
         # subscripts a dict with [0]. Every magnet resolve raises KeyError(0).
         _maybe_fix_pov_alldebrid_status,
@@ -832,37 +820,6 @@ def _skip_pov_patchers():
             pass
     return True
 
-def _maybe_repair_pov_cache_schema():
-    """Rebuild POV's cache tables when a POV update reordered their columns.
-
-    POV 6 renamed nothing and changed no code we own -- it swapped the order of
-    the columns in five of its own cache tables and kept CREATE TABLE IF NOT
-    EXISTS, so on an upgrade it writes every value into the wrong column of the
-    table the previous version left behind. See the module for the whole chain.
-    Not behind _skip_pov_patchers(): this repairs POV's DATA, not its code, and
-    isolating POV's code is not a reason to leave a poisoned cache in place.
-    """
-    try:
-        from resources.lib import pov_cache_schema_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        results = pov_cache_schema_patcher.ensure_patched()
-        rebuilt = [k for k, v in results.items() if v == 'rebuilt']
-        if rebuilt:
-            kodi_utils.log(
-                'pov_cache_schema_patcher: rebuilt {0} POV cache table(s) '
-                'left in the previous version\'s column order: {1}'.format(
-                    len(rebuilt), ', '.join(sorted(rebuilt))), level='INFO')
-    except Exception as e:
-        try:
-            from resources.lib import kodi_utils
-            kodi_utils.log('pov_cache_schema_patcher failed: {0}'.format(e),
-                           level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_patch_skin_watched_poster():
     """Make the watched tick tell the truth: draw it in the Poster view, which
     never had one, and stop the list views drawing it on everything.
@@ -898,26 +855,6 @@ def _maybe_patch_skin_watched_poster():
             from resources.lib import kodi_utils
             kodi_utils.log(
                 'skin_watched_poster_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-def _maybe_patch_pov_widget_budget():
-    """Keep home widgets light while leaving ordinary POV lists complete."""
-    try:
-        from resources.lib import pov_widget_budget_patcher, kodi_utils
-        results = pov_widget_budget_patcher.ensure_patched()
-        bad = {key: value for key, value in results.items()
-               if value in ('read_failed', 'write_failed', 'compile_failed',
-                            'xml_failed', 'unmatched', 'failed')}
-        if bad:
-            kodi_utils.log(
-                'pov_widget_budget_patcher needs attention: {0}'.format(bad),
-                level='WARNING')
-    except Exception as exc:
-        try:
-            from resources.lib import kodi_utils
-            kodi_utils.log(
-                'pov_widget_budget_patcher run failed: {0}'.format(exc),
                 level='WARNING')
         except Exception:
             pass
@@ -1261,35 +1198,6 @@ def _maybe_fix_pov_alldebrid_status():
         except Exception:
             pass
 
-
-def _maybe_fix_fentastic_clearlogo_var():
-    """Close brackets the skin left open, so the OSD logo can draw at all.
-
-    A user's log carries Kodi refusing an unparseable skin condition. The same
-    shape appears twenty-three times in the shipped skin; two of them are the
-    video OSD's clear-logo / studio-logo pair, and because both are false the
-    OSD draws NEITHER, on every device. See the module for why those two and
-    the ClearArtLogo variable are repaired and the rest are not.
-    """
-    try:
-        from resources.lib import fentastic_clearlogo_var_patcher, kodi_utils
-        st = fentastic_clearlogo_var_patcher.ensure_patched()
-        bad = [p for p in st.split(', ')
-               if p.split('=')[-1] in ('unmatched', 'write_failed',
-                                       'read_failed')]
-        if bad:
-            kodi_utils.log(
-                'fentastic_clearlogo_var_patcher: ' + st, level='WARNING')
-    except Exception as e:
-        try:
-            from resources.lib import kodi_utils
-            kodi_utils.log(
-                'fentastic_clearlogo_var_patcher failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_repair_addon_autoupdate():
     """Un-stick a device where add-ons are found but never installed.
 
@@ -1390,47 +1298,6 @@ def _maybe_seed_pov_seasons_view():
         except Exception:
             pass
 
-def _maybe_patch_pov_addon_window():
-    """Stop POV's own service dying in the seconds Kodi calls POV unknown.
-
-    Kodi flips the enabled flag at once and finishes loading the add-on a
-    couple of seconds later, and it starts the add-on's service at the first
-    of those two moments. POV's import chain reads a setting on the way up
-    (tmdb_api, at module level), so inside that window the whole service dies
-    -- no Trakt sync monitor, no premium-account notification, for the rest of
-    the session, plus a red error in the log. We open that window ourselves
-    every time pov_reload cycles POV, but it is Kodi's window and a hand
-    toggle hits it too, so the wait belongs inside POV. NOT cycled afterwards:
-    cycling is the thing that opens the window, and the patch is on disk for
-    the next one either way."""
-    try:
-        from resources.lib import pov_addon_window_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_addon_window_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'pov_addon_window_patcher: POV now waits out the '
-                'unknown-addon window instead of losing its service',
-                level='INFO')
-        elif status in ('read_failed', 'write_failed', 'compile_failed',
-                        'unmatched', 'partial'):
-            # 'partial' means one of the two patches went missing because POV
-            # rewrote the text it anchors on. The other one still being in
-            # place is exactly why it needs saying out loud: the file looks
-            # patched, and half of what it is patched for is gone.
-            kodi_utils.log(
-                'pov_addon_window_patcher: ' + status, level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_addon_window_patcher run failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
-
-
 def _maybe_quiet_update_nags():
     """Switch off the self-update check in Umbrella and Account Manager Lite.
 
@@ -1458,40 +1325,6 @@ def _maybe_quiet_update_nags():
         except Exception:
             pass
 
-
-def _maybe_fix_pov_container_refresh_crash():
-    """Revert the harmful container_refresh() widget-reload ping a previous
-    build injected into POV. That ping (UpdateLibrary(video,special://skin/foo)
-    after every Container.Refresh, including Trakt adds) reloaded all POV home
-    widgets at once -> concurrent router.py on POV's reuselanguageinvoker
-    interpreter -> CPython dict corruption -> native crash (confirmed from a
-    field log). Restoring container_refresh() to stock removes the crash; POV
-    is cycled so the fix applies this session, not only after a restart."""
-    try:
-        from resources.lib import pov_container_refresh_crash_fix, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_container_refresh_crash_fix.ensure_patched()
-        if status == 'reverted':
-            kodi_utils.log(
-                'pov_container_refresh_crash_fix: reverted container_refresh '
-                'ping (prevents the Trakt-add native crash)', level='INFO')
-            try:
-                from resources.lib import pov_reload
-                pov_reload.note_patched()
-            except Exception:
-                pass
-        elif status in ('read_failed', 'write_failed', 'compile_failed'):
-            kodi_utils.log(
-                'pov_container_refresh_crash_fix: ' + status, level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_container_refresh_crash_fix run failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
 
 
 def _maybe_patch_pov_widget_crash_guard():
@@ -3677,21 +3510,6 @@ def main():
     # When the engine is on, make MoranSubs the default subtitle service so it
     # opens/searches first in the dialog.
     _maybe_set_default_subtitle_service()
-
-    # BEFORE ANYTHING THAT CAN RE-ENABLE POV, which is what the line below is.
-    # This teaches POV to survive the seconds after a re-enable in which Kodi
-    # still calls it unknown -- so it has to be applied before those seconds
-    # can start, not merely before the patchers that arm a cycle later on.
-    #
-    # It sat with the POV patchers, sixty lines down, behind a comment of mine
-    # claiming it ran "FIRST OF THE POV PATCHERS, and it has to be". It did run
-    # first among those -- and _ensure_pov_enabled is not one of them: it issues
-    # SetAddonEnabled directly. So on the exact boot this feature exists for --
-    # a cycle interrupted last time, POV left off, and the patch not currently
-    # on disk because POV auto-updated over it -- the window opened sixty lines
-    # before anything taught POV to wait it out. A review caught the claim; the
-    # ordering it described is now real.
-    _maybe_patch_pov_addon_window()
 
     # Same safety net for POV: our pov_reload cycle (for remember_source) could
     # have left POV disabled on a slow box, which empties every home row + tile

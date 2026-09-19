@@ -1098,5 +1098,96 @@ PATCH_CONFIG = [
             "\timport sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/'); sys.path.append(p) if p not in sys.path else None; import pov_mdblist_patch_logic;\n"
             "\tpov_mdblist_patch_logic.heal_mdblist_account_if_needed()\n"
         )
+    },
+    {
+        "id": "pov_addon_window_import",
+        "name": "POV Addon Window Patcher (Import Scope)",
+        "description": "Waits out Kodi's unknown-addon window on import to prevent background service death.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/modules/kodi_utils.py",
+        "marker": "# WIZARD_POV_ADDON_WINDOW_IMPORT_v2",
+        "anchor": "from xbmcaddon import Addon",
+        "action": "append_after",
+        "hook": (
+            "import sys, xbmcvfs\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
+            "sys.path.append(p) if p not in sys.path else None\n"
+            "import pov_addon_window\n"
+            "pov_addon_window.wait_for_window()"
+        )
+    },
+    {
+        "id": "pov_addon_window_func",
+        "name": "POV Addon Window Patcher (Function Scope)",
+        "description": "Shadows addon() to retry fetching the addon object during the restart window.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/modules/kodi_utils.py",
+        "marker": "# WIZARD_POV_ADDON_WINDOW_FUNC_v2",
+        "anchor": "def addon_installed(addon_id):",
+        "action": "prepend_before",
+        "hook": (
+            "def addon(addon_id='plugin.video.pov'):\n"
+            "\timport sys, xbmcvfs\n"
+            "\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
+            "\tsys.path.append(p) if p not in sys.path else None\n"
+            "\timport pov_addon_window\n"
+            "\treturn pov_addon_window.safe_addon(addon_id)\n\n"
+        )
+    },
+    {
+        "id": "pov_cache_schema_repair",
+        "name": "POV Cache Schema DB Patcher",
+        "description": "Rebuilds transposed SQLite cache columns dynamically and migrates legacy databases.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/modules/cache.py",
+        "marker": "# WIZARD_POV_CACHE_SCHEMA_v2",
+        "anchor": "\tif not kodi_utils.path_exists(databases_path): kodi_utils.make_directory(databases_path)",
+        "action": "prepend_before",
+        "hook": (
+            "\timport sys, xbmcvfs\n"
+            "\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
+            "\tsys.path.append(p) if p not in sys.path else None\n"
+            "\timport pov_cache_schema\n"
+            "\tpov_cache_schema.run()\n"
+        )
+    },
+    {
+        "id": "pov_widget_budget_movies",
+        "name": "POV Widget Rendering Budget (Movies)",
+        "description": "Limits the scope of background metadata tasks for movies when rendering on the home screen to optimize speeds.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/menus/movies.py",
+        "marker": "# WIZARD_POV_WIDGET_BUDGET_MOVIES_v2",
+        "anchor": "kodi_utils.add_items(__handle__, worker())",
+        "action": "prepend_before",
+        "hook": (
+            "\t\t\timport sys, xbmcvfs;\n"
+            "\t\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
+            "\t\t\tsys.path.append(p) if p not in sys.path else None;\n"
+            "\t\t\timport pov_widget_budget;\n"
+            "\t\t\tworker = pov_widget_budget.wrap_worker(self, worker)"
+        )
+    },
+    {
+        "id": "pov_widget_budget_tvshows",
+        "name": "POV Widget Rendering Budget (TV Shows)",
+        "description": "Limits the scope of background metadata tasks for TV Shows when rendering on the home screen to optimize speeds.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/menus/tvshows.py",
+        "marker": "# WIZARD_POV_WIDGET_BUDGET_TVSHOWS_v2",
+        "anchor": "kodi_utils.add_items(__handle__, self.worker())",
+        "action": "prepend_before",
+        "hook": (
+            "\t\t\timport sys, xbmcvfs;\n"
+            "\t\t\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
+            "\t\t\tsys.path.append(p) if p not in sys.path else None;\n"
+            "\t\t\timport pov_widget_budget;\n"
+            "\t\t\tself.worker = pov_widget_budget.wrap_worker(self, self.worker)"
+        )
     }
 ]
