@@ -10,12 +10,14 @@
     "umbrella": {
       "name": "[B][COLOR orange]Umbrella[/COLOR][/B]",
       "icon": "special://home/addons/plugin.video.umbrella/icon.png",
-      "action": "RunAddon(\"plugin.video.umbrella\")"
+      "action": "RunAddon(\"plugin.video.umbrella\")",
+      "condition": "umbrella"
     },
     "search_provider": {
       "name": "[B][COLOR orange]מנוע החיפוש - POV / Umbrella[/COLOR][/B]",
       "icon": "special://home/addons/plugin.video.pov/resources/skins/Default/media/search.png",
-      "action": "RunScript(service.subtitles.kodipovilai,action=search_provider)"
+      "action": "RunScript(service.subtitles.kodipovilai,action=search_provider)",
+      "condition": "umbrella"
     },
     "connect_services": {
       "_note": "Opens POV's real 'My Services' account-linking menu (Real-Debrid, Trakt, Premiumize, TorBox, ... + our injected Gemini). mode=myservices calls POV's modules.myservices.authorize(), which pops the select dialog. The previous action used mode=navigator.build_shortcut_folder_list&shortcut_folder=True -- a generic skin-shortcut browser that opens EMPTY here, which is why the popup never appeared.",

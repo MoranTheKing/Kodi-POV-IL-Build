@@ -457,10 +457,6 @@ def _run_build_startup_repairs():
         # them, so POV never shows its mismatch dialog. Do not move it down on
         # the strength of the old sentence.
         _maybe_patch_pov_language_invoker,
-        # FIRST: heal Idan Plus before the user can navigate to it (a corrupt
-        # displayChannels.json otherwise crashes every channel load). Cheap,
-        # self-contained, and independent of the POV/skin repairs below.
-        _maybe_fix_pov_maincache_schema,
         # Cheap XML migration. It touches only the build's exact 9999 value,
         # keeps every cached thumbnail, and affects Kodi after its next start.
         _maybe_optimize_32bit_artwork,
@@ -470,10 +466,6 @@ def _run_build_startup_repairs():
         _maybe_patch_pov_hebrew_ui,
         _maybe_patch_mdblist_reauth,
         _maybe_seed_pov_seasons_view,
-        # Ordinary catalogue reads need only POV's synced watched SQLite data.
-        # Keep the remote Trakt/MDBList account stacks out of a fresh Python
-        # interpreter until a watched/progress operation actually calls them.
-        _maybe_patch_pov_watched_lazy_imports,
         # AF3's compact 32-bit rows read these local shortcut folders. Seed or
         # upgrade them before AF3 exposes the rows, so a fresh profile cannot
         # race the skin and momentarily render an empty personal/network/genre
@@ -931,24 +923,6 @@ def _maybe_patch_skin_watched_poster():
         except Exception:
             pass
 
-def _maybe_patch_pov_watched_lazy_imports():
-    """Defer POV watched-account backends until an operation needs them."""
-    try:
-        from resources.lib import pov_watched_lazy_import_patcher, kodi_utils
-        status = pov_watched_lazy_import_patcher.ensure_patched()
-        if status in ('read_failed', 'write_failed', 'compile_failed',
-                      'unmatched', 'failed'):
-            kodi_utils.log(
-                'pov_watched_lazy_import_patcher needs attention: {0}'.format(
-                    status), level='WARNING')
-    except Exception as exc:
-        try:
-            from resources.lib import kodi_utils
-            kodi_utils.log(
-                'pov_watched_lazy_import_patcher run failed: {0}'.format(exc),
-                level='WARNING')
-        except Exception:
-            pass
 
 
 def _tile_reload_worker():
@@ -1158,35 +1132,6 @@ def _maybe_add_tonight_entry():
         ensure()
     except Exception:
         pass  # An optional home shortcut must not interrupt startup repairs.
-
-
-def _maybe_fix_pov_maincache_schema():
-    """POV's search-history menus crash with "'int' object is not iterable"
-    on any device upgraded from POV 5.x -- its maincache table kept the old
-    column order while 6.x writes positionally. See the module for the full
-    account. Runs first: it is a data repair, and every POV menu that reads
-    that cache is wrong until it is done."""
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_maincache_schema_fix, kodi_utils
-    except Exception:
-        return
-    try:
-        st = pov_maincache_schema_fix.repair()
-        if st == 'repaired':
-            kodi_utils.log(
-                'pov_maincache_schema_fix: POV search history repaired',
-                level='INFO')
-        elif st == 'failed':
-            kodi_utils.log('pov_maincache_schema_fix: failed', level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_maincache_schema_fix failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
 
 
 def _maybe_fix_idanplus_youtube_id():

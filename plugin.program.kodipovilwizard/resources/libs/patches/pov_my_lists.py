@@ -68,17 +68,18 @@ def _safe_fetch(fn, media_type, page_no, source_label):
 			source_label, media_type, page_no, e))
 		return [], 0
 
+
 def _merge_tmdb_or_mdblist(fns_and_labels, media_type, page_no):
-    """Used for both TMDB and MDBList as both expect native TMDB IDs in the final list."""
+	"""Used for both TMDB and MDBList as both expect native TMDB IDs in the final list."""
 	seen, merged, total_pages = set(), [], 0
 	for fn, label in fns_and_labels:
 		data, pages = _safe_fetch(fn, media_type, page_no, label)
 		total_pages = max(total_pages, pages)
 		for item in data:
-            item_id = item.get('id')
-            if item_id is not None and item_id not in seen:
-                seen.add(item_id)
-                merged.append(item_id)
+			item_id = item.get('id') if isinstance(item, dict) else item
+			if item_id is not None and item_id not in seen:
+				seen.add(item_id)
+				merged.append(item_id)
 	return merged, total_pages
 
 
@@ -88,59 +89,63 @@ def _merge_trakt(fns_and_labels, media_type, page_no):
 		data, pages = _safe_fetch(fn, media_type, page_no, label)
 		total_pages = max(total_pages, pages)
 		for item in data:
-			ids = item.get('media_ids') or {}
-			key = ids.get('tmdb') or ids.get('imdb') or ids.get('trakt')
-			if key is not None and key not in seen:
-				seen.add(key)
-				merged.append(ids)
+			if isinstance(item, dict):
+				ids = item.get('media_ids') or {}
+				key = ids.get('tmdb') or ids.get('imdb') or ids.get('trakt')
+				if key is not None and key not in seen:
+					seen.add(key)
+					merged.append(ids)
 	return merged, total_pages
+
 
 def _populate(instance, page_no, actions, tmdb_media_type, trakt_mdblist_media_type):
 	if instance.action not in actions:
 		return
-		
-    # Check service status early to prevent redundant API calls / timeouts
-    try:
-	import pov_visibility_mgr
-        if instance.action.startswith('tmdb_'):
-            service = 'tmdb'
-        elif instance.action.startswith('mdblist_'):
-            service = 'mdblist'
-        else:
-            service = 'trakt'
 
-        if not pov_visibility_mgr.is_service_active(service):
-		instance.list = []
-		return
-    except Exception:
-      xbmc.log('[POV Wizard][MyLists] pov_visibility_mgr unavailable, skipping service status check', xbmc.LOGWARNING)
+	# Check service status early to prevent redundant API calls / timeouts
+	try:
+		import pov_visibility_mgr
+		if instance.action.startswith('tmdb_'):
+			service = 'tmdb'
+		elif instance.action.startswith('mdblist_'):
+			service = 'mdblist'
+		else:
+			service = 'trakt'
 
+		if not pov_visibility_mgr.is_service_active(service):
+			instance.list = []
+			return
+	except Exception:
+		if xbmc:
+			xbmc.log('[POV Wizard][MyLists] pov_visibility_mgr unavailable, skipping service status check', xbmc.LOGWARNING)
+
+	total_pages = 0
 	if instance.action.startswith('tmdb_'):
 		from indexers.tmdb_api import tmdb_favorites, tmdb_watchlist
-        merged, total_pages = _merge_tmdb_or_mdblist(
+		merged, total_pages = _merge_tmdb_or_mdblist(
 			((tmdb_favorites, 'tmdb_favorites'), (tmdb_watchlist, 'tmdb_watchlist')),
-            tmdb_media_type, page_no
-        )
-        instance.list = merged
-
-    elif instance.action.startswith('mdblist_'):
-        from indexers.mdblist_api import mdblist_watchlist, mdblist_collection
-        # MDBList uses 'movies'/'shows' like Trakt, and returns dicts where 'id' is TMDB
-        merged, total_pages = _merge_tmdb_or_mdblist(
-            ((mdblist_collection, 'mdblist_collection'), (mdblist_watchlist, 'mdblist_watchlist')),
-            trakt_mdblist_media_type, page_no
-        )
+			tmdb_media_type, page_no
+		)
 		instance.list = merged
 
-    elif instance.action.startswith('trakt_'):
+	elif instance.action.startswith('mdblist_'):
+		from indexers.mdblist_api import mdblist_watchlist, mdblist_collection
+		# MDBList uses 'movies'/'shows' like Trakt, and returns dicts where 'id' is TMDB
+		merged, total_pages = _merge_tmdb_or_mdblist(
+			((mdblist_collection, 'mdblist_collection'), (mdblist_watchlist, 'mdblist_watchlist')),
+			trakt_mdblist_media_type, page_no
+		)
+		instance.list = merged
+
+	elif instance.action.startswith('trakt_'):
 		instance.id_type = 'trakt_dict'
 		from indexers.trakt_api import trakt_collection, trakt_watchlist, trakt_favorites
 		merged, total_pages = _merge_trakt(
 			((trakt_collection, 'trakt_collection'),
 			 (trakt_watchlist, 'trakt_watchlist'),
 			 (trakt_favorites, 'trakt_favorites')),
-            trakt_mdblist_media_type, page_no
-        )
+			trakt_mdblist_media_type, page_no
+		)
 		instance.list = merged
 
 	if total_pages > 2:

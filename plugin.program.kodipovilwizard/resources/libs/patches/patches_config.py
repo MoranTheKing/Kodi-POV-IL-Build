@@ -263,25 +263,25 @@ PATCH_CONFIG = [
             "continue"
         )
     },
-  {
-      "id": "pov_acctmgr_integration",
-      "name": "POV Account Manager & Services Integration",
-      "description": "Intercepts POV's My Services to route Debrid/Trakt to Account Manager and inject Gemini AI UI.",
-      "addon_id": "plugin.video.pov",
-      "enabled": True,
-      "target_file": "resources/lib/modules/myservices.py",
-      "marker": "# WIZARD_POV_SERVICES_ACCTMGR_v2",
-      "anchor": "class RepeatTimer(Timer):",
-      "action": "prepend_before",
-      "hook": (
-          "import sys, xbmcvfs\n"
-          "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
-          "sys.path.append(p) if p not in sys.path else None\n"
-          "import pov_myservices\n"
-          "authorize = pov_myservices.get_authorize_override(authorize)\n"
-          "\n"
-      )
-  }
+    {
+        "id": "pov_acctmgr_integration",
+        "name": "POV Account Manager & Services Integration",
+        "description": "Intercepts POV's My Services to route Debrid/Trakt to Account Manager and inject Gemini AI UI.",
+        "addon_id": "plugin.video.pov",
+        "enabled": True,
+        "target_file": "resources/lib/modules/myservices.py",
+        "marker": "# WIZARD_POV_SERVICES_ACCTMGR_v2",
+        "anchor": "class RepeatTimer(Timer):",
+        "action": "prepend_before",
+        "hook": (
+            "import sys, xbmcvfs\n"
+            "p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')\n"
+            "sys.path.append(p) if p not in sys.path else None\n"
+            "import pov_myservices\n"
+            "authorize = pov_myservices.get_authorize_override(authorize)\n"
+            "\n"
+        )
+    },
     {
         "id": "pov_torbox_api_user_stats",
         "name": "TorBox Stats API Addition",

@@ -136,7 +136,8 @@ def _trigger_favourites_refresh():
 		current_skin = xbmc.getSkinDir()
 
 		addon_path = xbmcvfs.translatePath(
-			xbmcaddon.Addon('plugin.program.orderfavourites-hebrew').getAddonInfo('path'))
+			xbmcaddon.Addon('plugin.program.orderfavourites-hebrew').getAddonInfo('path')
+		)
 		module_file = os.path.join(addon_path, 'favourites_generator.py')
 
 		if not os.path.isfile(module_file):
@@ -229,7 +230,7 @@ def _snapshot():
 			if cached:
 				old_svc = cached.get('svc')
 				if _is_fresh(cached, fp, now):
-				snap = cached
+					snap = cached
 		except Exception:
 			snap = None
 	if snap is None:
@@ -281,6 +282,12 @@ def is_service_active(service):
 	Empty / unknown names mean "no requirement" (parity with the old
 	favourites_generator._check_condition, which returned True)."""
 	svc = (service or '').strip().lower()
+
+	# Prefix with '!' to negate (e.g., '!trakt' returns True only if Trakt is disconnected).
+
+	if svc.startswith('!'):
+		return not is_service_active(svc[1:])
+
 	if svc == 'umbrella':
 		return _umbrella_installed()
 	if svc in ('trakt', 'tmdb', 'mdblist', 'real_debrid', 'premiumize', 'alldebrid', 'torbox'):
