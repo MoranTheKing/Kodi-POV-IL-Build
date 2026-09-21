@@ -86,34 +86,38 @@ def _load_config(config_path=None):
         return json.load(fh)
 
 
+_VIS_MGR = None
+
+
+def _vis_mgr():
+    """Lazy, cross-addon import of the wizard's Dynamic Visibility Manager."""
+    global _VIS_MGR
+    if _VIS_MGR is None:
+        try:
+            import sys
+            p = xbmcvfs.translatePath(
+                'special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')
+            if p not in sys.path:
+                sys.path.append(p)
+            import pov_visibility_mgr
+            _VIS_MGR = pov_visibility_mgr
+        except Exception as e:
+            _log('visibility manager unavailable: {0}'.format(e), error=True)
+            _VIS_MGR = False
+    return _VIS_MGR or None
+
+
 def _check_condition(tile_def):
-    """Evaluate runtime conditions for dynamic tiles (e.g. MDBList / Umbrella).
-    If a tile definition has a 'condition' property in the JSON, it will only
-    be generated if this returns True."""
+    """A tile with a "condition" ("trakt" | "tmdb" | "mdblist" | "umbrella", or a
+    list of them) is emitted only when every named service is active."""
     cond = tile_def.get('condition')
     if not cond:
         return True
-
-    if cond == 'umbrella':
-        if xbmc is None:
-            return False
-        return xbmc.getCondVisibility('System.HasAddon(plugin.video.umbrella)')
-
-    if cond == 'mdblist':
-        if xbmcvfs is None:
-            return False
-        try:
-            path = xbmcvfs.translatePath('special://userdata/addon_data/plugin.video.pov/settings.xml')
-            if not os.path.exists(path):
-                return False
-            # Read directly rather than using in-memory settings to avoid stale state.
-            with open(path, 'r', encoding='utf-8') as f:
-                content = f.read()
-                return bool(re.search(r'<setting id="mdblist\.token"[^>]*>([^<]+)</setting>', content))
-        except Exception:
-            return False
-
-    return True
+    mgr = _vis_mgr()
+    if mgr is None:
+        return False  # fail closed: hide gated tiles rather than ship dead ones
+    names = cond if isinstance(cond, (list, tuple)) else [cond]
+    return all(mgr.is_service_active(n) for n in names)
 
 
 def _resolve_skin(config, skin_id):

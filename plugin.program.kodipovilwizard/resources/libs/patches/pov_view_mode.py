@@ -1,4 +1,4 @@
-# File: plugin.program.kodipovilwizard/resources/lib/patches/wizard_view_mode.py
+# File: plugin.program.kodipovilwizard/resources/lib/patches/pov_view_mode.py
 
 import xbmc
 

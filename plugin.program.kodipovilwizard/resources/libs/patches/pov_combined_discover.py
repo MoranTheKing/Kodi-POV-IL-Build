@@ -1,4 +1,4 @@
-# File: plugin.program.kodipovilwizard/resources/lib/patches/wizard_combined_discover.py
+# File: plugin.program.kodipovilwizard/resources/libs/patches/pov_combined_discover.py
 
 import xbmc
 from resources.lib.indexers.tmdb_api import base_url, get_tmdb, EXPIRES_4_HOURS
@@ -47,23 +47,31 @@ def handle_fetch(params):
     try:
         if not isinstance(params, dict):
             return None
-            
+#
+#         # Early check against centralized Visibility Manager
+#         try:
+#             import pov_visibility_mgr
+#             if not pov_visibility_mgr.is_service_active('tmdb'):
+#                 return None
+#         except Exception:
+#             pass
+
         action = params.get('action')
         query = (params.get('query') or '').strip()
         
         if action == 'search_multi':
             if query:
-                xbmc.log(f"POV WIZARD PATCH: Unified Discover routing to Search Multi (Query: {query})", xbmc.LOGINFO)
+                xbmc.log(f"[POV Wizard] Unified Discover routing to Search Multi (Query: {query})", xbmc.LOGINFO)
                 return tmdb_search_multi(query)
             else:
-                xbmc.log("POV WIZARD PATCH: Unified Discover routing to Trending All (Empty Query)", xbmc.LOGINFO)
+                xbmc.log("[POV Wizard] Unified Discover routing to Trending All (Empty Query)", xbmc.LOGINFO)
                 return tmdb_trending_all()
                 
         elif action == 'trending_all':
-            xbmc.log("POV WIZARD PATCH: Unified Discover routing to Trending All (Direct)", xbmc.LOGINFO)
+            xbmc.log("[POV Wizard] Unified Discover routing to Trending All (Direct)", xbmc.LOGINFO)
             return tmdb_trending_all()
             
         return None
     except Exception as e:
-        xbmc.log(f"POV WIZARD PATCH ERROR (handle_fetch): {e}", xbmc.LOGERROR)
+        xbmc.log(f"[POV Wizard] ERROR (handle_fetch): {e}", xbmc.LOGERROR)
         return None

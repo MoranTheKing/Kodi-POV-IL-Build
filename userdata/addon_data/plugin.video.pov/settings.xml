@@ -188,6 +188,7 @@
     <setting id="sort.progress">1</setting>
     <setting id="sort.watched">1</setting>
     <setting id="sort.collection">1</setting>
+    <setting id="sort.watchlist">1</setting>
     <setting id="sort.watchlist_movies" default="true">1</setting>
     <setting id="sort.watchlist_shows" default="true">1</setting>
     <setting id="sort.watchlist">1</setting>

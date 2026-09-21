@@ -4,8 +4,9 @@ Engine V2 decoupled patch module -- "My Movies" / "My Series" feature.
 
 Populates self.list for the four merged personal-list actions the
 home-screen tiles point at:
-    tmdb_my_movies / trakt_my_movies    (movies.py)
-    tmdb_my_tvshows / trakt_my_tvshows  (tvshows.py)
+    tmdb_my_movies / trakt_my_movies / mdblist_my_movies (movies.py)
+    tmdb_my_tvshows / trakt_my_tvshows / mdblist_my_tvshows (tvshows.py)
+
 POV has no native action by these names, so without this module the
 tiles build an empty directory.
 
@@ -40,8 +41,8 @@ try:
 except Exception:
 	xbmc = None
 
-MOVIE_ACTIONS = ('tmdb_my_movies', 'trakt_my_movies')
-TVSHOW_ACTIONS = ('tmdb_my_tvshows', 'trakt_my_tvshows')
+MOVIE_ACTIONS = ('tmdb_my_movies', 'trakt_my_movies', 'mdblist_my_movies')
+TVSHOW_ACTIONS = ('tmdb_my_tvshows', 'trakt_my_tvshows', 'mdblist_my_tvshows')
 
 _LOG_PREFIX = '[POV Wizard][MyLists]'
 
@@ -67,17 +68,17 @@ def _safe_fetch(fn, media_type, page_no, source_label):
 			source_label, media_type, page_no, e))
 		return [], 0
 
-
-def _merge_tmdb(fns_and_labels, media_type, page_no):
+def _merge_tmdb_or_mdblist(fns_and_labels, media_type, page_no):
+    """Used for both TMDB and MDBList as both expect native TMDB IDs in the final list."""
 	seen, merged, total_pages = set(), [], 0
 	for fn, label in fns_and_labels:
 		data, pages = _safe_fetch(fn, media_type, page_no, label)
 		total_pages = max(total_pages, pages)
 		for item in data:
-			tmdb_id = item.get('id')
-			if tmdb_id is not None and tmdb_id not in seen:
-				seen.add(tmdb_id)
-				merged.append(tmdb_id)
+            item_id = item.get('id')
+            if item_id is not None and item_id not in seen:
+                seen.add(item_id)
+                merged.append(item_id)
 	return merged, total_pages
 
 
@@ -94,25 +95,52 @@ def _merge_trakt(fns_and_labels, media_type, page_no):
 				merged.append(ids)
 	return merged, total_pages
 
-
-def _populate(instance, page_no, actions, tmdb_media_type, trakt_media_type):
+def _populate(instance, page_no, actions, tmdb_media_type, trakt_mdblist_media_type):
 	if instance.action not in actions:
 		return
+		
+    # Check service status early to prevent redundant API calls / timeouts
+    try:
+	import pov_visibility_mgr
+        if instance.action.startswith('tmdb_'):
+            service = 'tmdb'
+        elif instance.action.startswith('mdblist_'):
+            service = 'mdblist'
+        else:
+            service = 'trakt'
+
+        if not pov_visibility_mgr.is_service_active(service):
+		instance.list = []
+		return
+    except Exception:
+      xbmc.log('[POV Wizard][MyLists] pov_visibility_mgr unavailable, skipping service status check', xbmc.LOGWARNING)
 
 	if instance.action.startswith('tmdb_'):
 		from indexers.tmdb_api import tmdb_favorites, tmdb_watchlist
-		merged, total_pages = _merge_tmdb(
+        merged, total_pages = _merge_tmdb_or_mdblist(
 			((tmdb_favorites, 'tmdb_favorites'), (tmdb_watchlist, 'tmdb_watchlist')),
-			tmdb_media_type, page_no)
+            tmdb_media_type, page_no
+        )
+        instance.list = merged
+
+    elif instance.action.startswith('mdblist_'):
+        from indexers.mdblist_api import mdblist_watchlist, mdblist_collection
+        # MDBList uses 'movies'/'shows' like Trakt, and returns dicts where 'id' is TMDB
+        merged, total_pages = _merge_tmdb_or_mdblist(
+            ((mdblist_collection, 'mdblist_collection'), (mdblist_watchlist, 'mdblist_watchlist')),
+            trakt_mdblist_media_type, page_no
+        )
 		instance.list = merged
-	else:
+
+    elif instance.action.startswith('trakt_'):
 		instance.id_type = 'trakt_dict'
 		from indexers.trakt_api import trakt_collection, trakt_watchlist, trakt_favorites
 		merged, total_pages = _merge_trakt(
 			((trakt_collection, 'trakt_collection'),
 			 (trakt_watchlist, 'trakt_watchlist'),
 			 (trakt_favorites, 'trakt_favorites')),
-			trakt_media_type, page_no)
+            trakt_mdblist_media_type, page_no
+        )
 		instance.list = merged
 
 	if total_pages > 2:

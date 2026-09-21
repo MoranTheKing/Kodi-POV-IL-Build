@@ -22,6 +22,14 @@ except Exception:
     sqlite3 = None
 
 try:
+  import sys, xbmcvfs
+  p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/')
+  sys.path.append(p) if p not in sys.path else None
+  import pov_visibility_mgr
+except ImportError:
+  pov_visibility_mgr = None
+
+try:
     import xbmc
     import xbmcaddon
     import xbmcvfs
@@ -61,7 +69,6 @@ AF3_INFO_XML = AF3_XML_DIR + 'Includes_Info.xml'
 AF3_HEBREW_PO = (
     'special://home/addons/' + AF3_SKIN_ID +
     '/language/resource.language.he_il/strings.po')
-POV_NAVIGATOR_DB = 'special://profile/addon_data/plugin.video.pov/navigator.db'
 POV_MEDIA_BASE = 'special://home/addons/plugin.video.pov/resources/skins/Default/media/'
 BUNDLED_NOTO_FONT = os.path.join(
     os.path.dirname(__file__), 'media_assets', 'fonts', 'NotoSans-Regular.ttf')
@@ -147,20 +154,6 @@ def _pov(action='', mode='', name='', icon='', extra=''):
                 params.append((key, value))
     return 'plugin://plugin.video.pov/?' + '&'.join(
         '{0}={1}'.format(k, v) for k, v in params)
-
-
-def _mdblist_connected():
-    """True only when POV has an MDBList API key stored. The MDBList home
-    widgets route through POV's mdblist_watchlist action, which errors without a
-    key -- so we only surface them when MDBList is actually connected. Mirrors
-    favourites_personal_tiles_patcher._mdblist_connected()."""
-    try:
-        if xbmcaddon is None:
-            return False
-        tok = xbmcaddon.Addon('plugin.video.pov').getSetting('mdblist.token') or ''
-        return bool(tok.strip())
-    except Exception:
-        return False
 
 
 def _shortcut_folder(name, icon='folder.png'):
@@ -294,8 +287,6 @@ HOME_WIDGETS = [
     {
         # MDBList watchlist -- movies. Routes to POV's mdblist_watchlist, which
         # merges Watchlist + Collection and sorts newest-first (inherited here).
-        # Gated on MDBList being connected (see ensure_patched's loop): the row
-        # is filtered out of the canonical when no key is stored.
         'label': 'הסרטים שלי (MDBList)',
         'icon': 'special://home/media/povil_icons/My_Movies_MDBList.png',
         'path': _pov('mdblist_watchlist', 'build_movie_list', 'MDBList%20Watchlist',
@@ -950,144 +941,6 @@ def _patch_hebrew_language():
         return False
 
 
-# Stable genre-icon location we control + ship via build_icons_patcher
-# (media/povil_icons/genre_*.png by plugin.program.orderfavourites-hebrew. We point
-# every genre row's iconImage here instead of POV's own media/genres/
-# folder, which isn't shipped by us and vanishes on POV self-updates --
-# the reason genre icons were blank on BOTH skins.
-
-# Map of Hebrew genre label (stripped of [B]/[/B]) -> icon filename, so
-# we can re-icon a row even when POV rebuilt it WITHOUT the original
-# 'genres/...' iconImage prefix (the case the old prefix-only check
-# silently skipped). Covers both the movie and TV genre sets.
-GENRE_NAME_TO_ICON = {
-    'אקשן': 'genre_action.png',
-    'הרפתקאות': 'genre_adventure.png',
-    'אקשן והרפתקאות': 'genre_action_adventure.png',
-    'אנימציה': 'genre_animation.png',
-    'קומדיה': 'genre_comedy.png',
-    'פשע': 'genre_crime.png',
-    'דוקומנטרי': 'genre_documentary.png',
-    'דרמה': 'genre_drama.png',
-    'משפחה': 'genre_family.png',
-    'פנטזיה': 'genre_fantasy.png',
-    'היסטוריה': 'genre_history.png',
-    'אימה': 'genre_horror.png',
-    'מוזיקה': 'genre_music.png',
-    'מסתורין': 'genre_mystery.png',
-    'רומנטיקה': 'genre_romance.png',
-    'מדע בדיוני': 'genre_scifi.png',
-    'מדע בדיוני ופנטזיה': 'genre_scifi_fantasy.png',
-    'מתח': 'genre_thriller.png',
-    'מלחמה': 'genre_war.png',
-    'מלחמה ופוליטיקה': 'genre_war_politics.png',
-    'מערבון': 'genre_western.png',
-    'ילדים': 'genre_kids.png',
-    'חדשות': 'genre_news.png',
-    'ריאליטי': 'genre_reality.png',
-    'אופרת סבון': 'genre_soap.png',
-    'אירוח': 'genre_talk.png',
-}
-
-
-# NOTE: the old _genre_icon_for()/GENRE_ICON_BASE helpers (which returned
-# an ABSOLUTE special://home/media/povil_icons/... path) were
-# REMOVED in v0.2.85. They were the bug: POV's build_shortcut_folder_list
-# prepends media_path() to a non-network iconImage, so an absolute value
-# got doubled into a broken '.../media/special://...' path -> POV-logo
-# fallback. The correct approach is _heal_genre_icon() below, which writes
-# the RELATIVE 'genres/<file>' POV already ships and resolves. Keeping the
-# dead absolute helpers risked a future re-corruption, so they're gone.
-
-
-def _heal_genre_icon(item):
-    """Return the CORRECT relative iconImage for a genre row item, or ''
-    to leave it. POV's build_shortcut_folder_list (navigator.py:446)
-    unconditionally prepends media_path() to a non-network item's
-    iconImage, so the value MUST be a bare relative path like
-    'genres/genre_action.png' -- POV ships those icons in its media dir.
-    An earlier version of this patcher wrongly stored an ABSOLUTE
-    'special://home/media/povil_icons/...' path, which POV then
-    doubled into a broken '.../media/special://home/...' -> POV-logo
-    fallback. This heals that: any absolute special:// value (or a
-    bare filename without the 'genres/' dir) is mapped back to
-    'genres/<file>' by the Hebrew genre name."""
-    icon = item.get('iconImage', '') or ''
-    # Already the correct relative form -> leave it.
-    if icon.startswith('genres/'):
-        return ''
-    # Map by Hebrew name to the canonical relative path.
-    name = (item.get('name', '') or '')
-    name = name.replace('[B]', '').replace('[/B]', '').strip()
-    fn = GENRE_NAME_TO_ICON.get(name)
-    if fn:
-        return 'genres/' + fn
-    # If it's an absolute special:// path ending in a known genre file,
-    # salvage the filename.
-    if 'special://' in icon and icon.lower().endswith('.png'):
-        base = icon.rsplit('/', 1)[-1]
-        if base.startswith('genre_'):
-            return 'genres/' + base
-    return ''
-
-
-def _patch_pov_genre_icons():
-    if sqlite3 is None or ast is None:
-        return False
-    db_path = _translate(POV_NAVIGATOR_DB)
-    if not os.path.isfile(db_path):
-        return False
-
-    changed = False
-    conn = None
-    try:
-        conn = sqlite3.connect(db_path, timeout=2.0, isolation_level=None)
-        conn.execute('PRAGMA busy_timeout=2000')
-        cur = conn.cursor()
-        for row_name in (
-                'FENtastic - סרטים - זאנרים',
-                'FENtastic - סדרות - זאנרים'):
-            cur.execute(
-                'SELECT list_contents FROM navigator WHERE list_name=?',
-                (row_name,))
-            row = cur.fetchone()
-            if not row:
-                continue
-            try:
-                items = ast.literal_eval(row[0] or '[]')
-            except Exception:
-                continue
-            row_changed = False
-            for item in items:
-                new_icon = _heal_genre_icon(item)
-                if new_icon and item.get('iconImage', '') != new_icon:
-                    item['iconImage'] = new_icon
-                    row_changed = True
-            if not row_changed:
-                continue
-            cur.execute('BEGIN IMMEDIATE')
-            try:
-                cur.execute(
-                    'UPDATE navigator SET list_contents=? WHERE list_name=?',
-                    (repr(items), row_name))
-                cur.execute('COMMIT')
-                changed = True
-            except Exception:
-                try:
-                    cur.execute('ROLLBACK')
-                except Exception:
-                    pass
-    except Exception:
-        return changed
-    finally:
-        if conn is not None:
-            try:
-                conn.close()
-            except Exception:
-                pass
-    return changed
-
-
 def _patch_touch_cleanup_xml():
     changed = False
     for filename in TOUCH_CLEANUP_FILES:
@@ -1452,7 +1305,6 @@ def ensure_patched():
 
     _mkdir(AF3_NODES)
     changed = False
-    mdblist_ok = _mdblist_connected()
     umbrella_ok = _umbrella_installed()
     for filename, data in FILES.items():
         retired_keys = ()
@@ -1473,14 +1325,8 @@ def ensure_patched():
         if not umbrella_ok and filename in _UMBRELLA_MENU_FILES:
             data = [w for w in data
                     if (w.get('path') or '') not in _UMBRELLA_MENU_PATHS]
-        # MDBList home widgets are opt-in: drop them from the canonical unless
-        # MDBList is connected, so the merge never seeds/appends an mdblist_
-        # watchlist row that would error without a key. A user who connects
-        # later gets it appended on the next boot (brand-new vs the baseline);
-        # the 3-way merge keeps it if they later disconnect (add-only), matching
-        # the favourites tiles.
-        if filename == 'skinvariables-shortcut-homewidgets.json' and not mdblist_ok:
-            data = [w for w in data if 'mdblist_watchlist' not in (w.get('path') or '')]
+        if filename == 'skinvariables-shortcut-homewidgets.json' and pov_visibility_mgr is not None:
+            data = [w for w in data if pov_visibility_mgr.is_item_visible(w.get('path'))]
         if filename in _MERGE_FILES:
             changed = _merge_widget_nodes(
                 filename, data, retired_keys=retired_keys,
@@ -1489,7 +1335,6 @@ def ensure_patched():
             changed = _write_if_changed(filename, data) or changed
     changed = _patch_font_xml() or changed
     changed = _patch_hebrew_language() or changed
-    changed = _patch_pov_genre_icons() or changed
     changed = _patch_touch_cleanup_xml() or changed
     changed = _patch_info_plot_autoscroll_xml() or changed
     # Inject POV search rules into search_path.xml BEFORE the rebuild, so

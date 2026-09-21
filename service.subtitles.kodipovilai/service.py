@@ -470,38 +470,21 @@ def _run_build_startup_repairs():
         _maybe_patch_pov_hebrew_ui,
         _maybe_patch_mdblist_reauth,
         _maybe_seed_pov_seasons_view,
-        _maybe_patch_pov_resume_cancel,
-        _maybe_patch_pov_scraper_settings,
-        # TMDb/Trakt catalogue modules are needed to read POV's own SQLite
-        # cache, but their HTTP stack is needed only after that cache misses.
-        # Defer requests/session construction without changing cache expiry or
-        # the live fallback, so first-home rendering stays current and light.
-        _maybe_patch_pov_http_lazy_imports,
         # Ordinary catalogue reads need only POV's synced watched SQLite data.
         # Keep the remote Trakt/MDBList account stacks out of a fresh Python
         # interpreter until a watched/progress operation actually calls them.
         _maybe_patch_pov_watched_lazy_imports,
-        # Bound only explicit home-widget requests before AF3 can rebuild its
-        # home. Normal catalogue navigation carries no widget_limit.
-        _maybe_patch_pov_widget_budget,
         # AF3's compact 32-bit rows read these local shortcut folders. Seed or
         # upgrade them before AF3 exposes the rows, so a fresh profile cannot
         # race the skin and momentarily render an empty personal/network/genre
         # shelf. These are small local SQLite writes/checks, never web calls.
-        _maybe_patch_pov_personal_area,
-        _maybe_reseed_series_networks,
-        _maybe_reseed_genre_folders,
         _maybe_patch_af3_home,
         _maybe_quiet_update_nags,
         _maybe_patch_pov_widget_crash_guard,
         _maybe_patch_umbrella_language,
-        _maybe_patch_pov_navigator_read,
         _maybe_patch_skin_watched_poster,
-        _maybe_patch_favourites_xml,
-        _maybe_patch_favourites_personal_tiles,
         _maybe_add_tonight_entry,
         _maybe_seed_recent_updates_tile,
-        _maybe_patch_pov_mdblist_sync,
         _maybe_fix_idanplus_youtube_id,
         _maybe_refresh_shared_sdh,
         _maybe_show_af3_first_launch_dialog,
@@ -963,28 +946,6 @@ def _maybe_patch_pov_watched_lazy_imports():
             from resources.lib import kodi_utils
             kodi_utils.log(
                 'pov_watched_lazy_import_patcher run failed: {0}'.format(exc),
-                level='WARNING')
-        except Exception:
-            pass
-
-
-def _maybe_patch_pov_http_lazy_imports():
-    """Defer POV's catalogue HTTP stack until a cache miss needs it."""
-    try:
-        from resources.lib import pov_http_lazy_import_patcher, kodi_utils
-        results = pov_http_lazy_import_patcher.ensure_patched()
-        bad = {key: value for key, value in results.items()
-               if value in ('read_failed', 'write_failed', 'compile_failed',
-                            'unmatched', 'failed')}
-        if bad:
-            kodi_utils.log(
-                'pov_http_lazy_import_patcher needs attention: {0}'.format(
-                    bad), level='WARNING')
-    except Exception as exc:
-        try:
-            from resources.lib import kodi_utils
-            kodi_utils.log(
-                'pov_http_lazy_import_patcher run failed: {0}'.format(exc),
                 level='WARNING')
         except Exception:
             pass

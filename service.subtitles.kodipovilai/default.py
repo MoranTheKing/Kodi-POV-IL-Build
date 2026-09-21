@@ -1,3 +1,5 @@
+# File: service.subtitles.kodipovilai/default.py
+
 # Kodi subtitle service entry point.
 #
 # Kodi launches this with action=search or action=download in the
@@ -1952,17 +1954,6 @@ def _gemini_type_flow(kodi_utils, gemini):
             return
 
 
-# --- MDBList API-key pairing (mirror of the Gemini flow) --------------------
-# MDBList's key lives in POV's OWN `mdblist.token` setting (POV is the consumer),
-# so we read/write it cross-addon. The phone form validates against MDBList
-# before submit; _test_save_mdblist re-checks Kodi-side and stores it.
-def _mdblist_pov_addon():
-    try:
-        import xbmcaddon as _mx
-        return _mx.Addon('plugin.video.pov')
-    except Exception:
-        return None
-
 
 def _handle_search_provider(_params):
     """RunScript action=search_provider -- pick which add-on the home search
@@ -2024,6 +2015,16 @@ def _handle_search_provider(_params):
         'בסקין שאתם נמצאים בו כרגע השינוי ייכנס לתוקף לאחר הפעלה מחדש '
         'של Kodi.'.format(name))
 
+# --- MDBList API-key pairing (mirror of the Gemini flow) --------------------
+# MDBList's key lives in POV's OWN `mdblist.token` setting (POV is the consumer),
+# so we read/write it cross-addon. The phone form validates against MDBList
+# before submit; _test_save_mdblist re-checks Kodi-side and stores it.
+def _mdblist_pov_addon():
+    try:
+        import xbmcaddon as _mx
+        return _mx.Addon('plugin.video.pov')
+    except Exception:
+        return None
 
 ACCTMGR_ADDON_ID = 'script.module.acctmgr'
 
@@ -2355,35 +2356,6 @@ def _mdblist_reject(reason, retry):
     return 'cancel'
 
 
-def _mdblist_surface_lists():
-    """Add the MDBList "My Movies / My Series" home tiles and POV personal-area
-    rows the moment MDBList is connected, instead of on some later boot.
-
-    Both patchers are gated on POV holding an mdblist.token, so until now the
-    earliest they could fire was the next Kodi start -- and because Kodi caches
-    favourites.xml in memory at profile load and never re-reads it, that start
-    only wrote the tiles; a SECOND one was needed to show them. Users reported
-    exactly that as "I connected MDBList, ran a quick update, and the lists
-    still aren't on the home screen". Running them here, with the key already
-    stored, collapses that to zero restarts: the tile patcher pushes the new
-    tiles into the running favourites list itself.
-
-    Entirely best-effort -- a failure just restores the old behaviour of the
-    tiles arriving on a later boot, so nothing here may raise into the connect
-    flow that has already succeeded."""
-    try:
-        from resources.lib import favourites_personal_tiles_patcher
-        favourites_personal_tiles_patcher.ensure_patched()
-    except Exception as e:
-        _safe_log('mdblist tiles after connect failed: {0}'.format(e),
-                  level='WARNING')
-    try:
-        from resources.lib import pov_navigator_patcher
-        pov_navigator_patcher.maybe_fix_personal_area_lists()
-    except Exception as e:
-        _safe_log('mdblist personal-area row after connect failed: '
-                  '{0}'.format(e), level='WARNING')
-
 
 def _test_save_mdblist(kodi_utils, mdblist_pair, key, retry=False):
     """Validate the key against MDBList, then store it with the SAME side-effects
@@ -2416,14 +2388,7 @@ def _test_save_mdblist(kodi_utils, mdblist_pair, key, retry=False):
             'לחלוטין ולהפעיל מחדש, ואז לחזור לכאן.')
         return 'cancel'
 
-    # Belt and braces: the connect has already succeeded and been persisted at
-    # this point, so nothing cosmetic below it may be able to turn that into a
-    # failure the user sees.
-    try:
-        _mdblist_surface_lists()
-    except Exception as e:
-        _safe_log('mdblist surfacing after connect failed: {0}'.format(e),
-                  level='WARNING')
+
     spread = False
     try:
         spread = _mdblist_push_to_acctmgr(key, username)
@@ -3505,125 +3470,6 @@ def _pov_addon():
         return None
 
 
-def _format_bytes(value):
-    try:
-        value = float(value)
-    except Exception:
-        return str(value) if value not in (None, '') else ''
-    units = ('B', 'KB', 'MB', 'GB', 'TB')
-    idx = 0
-    while value >= 1024 and idx < len(units) - 1:
-        value /= 1024.0
-        idx += 1
-    if idx == 0:
-        return '{0:d} {1}'.format(int(value), units[idx])
-    return '{0:.1f} {1}'.format(value, units[idx])
-
-
-def _torbox_api_get(token, path, params=None):
-    import requests
-    url = 'https://api.torbox.app/v1/api/{0}'.format(path)
-    headers = {
-        'Authorization': 'Bearer {0}'.format(token),
-        'User-Agent': 'Kodi POV IL',
-    }
-    response = requests.get(url, headers=headers, params=params, timeout=20)
-    response.raise_for_status()
-    payload = response.json()
-    if isinstance(payload, dict) and 'data' in payload:
-        return payload.get('data')
-    return payload
-
-
-def _torbox_usage_30(stats):
-    if not isinstance(stats, dict):
-        return None
-    bandwidth = stats.get('bandwidth') or stats.get('bandwidths')
-    if isinstance(bandwidth, list):
-        total = 0
-        found = False
-        for item in bandwidth:
-            if not isinstance(item, dict):
-                continue
-            value = item.get('bytes_downloaded')
-            if value is None:
-                continue
-            try:
-                total += int(value)
-                found = True
-            except Exception:
-                pass
-        if found:
-            return total
-    general = stats.get('general')
-    if isinstance(general, dict):
-        for key in ('bytes_downloaded', 'total_downloaded',
-                    'total_data_downloaded'):
-            if key in general:
-                return general.get(key)
-    return None
-
-
-def _handle_torbox_status(_params):
-    pov = _pov_addon()
-    if pov is None:
-        xbmcgui.Dialog().ok('TorBox', 'plugin.video.pov not found.')
-        return
-    token = ''
-    try:
-        token = pov.getSetting('tb.token') or ''
-    except Exception:
-        pass
-    if not token:
-        xbmcgui.Dialog().ok('TorBox', 'TorBox is not connected in POV.')
-        return
-
-    try:
-        account_info = _torbox_api_get(token, 'user/me') or {}
-        stats = _torbox_api_get(
-            token, 'user/stats',
-            params={
-                'general': 'true',
-                'bandwidth': 'true',
-                'bandwidth_grouping': 'day',
-            }) or {}
-    except Exception as e:
-        xbmcgui.Dialog().ok('TorBox', 'TorBox status failed: {0}'.format(e))
-        return
-
-    from datetime import datetime
-    expires_raw = account_info.get('premium_expires_at') or ''
-    expires_label = expires_raw[:10] if expires_raw else ''
-    days_remaining = ''
-    if expires_raw:
-        try:
-            expires = datetime.strptime(expires_raw, '%Y-%m-%dT%H:%M:%SZ')
-            days_remaining = str((expires - datetime.today()).days)
-        except Exception:
-            pass
-
-    plans = {0: 'Free', 1: 'Essential', 2: 'Pro', 3: 'Standard'}
-    plan = plans.get(account_info.get('plan'), account_info.get('plan', ''))
-    usage_30 = _format_bytes(_torbox_usage_30(stats)) or 'N/A'
-    downloaded = account_info.get('total_downloaded', '')
-
-    body = [
-        'Days Remaining: {0}'.format(days_remaining or 'N/A'),
-        'Expires: {0}'.format(expires_label or 'N/A'),
-        'Account: {0}'.format(account_info.get('email', 'N/A')),
-        'Username: {0}'.format(account_info.get('customer', 'N/A')),
-        'Status: {0}'.format(plan or 'N/A'),
-        'Downloaded: {0}'.format(downloaded if downloaded != '' else 'N/A'),
-        '\u05e9\u05d9\u05de\u05d5\u05e9 30 \u05d9\u05d5\u05dd: {0}'.format(usage_30),
-    ]
-    text = '\n\n'.join(body)
-    dialog = xbmcgui.Dialog()
-    try:
-        dialog.textviewer('TORBOX', text)
-    except Exception:
-        dialog.ok('TORBOX', text)
-
-
 def _translate_path(path):
     try:
         if xbmcvfs is not None:
@@ -4046,8 +3892,6 @@ def main():
             _handle_open_pov_settings(params)
         elif action == 'debrid_notice_settings':
             _handle_debrid_notice_settings(params)
-        elif action == 'torbox_status':
-            _handle_torbox_status(params)
         elif action == 'he_avail':
             _handle_he_avail(params)
         elif action == 'engine_test':

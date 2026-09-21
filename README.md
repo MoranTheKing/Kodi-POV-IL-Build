@@ -13,8 +13,8 @@
 1. [Project Overview & Architecture](#1-project-overview--architecture)
 2. [CI/CD & the Manifest Pipeline](#2-cicd--the-manifest-pipeline)
 3. [The Installation Engine](#3-the-installation-engine)
-   - [A. Modular Updater & Headless Installer](#a-modular-updater--headless-installer-headless_installerpy)
-   - [B. OTA & Self‑Healing](#b-ota--self-healing)
+    - [A. Modular Updater & Headless Installer](#a-modular-updater--headless-installer-headless_installerpy)
+    - [B. OTA & Self‑Healing](#b-ota--self-healing)
 4. [Build‑Config System (`config_policy.json`)](#4-build-config-system-config_policyjson)
 5. [Assets & Dynamic Media Management](#5-assets--dynamic-media-management)
 6. [Runtime Cross‑Addon Patching](#6-runtime-cross-addon-patching)
@@ -32,14 +32,14 @@
 ### From monolith to modular
 
 The build used to ship as a **legacy monolithic model**: one massive `build.zip`
-containing every addon + all of `userdata/`, applied by a brute‑force wizard that
-**wiped** the device and extracted the whole payload. That approach was fragile —
+containing every addon + all of `userdata/`, applied by a brute‑force wizard that **wiped** the device and extracted the
+whole payload. That approach was fragile —
 any single corrupt/oversized file failed the whole install, updates meant
 re‑downloading hundreds of MB, and user data (Debrid logins, Trakt auth, custom
 favourites) was casually destroyed.
 
-The current architecture is **modular and manifest‑driven**. Every addon is an
-**independent, versioned zip**; the build state is described by a single
+The current architecture is **modular and manifest‑driven**. Every addon is an **independent, versioned zip**; the build
+state is described by a single
 `manifest.json`; and the device is *hydrated* and *updated* per‑addon, at the
 value/setting level, **without wiping anything**.
 
@@ -63,11 +63,11 @@ value/setting level, **without wiping anything**.
 
 Three classes of payload ship from CI:
 
-| Payload | What | How the device consumes it |
-| --- | --- | --- |
-| **Addon zips** | Our private addons + the third‑party **repository** addons + skins | `manifest.json` → download + sha256 verify + extract to `special://home/addons` |
-| **`config-<ver>.zip`** | The entire `userdata/` tree (settings, favourites, sources, skin settings, POV settings) | Applied by `config_apply.py` per `config_policy.json` — **always the final step** |
-| **Content addons** | `plugin.video.pov`, `plugin.video.idanplus`, `plugin.video.otaku`, `plugin.video.youtube`, `resource.language.he_il` | **Not vendored.** Installed at runtime by the **Headless Installer** from their own repos so they keep getting OTA updates from their original developers |
+| Payload                | What                                                                                                                 | How the device consumes it                                                                                                                                |
+|------------------------|----------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Addon zips**         | Our private addons + the third‑party **repository** addons + skins                                                   | `manifest.json` → download + sha256 verify + extract to `special://home/addons`                                                                           |
+| **`config-<ver>.zip`** | The entire `userdata/` tree (settings, favourites, sources, skin settings, POV settings)                             | Applied by `config_apply.py` per `config_policy.json` — **always the final step**                                                                         |
+| **Content addons**     | `plugin.video.pov`, `plugin.video.idanplus`, `plugin.video.otaku`, `plugin.video.youtube`, `resource.language.he_il` | **Not vendored.** Installed at runtime by the **Headless Installer** from their own repos so they keep getting OTA updates from their original developers |
 
 ### Synchronous, isolated installation
 
@@ -88,11 +88,11 @@ Installation is a **sequential queue**, not a parallel free‑for‑all:
 ### Critical invariant: `config.zip` is ALWAYS last
 
 `config-<ver>.zip` carries `userdata/`, including **POV's own `settings.xml`**
-(Hebrew metadata language, fanart, TMDB/Trakt keys) and the skin settings. It
-**must be extracted/applied as the absolute final step of a fresh install — after
+(Hebrew metadata language, fanart, TMDB/Trakt keys) and the skin settings. It **must be extracted/applied as the
+absolute final step of a fresh install — after
 every addon is on disk** — so that nothing an addon writes at install/first‑init
-can clobber our configuration. Applying it earlier reintroduces the
-*black‑background + English‑metadata* race. This ordering is enforced in
+can clobber our configuration. Applying it earlier reintroduces the *black‑background + English‑metadata* race. This
+ordering is enforced in
 `modular_updater.ModularUpdater.execute_updates()`.
 
 ---
@@ -213,7 +213,8 @@ Otaku is last so a transient Otaku stall can never block the core build; the boo
   POV answers `Unable to find plugin` / `GetDirectory` fails and the skin‑variable engine can hard‑deadlock the Python
   interpreter (the "second boot is always fine" symptom). `fresh_build_auto_install_if_needed()` arms a one‑shot marker
   (`kodipovil.first_boot_stabilize`, same pattern as `.provisioned`) right before the force‑close; on the next boot,
-  *after* `wait_for_gui_ready()`, `first_boot_stabilize_if_needed()` holds briefly with a **user‑visible Hebrew countdown
+  *after* `wait_for_gui_ready()`, `first_boot_stabilize_if_needed()` holds briefly with a **user‑visible Hebrew
+  countdown
   banner** while POV warms up (bounded by `first_boot_warmup_seconds`, default 25s, early‑exit once
   `System.HasAddon(plugin.video.pov)` + a minimum warm‑up), then `UpdateLocalAddons` + `ReloadSkin()` so the home
   widgets re‑evaluate against a ready POV. It is a no‑op on every normal boot, never patches the skin, uses no global
@@ -234,20 +235,19 @@ config.
 
 Per‑file apply **modes**:
 
-| Mode | Behaviour |
-| --- | --- |
-| `replace` | Overwrite the whole destination file. |
-| `merge_id` | Per `<setting id=...>`: **build value wins**, every *other* user setting is left untouched. `exclude_ids[]` is never written. |
-| `merge_name` | Per `<source><name>`: add the build's sources, keep the user's. |
-| `seed_if_absent` | Write only when the destination doesn't already exist. |
+| Mode             | Behaviour                                                                                                                     |
+|------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| `replace`        | Overwrite the whole destination file.                                                                                         |
+| `merge_id`       | Per `<setting id=...>`: **build value wins**, every *other* user setting is left untouched. `exclude_ids[]` is never written. |
+| `merge_name`     | Per `<source><name>`: add the build's sources, keep the user's.                                                               |
+| `seed_if_absent` | Write only when the destination doesn't already exist.                                                                        |
 
-Each file declares a `fresh` mode (clean/first install) and an `update` mode
-(existing device).
+Each file declares a `fresh` mode (clean/first install) and an `update` mode (existing device).
 
 ### The POV settings lesson (credential‑safe OTA)
 
-`userdata/addon_data/plugin.video.pov/settings.xml` was shipped in the zip but was
-**not in the policy**, so it was **never applied** — POV ran on its English /
+`userdata/addon_data/plugin.video.pov/settings.xml` was shipped in the zip but was **not in the policy**, so it was
+**never applied** — POV ran on its English /
 no‑fanart defaults. The fix added it to the policy as:
 
 - `fresh: replace` — land the full config (`meta_language=he`, `get_fanart_data=true`,
@@ -293,56 +293,83 @@ no‑fanart defaults. The fix added it to the policy as:
   fixes to existing users.
 
 ---
+
 ## 6. Runtime Cross‑Addon Patching
 
-###  🛠️ Metadata-Driven Patching Architecture (Engine v2)
+### 🛠️ Metadata-Driven Patching Architecture (Engine v2)
 
-Our build system employs a highly decoupled, declarative, and metadata-driven patching architecture managed exclusively by the **Wizard Addon (`plugin.program.wizard`)**.
+Our build system employs a highly decoupled, declarative, and metadata-driven patching architecture managed exclusively
+by the **Wizard Addon (`plugin.program.wizard`)**.
 
-Instead of executing standalone runtime scripts that perform repetitive file I/O operations and inject heavy logic, the Wizard runs a **Unified Patching Engine**. This engine ingests static configuration dictionaries (metadata), groups operations by target files, and executes atomic, additive injections in a single pass.
+Instead of executing standalone runtime scripts that perform repetitive file I/O operations and inject heavy logic, the
+Wizard runs a **Unified Patching Engine**. This engine ingests static configuration dictionaries (metadata), groups
+operations by target files, and executes atomic, additive injections in a single pass.
 
 ### 📐 Core Architectural Principles
 
 1. **Additive Patching (Lean Hooks)**
-   To prevent upstream breaks, patches *never* overwrite or perform brittle multi-line block replacements of native code. Instead, they use strict, single-line string anchors to seamlessly insert an ultra-lean execution hook either immediately before (`prepend_before`) or after (`append_after`) a target code line.
+   To prevent upstream breaks, patches *never* overwrite or perform brittle multi-line block replacements of native
+   code. Instead, they use strict, single-line string anchors to seamlessly insert an ultra-lean execution hook either
+   immediately before (`prepend_before`) or after (`append_after`) a target code line.
 
-2. **Decoupled Business Logic & Single Folder Consolidation**
-   Target addon files are kept completely clean of heavy business logic or algorithms. Injected hooks act purely as routers—appending our core patches path and calling external helper modules hosted natively inside the Wizard addon. All metadata registry definitions and extracted business logic modules MUST reside strictly inside a single unified directory to maintain encapsulation.
-   *Example Hook:*
+2. **Decoupled Business Logic & Single Directory Consolidation**
+   Target addon files are kept completely clean of heavy business logic or algorithms. Injected hooks act purely as
+   routers—appending our core patches path and calling external helper modules hosted natively inside the Wizard addon.
+   All metadata definitions and extracted logic modules MUST reside strictly inside a single unified directory:
+   `plugin.program.kodipovilwizard/resources/libs/patches/`. Extracted logic files must be prefixed with the target
+   addon shorthand (e.g., `pov_` for `plugin.video.pov`).
+
+*Example Hook:*
    ```python
-   import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/'); sys.path.append(p) if p not in sys.path else None; import feature_module; feature_module.run(local_vars)
+   import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/'); sys.path.append(p) if p not in sys.path else None; import pov_feature_module; pov_feature_module.run(local_vars)
    ```
 
-3. **Versioned Markers & Anti-Collision**
-Every injected hook is uniquely identified by a versioned marker (e.g., `# WIZARD_POV_FEATURE_NAME_v2`). The engine uses the base string identifier to prevent duplicate injections, seamlessly upgrading older hook versions (`_v1` $\rightarrow$ `_v2`) or executing clean rollbacks without risking source corruption.
-4. **Clean Environment Assumption (YAGNI)**
-The deployment workflow enforces 100% clean installations. Because the target files are guaranteed to be pristine, unpatched upstream source files at the time of execution, the runtime engine does not waste cycles on legacy regex scrubbing or historical backward-compatibility code.
-5. **Static Configuration Priority**
-Following a "Configuration over Code" philosophy, all environmental variables, addon settings, and initial database structures (e.g., SQLite schemas) are pre-baked statically into our controlled `userdata` distribution. Runtime hooks are strictly reserved for logic routing that cannot be achieved via static files.
+> **Note:** Injected hooks must avoid over-engineering or overcomplicating. they should remain simple, maintainable, and straightforward.
+
+3. **Strict Tab Indentation (`\t`)**
+Injected lines inside multi-line hook definitions MUST explicitly utilize tab characters (`\t`) for scope alignment to prevent Python `IndentationError` exceptions when evaluated against upstream source code.
+4. **Versioned Markers & Anti-Collision**
+Every injected hook is uniquely identified by a versioned marker prefixed with `# WIZARD_` (e.g., `# WIZARD_POV_FEATURE_NAME_v2`). The engine uses the base string identifier to prevent duplicate injections, seamlessly upgrading older hook versions (`_v1` -> `_v2`) or executing clean rollbacks without risking source corruption.
+5. **Clean Environment Assumption (YAGNI)**
+The deployment workflow enforces 100% clean installations. Because target files are guaranteed to be pristine, unpatched upstream source files at execution time, the runtime engine does not waste cycles on legacy regex scrubbing or historical backward-compatibility logic.
+6. **Static Configuration Priority**
+Following a "Configuration over Code" philosophy, all environmental variables, addon settings, XML skin elements, and initial database structures (e.g., SQLite schemas) are pre-baked statically into our controlled `userdata` distribution. Runtime hooks are strictly reserved for code execution routing that cannot be achieved via static files.
 
 ---
 
 ### 🗂️ Patch Definition Schema
 
-Each patch configuration is declared as a structured Python dictionary within the Wizard's central patch registry:
+Each patch configuration is declared as a structured Python dictionary within the Wizard's central patch registry (`patches_config.py`):
 
 ```python
 {
     "id": "pov_source_remember",
     "name": "Remember Last Played Source",
+    "description": "Captures the last played source in POV and persists it for future sessions.",
+    "addon_id": "plugin.video.pov",
+    "enabled": True,
     "target_file": "resources/lib/modules/sources.py",
     "marker": "# WIZARD_POV_SOURCE_REMEMBER_v2",
     "anchor": "def play_file(item):",
     "action": "append_after",
-    "hook": "import sys, xbmcvfs; p = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/lib/patches/'); sys.path.append(p) if p not in sys.path else None; import source_memory; source_memory.capture(item)"
+    "hook": (
+        "\timport sys, xbmcvfs;\n"
+        "\tp = xbmcvfs.translatePath('special://home/addons/plugin.program.kodipovilwizard/resources/libs/patches/');\n"
+        "\tsys.path.append(p) if p not in sys.path else None;\n"
+        "\timport pov_source_memory;\n"
+        "\tpov_source_memory.capture(item)"
+    )
 }
 
 ```
 
 ### 🔁 Lifecycle & Upstream Updates
 
-* **On Addon Updates:** When Kodi updates an upstream addon, it wipes the directory and extracts pristine source files, naturally reverting all patches. The Wizard engine detects the missing markers on the next boot and reapplies the hooks seamlessly.
-* **On Rollbacks / Disabling:** By setting `"enabled": False` or removing a configuration, the engine targets the specific versioned marker and drops only the injected lines, instantly returning the file to its original upstream state.
+* **On Addon Updates:** When Kodi updates an upstream addon, it wipes the directory and extracts pristine source files,
+  naturally reverting all patches. The Wizard engine detects missing markers on next boot and reapplies hooks
+  seamlessly.
+* **On Rollbacks / Disabling:** By setting `"enabled": False` or removing a configuration, the engine targets the
+  specific versioned marker and drops only injected lines, instantly returning the file to its original upstream state.
 
 ---
 
@@ -353,8 +380,8 @@ the build's runtime patch host in one addon.
 
 - **AI translation:** translates English (or other) subtitles to Hebrew on the fly
   via Google's Gemini Flash‑Lite API (user brings a free key from
-  `aistudio.google.com`). It is **gender‑aware** — it pulls cast metadata from TMDB
-  (via `script.module.tmdbhelper`) to choose correct Hebrew verb/adjective gender
+  `aistudio.google.com`). It is **gender‑aware** — it pulls cast metadata from TMDB (via `script.module.tmdbhelper`) to
+  choose correct Hebrew verb/adjective gender
   forms. It **falls back to existing human Hebrew subtitles** when available and
   never wastes API quota on already‑translated content.
 - **Gemini setup** is reached from POV's *My Services* menu (the injected Gemini
@@ -446,20 +473,20 @@ reintroduce them or references to them**:
 **Manifest addon inventory** (versions are illustrative — the manifest is the live
 source):
 
-| Addon | Type | Role |
-| --- | --- | --- |
-| `plugin.program.kodipovilwizard` | plugin | Install / OTA / self‑heal engine |
-| `plugin.program.orderfavourites-hebrew` | plugin | Favourites generator + global icon/media installer |
-| `service.subtitles.kodipovilai` | subtitle | AI Hebrew subtitles + runtime patch host |
-| `script.fentastic.helper` | module | FENtastic skin helper |
-| `script.module.autocompletion` / `plugin.program.autocompletion` | module/plugin | Search autocompletion |
-| `repository.kodifitzwell` | repository | Source for `plugin.video.pov` |
-| `repository.Fishenzon` | repository | Source for `plugin.video.idanplus` |
-| `repository.otaku` | repository | Source for `plugin.video.otaku` (+ `context.otaku`) |
-| `repository.jurialmunkey` | repository | Source for Arctic Fuse 3 + helpers |
-| `skin.fentastic` | skin | Default/active skin |
-| `skin.povil.nox` | skin | On‑demand skin (large) |
-| `skin.estuary` | skin | Fallback skin |
+| Addon                                                            | Type          | Role                                                |
+|------------------------------------------------------------------|---------------|-----------------------------------------------------|
+| `plugin.program.kodipovilwizard`                                 | plugin        | Install / OTA / self‑heal engine                    |
+| `plugin.program.orderfavourites-hebrew`                          | plugin        | Favourites generator + global icon/media installer  |
+| `service.subtitles.kodipovilai`                                  | subtitle      | AI Hebrew subtitles + runtime patch host            |
+| `script.fentastic.helper`                                        | module        | FENtastic skin helper                               |
+| `script.module.autocompletion` / `plugin.program.autocompletion` | module/plugin | Search autocompletion                               |
+| `repository.kodifitzwell`                                        | repository    | Source for `plugin.video.pov`                       |
+| `repository.Fishenzon`                                           | repository    | Source for `plugin.video.idanplus`                  |
+| `repository.otaku`                                               | repository    | Source for `plugin.video.otaku` (+ `context.otaku`) |
+| `repository.jurialmunkey`                                        | repository    | Source for Arctic Fuse 3 + helpers                  |
+| `skin.fentastic`                                                 | skin          | Default/active skin                                 |
+| `skin.povil.nox`                                                 | skin          | On‑demand skin (large)                              |
+| `skin.estuary`                                                   | skin          | Fallback skin                                       |
 
 **Content addons (NOT in the manifest — provisioned headlessly):**
 `plugin.video.pov`, `plugin.video.idanplus`, `plugin.video.otaku`,
@@ -482,8 +509,7 @@ source):
   service patch host**. Inter‑addon calls go through Kodi (`RunScript` /
   `RunAddon` / `executebuiltin`), not import side‑effects.
 - ❌ **NEVER bring back the aggressive dialog watchdog** that closes arbitrary
-  windows. The only permitted auto‑confirm is the **minimal** one that clicks
-  **window 10100 only**.
+  windows. The only permitted auto‑confirm is the **minimal** one that clicks **window 10100 only**.
 - ❌ **NEVER blindly extract binary/platform addons** (`inputstream.*`, `pvr.*`,
   `vfs.*`, etc.). Defer them to Kodi's native installer.
 - ❌ **NEVER hand‑edit `manifest.json`.** It is regenerated by CI. Bump the
@@ -514,8 +540,9 @@ runtime files**, including:
 > (POV menu order + per‑list view types). These overwrite on update by design (no
 > merge yet). Do **not** add *new* `*.db` files unless they are a deliberate build
 > default **and** you add a matching `replace` policy entry + bump `config_version`.
-- **Hardware/display‑specific values** — screen resolutions, device UUID/name
-  (`videoscreen.resolution`, `services.deviceuuid/devicename`, … are already in
+
+- **Hardware/display‑specific values** — screen resolutions, device UUID/name (`videoscreen.resolution`,
+  `services.deviceuuid/devicename`, … are already in
   `exclude_ids` for `guisettings.xml`).
 - **Personal tokens / auth** — Debrid/Trakt/TMDB tokens, usernames, session ids,
   API keys. These belong to the user, never to the build.
@@ -552,7 +579,7 @@ token, or hardware value.
   (fast‑forward) so it stays even with `main`.
 - A change is "done" only when: code compiles, configs validate, the version is
   bumped, CI is green, and the regenerated `manifest.json` shows the new
-  version(s).
+  version (s).
 
 ---
 

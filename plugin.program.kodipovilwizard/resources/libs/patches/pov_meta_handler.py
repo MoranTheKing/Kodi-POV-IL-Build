@@ -1,3 +1,5 @@
+# File : plugin.program.kodipovilwizard/resources/libs/patches/pov_meta_handler.py
+
 import os
 import threading
 import sqlite3

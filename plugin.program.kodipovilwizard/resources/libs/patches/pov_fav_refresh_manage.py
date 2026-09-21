@@ -1,4 +1,4 @@
-# File: plugin.program.kodipovilwizard/resources/lib/patches/fav_refresh_manage.py
+# File: plugin.program.kodipovilwizard/resources/lib/patches/pov_fav_refresh_manage.py
 
 import xbmc
 
@@ -13,6 +13,9 @@ def run(local_vars):
         choice = local_vars.get('choice')
         action_add = local_vars.get('action_add')
 
+        # Pull kodi_utils safely from the upstream locals
+        kodi_utils = local_vars.get('kodi_utils')
+
         # 1. Execute the original upstream toggle logic safely
         toggle_result = self_obj.execute_toggle(choice, action_add)
 
@@ -21,12 +24,11 @@ def run(local_vars):
         folder_path = xbmc.getInfoLabel('Container.FolderPath') or ''
 
         if 'search' not in folder_path.lower():
-            # Force the container refresh post-toggle
-        from modules import kodi_utils
-        kodi_utils.container_refresh()
+            if kodi_utils:
+                kodi_utils.container_refresh()
 
         return toggle_result
 
     except Exception as e:
-        xbmc.log(f"[Wizard Addon] Error in fav_refresh_manage: {e}", xbmc.LOGERROR)
+        xbmc.log(f"[Wizard Addon] Error in pov_fav_refresh_manage: {e}", xbmc.LOGERROR)
         return None
