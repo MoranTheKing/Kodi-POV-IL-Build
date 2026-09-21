@@ -3,7 +3,7 @@
   "name": "Kodi POV IL Build",
   "repo": "MoranTheKing/Kodi-POV-IL-Build",
   "release_tag": "addons-latest",
-  "generated": "2026-09-21T19:38:57Z",
+  "generated": "2026-09-21T23:01:02Z",
   "manifest_url": "https://raw.githubusercontent.com/MoranTheKing/Kodi-POV-IL-Build/main/manifest.json",
   "config": {
     "config_version": "2.0.6",
@@ -28,24 +28,24 @@
     "plugin.program.kodipovilwizard": {
       "id": "plugin.program.kodipovilwizard",
       "name": "[COLOR yellow]Kodi POV IL Wizard[/COLOR]",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "type": "plugin",
-      "filename": "plugin.program.kodipovilwizard-0.4.0.zip",
-      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.kodipovilwizard-0.4.0.zip",
-      "size": 2180866,
-      "sha256": "4ea0e5b2caac760bdb183e76f24e613e2e32c7610c68ea3ef7cf7a0d36bba480",
-      "updated": "2026-09-21T19:38:57Z"
+      "filename": "plugin.program.kodipovilwizard-0.4.1.zip",
+      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.kodipovilwizard-0.4.1.zip",
+      "size": 2180899,
+      "sha256": "7b987130c30dcfab7f940b0ea93a79a2acb3dd12484eb9ec6ed64d7c76edc310",
+      "updated": "2026-09-21T23:01:02Z"
     },
     "plugin.program.orderfavourites-hebrew": {
       "id": "plugin.program.orderfavourites-hebrew",
       "name": "מועדפים ואייקונים",
-      "version": "1.4.2",
+      "version": "1.4.3",
       "type": "plugin",
-      "filename": "plugin.program.orderfavourites-hebrew-1.4.2.zip",
-      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.orderfavourites-hebrew-1.4.2.zip",
-      "size": 12999280,
-      "sha256": "397788d898419b69e6d22133d5c19f46b14ad85dcd329f95b07ce17299d3d5b7",
-      "updated": "2026-09-21T19:38:57Z"
+      "filename": "plugin.program.orderfavourites-hebrew-1.4.3.zip",
+      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/plugin.program.orderfavourites-hebrew-1.4.3.zip",
+      "size": 12999285,
+      "sha256": "e5d00f1dc7b8d0420de2e7713c2457e749ec48b5d765b9369d5dcb9a14af64b9",
+      "updated": "2026-09-21T23:01:02Z"
     },
     "repository.709": {
       "id": "repository.709",
@@ -127,13 +127,13 @@
     "service.subtitles.kodipovilai": {
       "id": "service.subtitles.kodipovilai",
       "name": "MoranSubs",
-      "version": "0.3.12",
+      "version": "0.3.13",
       "type": "subtitle",
-      "filename": "service.subtitles.kodipovilai-0.3.12.zip",
-      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/service.subtitles.kodipovilai-0.3.12.zip",
-      "size": 3532087,
-      "sha256": "4af68dfc559f07393f48b7f57e7ae48020a4dea68bb21cc156f42fde4101b20c",
-      "updated": "2026-09-21T19:38:57Z"
+      "filename": "service.subtitles.kodipovilai-0.3.13.zip",
+      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/service.subtitles.kodipovilai-0.3.13.zip",
+      "size": 3529026,
+      "sha256": "9aae1d2d4fc56b6b42e81bd8a8ef12bb9b9a3e5ef14af386c966518aa7dc9299",
+      "updated": "2026-09-21T23:01:02Z"
     },
     "skin.estuary": {
       "id": "skin.estuary",
@@ -149,13 +149,13 @@
     "skin.fentastic": {
       "id": "skin.fentastic",
       "name": "FENtastic",
-      "version": "1.0.28",
+      "version": "1.0.29",
       "type": "skin",
-      "filename": "skin.fentastic-1.0.28.zip",
-      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/skin.fentastic-1.0.28.zip",
-      "size": 20851511,
-      "sha256": "c4db2ad16dcc28dd69a9114f4f00110b622cacf6a4e21dfc89fade3b6d69adce",
-      "updated": "2026-09-19T09:41:24Z"
+      "filename": "skin.fentastic-1.0.29.zip",
+      "zip": "https://github.com/MoranTheKing/Kodi-POV-IL-Build/releases/download/addons-latest/skin.fentastic-1.0.29.zip",
+      "size": 20851515,
+      "sha256": "68eb3bdc83d4a66efb48a635d7379bd98351d6be57c5e3c5904958bda8b931de",
+      "updated": "2026-09-21T23:01:02Z"
     },
     "skin.povil.nox": {
       "id": "skin.povil.nox",
