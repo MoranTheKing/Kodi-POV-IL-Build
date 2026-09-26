@@ -340,10 +340,11 @@ PATCH_CONFIG = [
         "addon_id": "plugin.video.pov",
         "enabled": True,
         "target_file": "resources/lib/caches/trakt_cache.py",
-        "marker": "# WIZARD_POV_TRAKT_TABLE_CLEAR_v2",
+        "marker": "# WIZARD_POV_TRAKT_TABLE_CLEAR_v3",
         "anchor": "def clear_all_trakt_cache_data(refresh=True):",
         "action": "append_after",
         "hook": (
+        "# WIZARD: Ensure trakt_data table exists before clearing cache\n"
         "\ttry:\n"
         "\t\tTraktCache().dbcur.execute('CREATE TABLE IF NOT EXISTS trakt_data (id TEXT UNIQUE, data TEXT)')\n"
         "\texcept Exception: pass\n"

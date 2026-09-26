@@ -1629,36 +1629,7 @@ def _maybe_patch_umbrella_language():
 
 
 
-def _maybe_patch_pov_services():
-    """Inject Gemini AI + Wyzie entries into the POV plugin's
-    "My Services" menu (the one at /myservices in plugin.video.pov).
-    Same self-healing pattern as the wizard patcher -- POV's menu
-    has a hardcoded tuple of services with no extension point, so
-    we patch the source file on disk and re-inject on every Kodi
-    startup if the marker is missing."""
-    if _skip_pov_patchers():
-        return
-    try:
-        from resources.lib import pov_services_patcher, kodi_utils
-    except Exception:
-        return
-    try:
-        status = pov_services_patcher.ensure_patched()
-        if status == 'patched':
-            kodi_utils.log(
-                'pov_services_patcher (re)injected on startup',
-                level='INFO')
-        elif status in ('unmatched', 'write_failed', 'read_failed'):
-            kodi_utils.log(
-                'pov_services_patcher skipped: ' + status,
-                level='WARNING')
-    except Exception as e:
-        try:
-            kodi_utils.log(
-                'pov_services_patcher run failed: {0}'.format(e),
-                level='WARNING')
-        except Exception:
-            pass
+
 
 # The auto-on-play machinery (state, the on-play search/apply flow, and the
 # Player listener) lives in resources/lib/autosub_service.py -- extracted
@@ -3489,9 +3460,6 @@ def main():
     except Exception:
         pass
 
-    # POV's own "My Services" menu -- THE correct place. Inject
-    # Gemini + Wyzie entries here on every startup; idempotent.
-    _maybe_patch_pov_services()
 
     if build_mode:
         # CONTAINED HERE, NOT IN THE LOOP. The pass re-raises a BaseException
